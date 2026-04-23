@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #050F1A; font-family: 'League Spartan', sans-serif; padding: 20px 24px; }
+  .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; margin-bottom: 20px; }
+  .token { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { background: #0276D6; border-radius: 3px; width: 100%; }
+  .val { font-size: 10px; font-weight: 700; color: #5A7A99; font-family: 'Courier New', monospace; text-align: center; }
+  .name { font-size: 9px; color: #3A5A78; text-transform: uppercase; letter-spacing: 0.06em; }
+  .divider { border: none; border-top: 1px solid #1E3A55; margin: 4px 0 16px; }
+  .radius-row { display: flex; gap: 16px; align-items: center; }
+  .rbox { background: #012E55; border: 1px solid #1A5FA8; width: 56px; height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .rlabel { font-size: 9px; font-weight: 700; color: #5A7A99; letter-spacing: 0.06em; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="grid">
+  <div class="token"><div class="bar" style="height:4px;"></div><div class="val">4</div><div class="name">space-1</div></div>
+  <div class="token"><div class="bar" style="height:8px;"></div><div class="val">8</div><div class="name">space-2</div></div>
+  <div class="token"><div class="bar" style="height:12px;"></div><div class="val">12</div><div class="name">space-3</div></div>
+  <div class="token"><div class="bar" style="height:16px;"></div><div class="val">16</div><div class="name">space-4</div></div>
+  <div class="token"><div class="bar" style="height:24px;"></div><div class="val">24</div><div class="name">space-6</div></div>
+  <div class="token"><div class="bar" style="height:32px;"></div><div class="val">32</div><div class="name">space-8</div></div>
+  <div class="token"><div class="bar" style="height:48px;"></div><div class="val">48</div><div class="name">space-12</div></div>
+  <div class="token"><div class="bar" style="height:64px;"></div><div class="val">64</div><div class="name">space-16</div></div>
+  <div class="token"><div class="bar" style="height:80px;"></div><div class="val">80</div><div class="name">space-20</div></div>
+</div>
+<hr class="divider">
+<div class="radius-row">
+  <div class="token"><div class="rbox" style="border-radius:0px;"><div class="rlabel">0px</div><div class="name">none</div></div></div>
+  <div class="token"><div class="rbox" style="border-radius:4px;"><div class="rlabel">4px</div><div class="name">sm</div></div></div>
+  <div class="token"><div class="rbox" style="border-radius:8px;"><div class="rlabel">8px</div><div class="name">md</div></div></div>
+  <div class="token"><div class="rbox" style="border-radius:9999px; width:80px; height:32px;"><div class="rlabel">pill</div></div></div>
+  <div class="token"><div class="rbox" style="border-radius:50%; width:56px; height:56px;"><div class="rlabel">circle</div></div></div>
+</div>
+</body></html>

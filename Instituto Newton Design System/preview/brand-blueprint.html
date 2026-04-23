@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #050F1A; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+  .panel { display: flex; flex-direction: column; gap: 6px; }
+  .plabel { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1A5FA8; margin-bottom: 4px; }
+  .blueprint { 
+    width: 280px; height: 160px;
+    background-color: #013E70;
+    background-image: linear-gradient(rgba(2,118,214,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(2,118,214,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    border: 1px solid #1A5FA8;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .bp-room { border: 1px solid rgba(2,118,214,0.6); position: absolute; display: flex; align-items: center; justify-content: center; }
+  .bp-label { font-size: 9px; font-weight: 700; color: rgba(226,214,175,0.7); text-transform: uppercase; letter-spacing: 0.08em; }
+  .shadow-row { display: flex; gap: 16px; align-items: flex-end; }
+  .shadow-card { width: 80px; height: 60px; background: #012E55; border: 1px solid #1A5FA8; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .shadow-label { font-size: 9px; color: #5A7A99; text-align: center; margin-top: 6px; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="panel">
+  <div class="plabel">Blueprint Grid</div>
+  <div class="blueprint">
+    <div class="bp-room" style="left:20px;top:20px;width:80px;height:60px;"><div class="bp-label">Lab</div></div>
+    <div class="bp-room" style="left:110px;top:20px;width:60px;height:40px;"><div class="bp-label">Dir.</div></div>
+    <div class="bp-room" style="left:180px;top:20px;width:80px;height:60px;"><div class="bp-label">Bib.</div></div>
+    <div class="bp-room" style="left:20px;top:90px;width:140px;height:50px;"><div class="bp-label">Patio Interior</div></div>
+    <div class="bp-room" style="left:170px;top:90px;width:90px;height:50px;"><div class="bp-label">Aparcamiento</div></div>
+  </div>
+</div>
+<div class="panel">
+  <div class="plabel">Shadow / Glow System</div>
+  <div class="shadow-row">
+    <div>
+      <div class="shadow-card" style="box-shadow: 0 2px 8px rgba(1,62,112,0.4);"></div>
+      <div class="shadow-label">Card<br>shadow</div>
+    </div>
+    <div>
+      <div class="shadow-card" style="box-shadow: 0 0 24px rgba(2,118,214,0.3); border-color: #0276D6;"></div>
+      <div class="shadow-label">Glow<br>active</div>
+    </div>
+    <div>
+      <div class="shadow-card" style="box-shadow: 0 8px 32px rgba(5,15,26,0.6);"></div>
+      <div class="shadow-label">Deep<br>shadow</div>
+    </div>
+    <div>
+      <div class="shadow-card" style="box-shadow: 0 0 16px rgba(245,184,0,0.2); border-color: #F5B800;"></div>
+      <div class="shadow-label">Gold<br>glow</div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ':*)",
+      "Bash(curl -s \"https://project-butterfly-d0242-default-rtdb.firebaseio.com/.json\")"
+    ]
+  }
+}

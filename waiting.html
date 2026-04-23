@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>El Examen 2 - Conectando</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="waiting-shell">
+      <section class="waiting-panel panel">
+        <p class="eyebrow">Instituto Newton</p>
+        <h1>Conectando con el gimnasio</h1>
+        <p id="waiting-role" class="waiting-role">Rol seleccionado: ...</p>
+        <p class="waiting-copy">
+          La red interna tarda en responder. En la pantalla aparece el sello del Instituto Newton y una puerta de gimnasio
+          que todavía no se ha abierto. Espera a que el Game Master inicie la partida.
+        </p>
+        <div class="waiting-signal" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <p id="waiting-status" class="waiting-status">Esperando señal del GM...</p>
+      </section>
+    </main>
+    <script>
+      const firebaseBaseUrl = "https://project-butterfly-d0242-default-rtdb.firebaseio.com";
+      const params = new URLSearchParams(window.location.search);
+      const role = params.get("role") || "empollon";
+      const roleLabels = {
+        empollon: "El Empollón",
+        manitas: "La Manitas",
+        bruto: "El Bruto",
+        mistica: "La Mística",
+      };
+      const rolePages = {
+        empollon: "game-empollon.html",
+        manitas: "game-manitas.html",
+        bruto: "game-bruto.html",
+        mistica: "game-mistica.html",
+      };
+      const waitingRole = document.querySelector("#waiting-role");
+      const waitingStatus = document.querySelector("#waiting-status");
+      const storedCode = window.localStorage.getItem("elExamen2.sessionCode") || "";
+
+      window.requestAnimationFrame(() => {
+        document.body.classList.add("page-ready");
+      });
+
+      waitingRole.textContent = `Rol seleccionado: ${roleLabels[role] || roleLabels.empollon}`;
+
+      function firebaseUrl(path) {
+        return `${firebaseBaseUrl}/${path}.json`;
+      }
+
+      function enterRole() {
+        const target = rolePages[role] || rolePages.empollon;
+        document.body.classList.add("page-leaving");
+        window.setTimeout(() => {
+          window.location.href = target;
+        }, 220);
+      }
+
+      async function checkSession() {
+        try {
+          const response = await fetch(firebaseUrl("session"), { cache: "no-store" });
+          const session = await response.json();
+          const activeCode = session && session.accessCode ? String(session.accessCode) : "";
+
+          if (!activeCode || storedCode !== activeCode) {
+            waitingStatus.textContent = "Codigo de sesion no valido. Volviendo al acceso...";
+            document.body.classList.add("page-leaving");
+            window.setTimeout(() => {
+              window.location.href = "index.html";
+            }, 220);
+            return;
+          }
+
+          if (session && session.status === "in_game") {
+            waitingStatus.textContent = "Señal recibida. Entrando al gimnasio...";
+            enterRole();
+            return;
+          }
+
+          waitingStatus.textContent = "Esperando señal del GM...";
+        } catch (error) {
+          waitingStatus.textContent = "Sin conexión con la red del instituto. Reintentando...";
+        }
+      }
+
+      checkSession();
+      window.setInterval(checkSession, 1000);
+    </script>
+  </body>
+</html>

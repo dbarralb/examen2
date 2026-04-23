@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instituto Newton — Game UI Kit</title>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+<link rel="stylesheet" href="https://unpkg.com/lucide-static@0.344.0/font/lucide.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #050F1A; font-family: 'League Spartan', sans-serif; color: #E2D6AF; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #012E55; } ::-webkit-scrollbar-thumb { background: #1A5FA8; }
+  .bp-bg {
+    background-color: #013E70;
+    background-image: linear-gradient(rgba(2,118,214,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(2,118,214,0.07) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+</style>
+</head>
+<body>
+<script type="text/babel" src="Components.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── LOGO ──────────────────────────────────────────────────────
+function Logo({ size = 'md' }) {
+  const s = size === 'sm' ? 0.5 : size === 'lg' ? 1.2 : 1;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 * s, flexShrink: 0 }}>
+      <div style={{ width: 48*s, height: 55*s, background: '#0276D6', clipPath: 'polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 40*s, height: 46*s, background: '#013E70', clipPath: 'polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+          <div style={{ fontSize: 18*s, fontWeight: 900, color: '#F5B800', lineHeight: 1, letterSpacing: '-0.02em' }}>N</div>
+          <div style={{ fontSize: 7*s, color: '#E2D6AF' }}>⚛</div>
+        </div>
+      </div>
+      <div style={{ lineHeight: 1 }}>
+        <div style={{ fontSize: 7*s, fontWeight: 700, letterSpacing: '0.2em', color: '#E2D6AF', textTransform: 'uppercase' }}>Instituto</div>
+        <div style={{ fontSize: 14*s, fontWeight: 900, color: '#F5B800', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1 }}>Newton</div>
+        <div style={{ fontSize: 6*s, fontWeight: 700, letterSpacing: '0.15em', color: '#5A7A99', textTransform: 'uppercase' }}>Desde 1922</div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN MENU ─────────────────────────────────────────────────
+function MainMenu({ onStart }) {
+  const [hover, setHover] = useState(null);
+  const items = ['Nueva Partida', 'Continuar', 'Opciones', 'Créditos', 'Salir'];
+  return (
+    <div className="bp-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+      {/* Blueprint floor plan background hint */}
+      <div style={{ position: 'absolute', right: -60, top: '50%', transform: 'translateY(-50%)', opacity: 0.06, fontSize: 400, fontWeight: 900, color: '#0276D6', userSelect: 'none', lineHeight: 1 }}>N</div>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: '#0276D6' }}></div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 48 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <Logo size="lg" />
+          <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.25em', color: '#5A7A99', textTransform: 'uppercase' }}>Gravedad para mentes brillantes</div>
+          <div style={{ width: 120, height: 1, background: '#1A5FA8' }}></div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+          {items.map((item, i) => (
+            <button key={item}
+              onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}
+              onClick={i === 0 ? onStart : i === 1 ? onStart : undefined}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0',
+                transition: 'all 150ms',
+              }}>
+              <div style={{ width: 24, height: 1, background: hover === i ? '#0276D6' : '#1A5FA8', transition: 'background 150ms' }}></div>
+              <span style={{
+                fontSize: 22, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+                color: hover === i ? '#fff' : '#C5D3E0',
+                transition: 'color 150ms', transform: hover === i ? 'translateX(4px)' : 'translateX(0)',
+                display: 'block', transition: 'all 150ms'
+              }}>{item}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', color: '#1E3A55', textTransform: 'uppercase' }}>v1.0.0 — © Instituto Newton 2026</div>
+      </div>
+    </div>
+  );
+}
+
+// ── LOADING SCREEN ────────────────────────────────────────────
+function LoadingScreen({ onDone }) {
+  const [progress, setProgress] = useState(0);
+  const [text, setText] = useState('Iniciando sistemas...');
+  const msgs = ['Iniciando sistemas...', 'Cargando planos del instituto...', 'Verificando accesos...', 'Preparando misión...', 'Listo.'];
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(p => {
+        const next = Math.min(p + Math.random() * 8 + 2, 100);
+        setText(msgs[Math.floor((next/100) * (msgs.length - 1))]);
+        if (next >= 100) { clearInterval(interval); setTimeout(onDone, 600); }
+        return next;
+      });
+    }, 120);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: '#013E70', position: 'relative', overflow: 'hidden', display: 'flex' }}>
+      {/* Blueprint map area */}
+      <div className="bp-bg" style={{ flex: 1, position: 'relative', padding: 40 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, #013E70 100%)' }}></div>
+        {/* Mini floor plan */}
+        {[
+          { left: '5%', top: '10%', w: '18%', h: '35%', label: 'Gimnasio' },
+          { left: '27%', top: '5%', w: '12%', h: '20%', label: 'Aulas' },
+          { left: '42%', top: '5%', w: '12%', h: '20%', label: 'Lab. CC' },
+          { left: '57%', top: '5%', w: '10%', h: '20%', label: 'Inform.' },
+          { left: '27%', top: '50%', w: '20%', h: '25%', label: 'Comedor' },
+          { left: '50%', top: '50%', w: '10%', h: '15%', label: 'Dirección' },
+          { left: '63%', top: '50%', w: '10%', h: '15%', label: 'Consejo' },
+          { left: '27%', top: '25%', w: '30%', h: '22%', label: 'Patio Interior' },
+          { left: '42%', top: '70%', w: '8%', h: '18%', label: 'Recepción' },
+        ].map(({ left, top, w, h, label }, i) => (
+          <div key={i} style={{ position: 'absolute', left, top, width: w, height: h, border: '1px solid rgba(2,118,214,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(226,214,175,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>{label}</span>
+          </div>
+        ))}
+        {/* Logo bottom-left */}
+        <div style={{ position: 'absolute', bottom: 32, left: 32 }}><Logo size="md" /></div>
+      </div>
+
+      {/* Text panel */}
+      <div style={{ width: 380, padding: '48px 40px', display: 'flex', flexDirection: 'column', gap: 24, justifyContent: 'center' }}>
+        <div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1.2, textTransform: 'uppercase', letterSpacing: '-0.01em' }}>Newton:</div>
+          <div style={{ fontSize: 26, fontWeight: 900, color: '#E2D6AF', lineHeight: 1.2, letterSpacing: '-0.01em' }}>"Gravedad para<br/>mentes brillantes"</div>
+        </div>
+        <div style={{ fontSize: 13, color: '#C5D3E0', lineHeight: 1.7 }}>
+          El Instituto Newton es un prestigioso centro con más de 100 años formando a las élites científicas, reconocido por su excelencia académica.
+        </div>
+        <div style={{ borderLeft: '2px solid #0276D6', paddingLeft: 16 }}>
+          <div style={{ fontSize: 13, fontStyle: 'italic', color: '#8FA8C0', lineHeight: 1.6 }}>"El Instituto Newton no presume de secretos. Pero tampoco los niega."</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#0276D6', marginTop: 6, letterSpacing: '0.05em' }}>— Anne, Profesora de Química</div>
+        </div>
+        <div style={{ marginTop: 16 }}>
+          <NProgress value={progress} max={100} label="Cargando" color="#0276D6" />
+          <div style={{ fontSize: 11, fontFamily: 'Courier New, monospace', color: '#3A5A78', marginTop: 8, letterSpacing: '0.06em' }}>{text}</div>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.25em', color: '#0276D6', textTransform: 'uppercase', animation: 'blink 1.2s step-end infinite' }}>CARGANDO...</div>
+      </div>
+      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+    </div>
+  );
+}
+
+// ── HUD / GAME SCREEN ─────────────────────────────────────────
+function GameHUD({ onMenu }) {
+  const [time, setTime] = useState(3540);
+  const [clueModal, setClueModal] = useState(false);
+  const [notepad, setNotepad] = useState(false);
+  const [notes, setNotes] = useState('');
+  const urgent = time < 300;
+
+  useEffect(() => {
+    const t = setInterval(() => setTime(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="bp-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* Top HUD bar */}
+      <div style={{ background: 'rgba(1,46,85,0.95)', borderBottom: '1px solid #1A5FA8', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(8px)' }}>
+        <Logo size="sm" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div style={{ textAlign: 'center' }}>
+            <NLabel>Tiempo</NLabel>
+            <NTimer seconds={time} urgent={urgent} />
+          </div>
+          <NDivider />
+          <div>
+            <NLabel>Misión Actual</NLabel>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 2 }}>Sala de Profesores — Código A</div>
+          </div>
+          <NBadge status="info">En Curso</NBadge>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <NBtn variant="ghost" size="sm" onClick={() => setNotepad(true)}>Notas</NBtn>
+          <NBtn variant="ghost" size="sm" onClick={onMenu}>Menú</NBtn>
+        </div>
+      </div>
+
+      {/* Main game area */}
+      <div style={{ flex: 1, display: 'flex', gap: 0 }}>
+        {/* Sidebar — missions */}
+        <div style={{ width: 260, background: 'rgba(1,46,85,0.8)', borderRight: '1px solid #1A5FA8', padding: 20, display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+          <NLabel>Misiones Activas</NLabel>
+          {[
+            { id: '01', title: 'Encontrar el archivo rojo', status: 'success', done: true },
+            { id: '02', title: 'Acceder a la sala del director', status: 'info', done: false },
+            { id: '03', title: 'Descifrar el código del archivador', status: 'warning', done: false },
+            { id: '04', title: 'Hablar con Anne', status: 'muted', done: false },
+          ].map(m => (
+            <NCard key={m.id} style={{ opacity: m.done ? 0.5 : 1 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: m.done ? '#2ECC71' : '#1A5FA8', lineHeight: 1, flexShrink: 0 }}>{m.id}</div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: m.done ? '#5A7A99' : '#fff', textDecoration: m.done ? 'line-through' : 'none', lineHeight: 1.3 }}>{m.title}</div>
+                  <div style={{ marginTop: 6 }}><NBadge status={m.status}>{m.done ? 'Hecho' : m.status === 'warning' ? 'Urgente' : m.status === 'info' ? 'Activo' : 'Pendiente'}</NBadge></div>
+                </div>
+              </div>
+            </NCard>
+          ))}
+          <NDivider />
+          <NLabel>Inventario</NLabel>
+          {['Llave maestra #4', 'Nota cifrada', 'Tarjeta Nivel B'].map(item => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#011E3A', border: '1px solid #1A5FA8', borderRadius: 4, cursor: 'pointer' }}>
+              <div style={{ width: 8, height: 8, background: '#0276D6', flexShrink: 0 }}></div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#E2D6AF' }}>{item}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Center — room view */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.25em', color: '#5A7A99', textTransform: 'uppercase' }}>Ubicación Actual</div>
+          <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.01em', textAlign: 'center' }}>Sala de Profesores</div>
+          <NBadge status="info">Sala 10</NBadge>
+
+          {/* Room illustration placeholder */}
+          <div style={{ width: '100%', maxWidth: 520, height: 220, background: '#011E3A', border: '1px solid #1A5FA8', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(2,118,214,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(2,118,214,0.05) 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+            <div style={{ textAlign: 'center', color: '#1A5FA8' }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>🗂</div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Ilustración de sala</div>
+              <div style={{ fontSize: 10, color: '#3A5A78', marginTop: 4 }}>Pendiente de arte final</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <NBtn variant="primary" onClick={() => setClueModal(true)}>Ver Pista</NBtn>
+            <NBtn variant="secondary">Examinar Sala</NBtn>
+            <NBtn variant="ghost">Mapa</NBtn>
+          </div>
+        </div>
+
+        {/* Right sidebar — log */}
+        <div style={{ width: 240, background: 'rgba(1,46,85,0.8)', borderLeft: '1px solid #1A5FA8', padding: 20, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
+          <NLabel>Registro</NLabel>
+          {[
+            { time: '58:42', msg: 'Encontraste el archivo rojo.' },
+            { time: '55:10', msg: 'Accediste al pasillo norte.' },
+            { time: '51:33', msg: 'Anne te dio una pista sobre el código.' },
+            { time: '48:02', msg: 'Tarjeta Nivel B obtenida.' },
+          ].map((entry, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <div style={{ fontSize: 10, fontFamily: 'Courier New, monospace', color: '#3A5A78', flexShrink: 0, marginTop: 2 }}>{entry.time}</div>
+              <div style={{ fontSize: 12, color: '#8FA8C0', lineHeight: 1.4 }}>{entry.msg}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Clue Modal */}
+      <NModal title="Pista Desbloqueada" visible={clueModal} onClose={() => setClueModal(false)}>
+        <div style={{ fontSize: 14, color: '#C5D3E0', lineHeight: 1.7, marginBottom: 20 }}>
+          El archivador rojo está cerca del escritorio norte. Busca bajo la segunda carpeta — la que tiene la etiqueta <code style={{ background: 'rgba(2,118,214,0.1)', color: '#1A8FEF', padding: '1px 6px', borderRadius: 4, fontFamily: 'Courier New' }}>SECTOR_7</code>.
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <NBtn variant="ghost" size="sm" onClick={() => setClueModal(false)}>Cerrar</NBtn>
+          <NBtn variant="primary" size="sm" onClick={() => setClueModal(false)}>Entendido</NBtn>
+        </div>
+      </NModal>
+
+      {/* Notepad Modal */}
+      <NModal title="Notas del Jugador" visible={notepad} onClose={() => setNotepad(false)}>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={6} placeholder="Escribe tus pistas aquí..."
+          style={{ width: '100%', background: '#011E3A', border: '1px solid #1A5FA8', color: '#E2D6AF', fontFamily: 'Courier New, monospace', fontSize: 13, padding: '12px 14px', resize: 'vertical', outline: 'none', lineHeight: 1.7, marginBottom: 16 }} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <NBtn variant="primary" size="sm" onClick={() => setNotepad(false)}>Guardar</NBtn>
+        </div>
+      </NModal>
+    </div>
+  );
+}
+
+// ── MISSION BRIEF ─────────────────────────────────────────────
+function MissionBrief({ onStart, onBack }) {
+  return (
+    <div className="bp-bg" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ maxWidth: 640, width: '90%' }}>
+        <NCard glow>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 20 }}>
+            <div style={{ fontSize: 48, fontWeight: 900, color: '#0276D6', lineHeight: 1, flexShrink: 0 }}>02</div>
+            <div>
+              <NLabel>Misión Principal</NLabel>
+              <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.01em', marginTop: 4 }}>Acceso Restringido</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <NBadge status="warning">Urgente</NBadge>
+                <NBadge status="info">Sala 10</NBadge>
+              </div>
+            </div>
+          </div>
+          <NDivider />
+          <div style={{ fontSize: 14, color: '#C5D3E0', lineHeight: 1.8, marginBottom: 20 }}>
+            Debes acceder a la sala del director antes de que termine la jornada escolar. Se sabe que guarda documentos comprometedores en el archivador norte — el que siempre permanece cerrado con llave.
+          </div>
+          <div style={{ background: 'rgba(2,118,214,0.08)', border: '1px solid #1A5FA8', borderRadius: 4, padding: '12px 16px', marginBottom: 20 }}>
+            <NLabel>Objetivos</NLabel>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {['Obtener la llave de la sala del director', 'Acceder al archivador norte', 'Fotografiar los documentos comprometedores'].map((obj, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13, color: '#E2D6AF' }}>
+                  <div style={{ width: 16, height: 16, border: '1px solid #0276D6', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#0276D6', fontWeight: 900 }}>{i + 1}</div>
+                  {obj}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ borderLeft: '2px solid #F5B800', paddingLeft: 14, marginBottom: 24 }}>
+            <div style={{ fontSize: 12, fontStyle: 'italic', color: '#8FA8C0', lineHeight: 1.6 }}>"El director tiene costumbre de esconder la llave bajo la maceta del pasillo norte. Pero hay cámaras."</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#F5B800', marginTop: 4, letterSpacing: '0.06em', textTransform: 'uppercase' }}>— Fuente anónima</div>
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <NBtn variant="ghost" onClick={onBack}>Volver</NBtn>
+            <NBtn variant="primary" onClick={onStart}>Iniciar Misión</NBtn>
+          </div>
+        </NCard>
+      </div>
+    </div>
+  );
+}
+
+// ── CHAPTER SELECT ────────────────────────────────────────────
+function ChapterSelect({ onSelect }) {
+  const chapters = [
+    { n: '01', title: 'El Primer Día', rooms: 4, status: 'success', time: '42:18' },
+    { n: '02', title: 'Acceso Restringido', rooms: 6, status: 'info', time: null },
+    { n: '03', title: 'La Prueba Final', rooms: 8, status: 'muted', time: null },
+  ];
+  return (
+    <div className="bp-bg" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
+      <div style={{ textAlign: 'center' }}>
+        <NLabel>Instituto Newton</NLabel>
+        <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.01em', marginTop: 8 }}>Selecciona Capítulo</div>
+      </div>
+      <div style={{ display: 'flex', gap: 20 }}>
+        {chapters.map(ch => (
+          <NCard key={ch.n} glow={ch.status === 'info'} style={{ width: 200, cursor: ch.status !== 'muted' ? 'pointer' : 'not-allowed', opacity: ch.status === 'muted' ? 0.4 : 1 }}
+            onClick={ch.status !== 'muted' ? () => onSelect(ch.n) : undefined}>
+            <div style={{ fontSize: 40, fontWeight: 900, color: ch.status === 'success' ? '#2ECC71' : '#0276D6', lineHeight: 1, marginBottom: 8 }}>{ch.n}</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '-0.01em', marginBottom: 8, lineHeight: 1.2 }}>{ch.title}</div>
+            <NDivider />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, color: '#5A7A99' }}>{ch.rooms} salas</span>
+              {ch.time && <span style={{ fontSize: 11, fontFamily: 'Courier New', color: '#2ECC71' }}>{ch.time}</span>}
+            </div>
+            <NBadge status={ch.status}>{ch.status === 'success' ? 'Completado' : ch.status === 'info' ? 'En Curso' : 'Bloqueado'}</NBadge>
+          </NCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── APP ROOT ──────────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = useState(() => localStorage.getItem('newton_screen') || 'loading');
+  const go = s => { localStorage.setItem('newton_screen', s); setScreen(s); };
+
+  return (
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {screen === 'loading'   && <LoadingScreen onDone={() => go('menu')} />}
+      {screen === 'menu'      && <MainMenu onStart={() => go('chapters')} />}
+      {screen === 'chapters'  && <ChapterSelect onSelect={() => go('brief')} />}
+      {screen === 'brief'     && <MissionBrief onStart={() => go('hud')} onBack={() => go('chapters')} />}
+      {screen === 'hud'       && <GameHUD onMenu={() => go('menu')} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+<div id="root" style="width:100vw;height:100vh;overflow:hidden;"></div>
+</body>
+</html>

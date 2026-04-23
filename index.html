@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>El Examen 2 - Acceso</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="access-shell">
+      <section class="access-panel panel">
+        <p class="eyebrow">El Examen 2</p>
+        <h1>Codigo de sesion</h1>
+        <p class="access-copy">
+          Pide al Game Master el codigo de 6 digitos de esta partida. Se genera uno nuevo cada vez que el GM inicia una partida.
+        </p>
+        <form id="access-form" class="access-form">
+          <label for="session-code">Codigo</label>
+          <input id="session-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" />
+          <button class="primary-button" type="submit">Entrar</button>
+        </form>
+        <p id="access-status" class="waiting-status" role="status" aria-live="polite">Esperando codigo...</p>
+        <a class="gm-access-link" href="gm.html">Entrar como Game Master</a>
+      </section>
+    </main>
+    <script>
+      const firebaseBaseUrl = "https://project-butterfly-d0242-default-rtdb.firebaseio.com";
+      const form = document.querySelector("#access-form");
+      const input = document.querySelector("#session-code");
+      const statusEl = document.querySelector("#access-status");
+
+      window.requestAnimationFrame(() => {
+        document.body.classList.add("page-ready");
+      });
+
+      function firebaseUrl(path) {
+        return `${firebaseBaseUrl}/${path}.json`;
+      }
+
+      function leaveTo(url) {
+        document.body.classList.add("page-leaving");
+        window.setTimeout(() => {
+          window.location.href = url;
+        }, 220);
+      }
+
+      function normalizeCode(value) {
+        return (value || "").replace(/\D/g, "").slice(0, 6);
+      }
+
+      input.addEventListener("input", () => {
+        input.value = normalizeCode(input.value);
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const code = normalizeCode(input.value);
+
+        if (code.length !== 6) {
+          statusEl.textContent = "Introduce los 6 digitos del codigo.";
+          return;
+        }
+
+        try {
+          statusEl.textContent = "Comprobando codigo...";
+          const response = await fetch(firebaseUrl("session"), { cache: "no-store" });
+          const session = await response.json();
+          const activeCode = session && session.accessCode ? String(session.accessCode) : "";
+
+          if (!activeCode) {
+            statusEl.textContent = "El GM todavia no ha iniciado una partida con codigo.";
+            return;
+          }
+
+          if (code !== activeCode) {
+            statusEl.textContent = "Codigo incorrecto.";
+            return;
+          }
+
+          window.localStorage.setItem("elExamen2.sessionCode", code);
+          leaveTo("roles.html");
+        } catch (error) {
+          statusEl.textContent = "No se pudo comprobar Firebase. Reintentando...";
+        }
+      });
+
+      document.querySelectorAll("a[href]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const href = link.getAttribute("href");
+
+          if (!href || href.startsWith("#") || link.target) {
+            return;
+          }
+
+          event.preventDefault();
+          leaveTo(href);
+        });
+      });
+    </script>
+  </body>
+</html>

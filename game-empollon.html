@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>El Examen 2 - El Empollón</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-role="empollon">
+    <main class="game-shell">
+      <section class="scene-wrap panel">
+        <div id="scene" class="scene" aria-label="Escenario del gimnasio">
+          <div class="scene-overlay-label">Targets clicables</div>
+          <div id="selection-status" class="status-pill">Target seleccionado: ninguno</div>
+          <div id="game-timer" class="game-timer player-game-timer" data-status="idle">Tiempo: 00:00</div>
+          <section class="log-overlay" aria-label="Historial">
+            <header class="overlay-mini-header">
+              <h2>Historial</h2>
+            </header>
+            <ul id="log-list" class="log-list"></ul>
+          </section>
+          <section class="chat-overlay" aria-label="Chat">
+            <header class="overlay-mini-header">
+              <h2>Chat</h2>
+            </header>
+            <ul id="chat-list" class="chat-list"></ul>
+            <form id="chat-form" class="chat-form">
+              <input id="chat-input" type="text" placeholder="Escribe un mensaje..." autocomplete="off" />
+              <button class="primary-button" type="submit">Enviar</button>
+            </form>
+          </section>
+          <section id="queue-panel" class="queue-overlay" aria-label="Cola de acciones">
+            <header class="overlay-mini-header">
+              <h2>Cola</h2>
+              <button id="resolve-pulse-button" class="primary-button hidden-control" type="button">Resolver pulso</button>
+            </header>
+            <div id="queue-list" class="queue-list"></div>
+            <p id="action-warning" class="warning" role="status" aria-live="polite"></p>
+          </section>
+          <section class="intent-overlay" aria-label="Acción preparada">
+            <p id="intent-preview" class="intent-preview">Selecciona carta y objeto</p>
+            <button id="enqueue-button" class="enqueue-button" type="button">Encolar acción</button>
+          </section>
+          <section class="actions-overlay" aria-label="Pull de cartas">
+            <p id="player-role-label" class="hidden-control">Jugador 1</p>
+            <div id="card-status" class="status-pill">Carta: ninguna</div>
+            <div id="cards-list" class="cards-list"></div>
+          </section>
+          <aside class="role-device role-device-overlay panel">
+            <header class="panel-header compact">
+              <div>
+                <p class="eyebrow">Pantalla de rol</p>
+                <h2>Dispositivo de rol</h2>
+              </div>
+            </header>
+            <div id="device-screen" class="device-screen"></div>
+          </aside>
+        </div>
+      </section>
+
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

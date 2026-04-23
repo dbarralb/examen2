@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: #050F1A; font-family: 'League Spartan', sans-serif; padding: 20px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .item { display: flex; align-items: center; gap: 10px; background: #012E55; border: 1px solid #1A5FA8; border-radius: 8px; padding: 12px 16px; min-width: 160px; }
+  .dot  { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; }
+  .name { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #E2D6AF; display: block; }
+  .hex  { font-size: 11px; color: #5A7A99; font-family: 'Courier New', monospace; }
+  .bg-pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 4px; margin-top: 4px; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="item"><div class="dot" style="background:#2ECC71;"></div><div><span class="name">Success</span><div class="hex">#2ECC71</div><span class="bg-pill" style="background:rgba(46,204,113,0.12);color:#2ECC71;">bg 12%</span></div></div>
+<div class="item"><div class="dot" style="background:#F5B800;"></div><div><span class="name">Warning</span><div class="hex">#F5B800</div><span class="bg-pill" style="background:rgba(245,184,0,0.12);color:#F5B800;">bg 12%</span></div></div>
+<div class="item"><div class="dot" style="background:#E74C3C;"></div><div><span class="name">Danger</span><div class="hex">#E74C3C</div><span class="bg-pill" style="background:rgba(231,76,60,0.12);color:#E74C3C;">bg 12%</span></div></div>
+<div class="item"><div class="dot" style="background:#0276D6;"></div><div><span class="name">Info</span><div class="hex">#0276D6</div><span class="bg-pill" style="background:rgba(2,118,214,0.12);color:#0276D6;">bg 12%</span></div></div>
+</body></html>

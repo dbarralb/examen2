@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HEXER - System Bypass</title>
+    <style>
+        /* FUENTE ESTILO TERMINAL */
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
+
+        :root {
+            --neon-green: #39FF14;
+            --dark-green: #052c05;
+            --bg-black: #0a0a0a;
+            --error-red: #ff003c;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon-green);
+            font-family: 'Fira Code', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* EFECTO CRT Y LÍNEAS DE ESCANEO */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+
+        header {
+            padding: 15px;
+            border-bottom: 2px solid var(--neon-green);
+            background: rgba(0, 40, 0, 0.2);
+            z-index: 10;
+        }
+
+        .system-status {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* BARRA DE TIEMPO */
+        .timer-bar-container {
+            width: 100%;
+            height: 4px;
+            background: var(--dark-green);
+            margin-bottom: 10px;
+        }
+        #timer-fill {
+            width: 100%;
+            height: 100%;
+            background: var(--neon-green);
+            transition: width 0.1s linear;
+        }
+
+        .target-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .hex-slot {
+            width: 50px;
+            height: 40px;
+            border: 1px dashed var(--neon-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .hex-slot.active {
+            border-style: solid;
+            box-shadow: 0 0 10px var(--neon-green);
+            background: var(--dark-green);
+            animation: pulse 1s infinite;
+        }
+
+        .hex-slot.completed {
+            background: var(--neon-green);
+            color: var(--bg-black);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; }
+        }
+
+        #game-board {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle, #0a1a0a 0%, #000 100%);
+        }
+
+        /* CÓDIGOS FLOTANTES */
+        .floating-hex {
+            position: absolute;
+            color: var(--neon-green);
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 15px; /* Más área de toque para móvil */
+            text-shadow: 0 0 5px var(--neon-green);
+            z-index: 50;
+            touch-action: none;
+        }
+
+        @keyframes fall {
+            from { transform: translateY(-50px); }
+            to { transform: translateY(110vh); }
+        }
+
+        /* OVERLAYS */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 { font-size: 2rem; margin-bottom: 10px; color: var(--neon-green); text-shadow: 0 0 10px var(--neon-green); }
+
+        .btn {
+            background: transparent;
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 15px 30px;
+            margin: 10px;
+            font-family: inherit;
+            width: 240px;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .btn:active {
+            background: var(--neon-green);
+            color: var(--bg-black);
+        }
+
+        /* FEEDBACK VISUAL */
+        .error-flash {
+            animation: flash 0.2s;
+        }
+        @keyframes flash {
+            0% { background: rgba(255, 0, 0, 0.4); }
+            100% { background: transparent; }
+        }
+
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="system-status">
+            <span>Status: Connected</span>
+            <span id="timer-text">Time: --</span>
+        </div>
+        <div class="timer-bar-container">
+            <div id="timer-fill"></div>
+        </div>
+        <div class="target-container" id="target-buffer"></div>
+    </header>
+
+    <main id="game-board">
+        <!-- MENÚ INICIAL -->
+        <div id="start-menu" class="overlay">
+            <h1>HEXER v1.0</h1>
+            <p style="margin-bottom: 20px; font-size: 0.8rem;">[ SELECT DIFFICULTY TO BYPASS ]</p>
+            <button class="btn" data-diff="easy">Fácil (1 Cod)</button>
+            <button class="btn" data-diff="medium">Medio (3 Cod)</button>
+            <button class="btn" data-diff="hard">Difícil (5 Cod)</button>
+        </div>
+
+        <!-- PANTALLA FINAL -->
+        <div id="end-screen" class="overlay hidden">
+            <h1 id="end-title">ACCESS GRANTED</h1>
+            <p id="end-msg" style="margin-bottom: 20px;">System Compromised</p>
+            <button class="btn" onclick="location.reload()">Reiniciar</button>
+        </div>
+    </main>
+
+    <script>
+        // --- MOTOR DE SONIDO (WEB AUDIO API) ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if(!audioCtx) audioCtx = new AudioCtx();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sounds = {
+            start: () => playTone(400, 'square', 0.2),
+            hit: () => playTone(800, 'sine', 0.1),
+            error: () => playTone(150, 'sawtooth', 0.3, 0.2),
+            victory: () => {
+                [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playTone(f, 'sine', 0.4), i * 150));
+            },
+            gameOver: () => {
+                [300, 200, 100].forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.5, 0.2), i * 200));
+            }
+        };
+
+        // --- LÓGICA DEL JUEGO ---
+        const gameBoard = document.getElementById('game-board');
+        const targetBuffer = document.getElementById('target-buffer');
+        const startMenu = document.getElementById('start-menu');
+        const endScreen = document.getElementById('end-screen');
+        const timerFill = document.getElementById('timer-fill');
+        const timerText = document.getElementById('timer-text');
+
+        let gameState = {
+            targets: [],
+            currentIndex: 0,
+            isPlaying: false,
+            timeLeft: 0,
+            maxTime: 0
+        };
+
+        const CONFIG = {
+            easy: { targets: 1, speed: 4, spawnRate: 800, time: 15 },
+            medium: { targets: 3, speed: 3.5, spawnRate: 600, time: 25 },
+            hard: { targets: 5, speed: 2.5, spawnRate: 400, time: 35 }
+        };
+
+        function generateHex() {
+            const chars = '0123456789ABCDEF';
+            return chars[Math.floor(Math.random() * 16)] + chars[Math.floor(Math.random() * 16)];
+        }
+
+        function startGame(diffKey) {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            sounds.start();
+
+            const settings = CONFIG[diffKey];
+            gameState.isPlaying = true;
+            gameState.currentIndex = 0;
+            gameState.targets = [];
+            gameState.timeLeft = settings.time;
+            gameState.maxTime = settings.time;
+            
+            // Generar la secuencia objetivo
+            for(let i=0; i<settings.targets; i++) {
+                gameState.targets.push(generateHex());
+            }
+
+            renderBuffer();
+            startMenu.classList.add('hidden');
+            
+            gameLoop(settings);
+            updateTimer();
+        }
+
+        function renderBuffer() {
+            targetBuffer.innerHTML = '';
+            gameState.targets.forEach((hex, index) => {
+                const slot = document.createElement('div');
+                slot.className = `hex-slot ${index === 0 ? 'active' : ''}`;
+                slot.id = `slot-${index}`;
+                slot.innerText = hex;
+                targetBuffer.appendChild(slot);
+            });
+        }
+
+        function spawnHex(settings) {
+            if(!gameState.isPlaying) return;
+
+            const hexDiv = document.createElement('div');
+            hexDiv.className = 'floating-hex';
+            
+            // Probabilidad de spawn del target actual para que el juego sea fluido
+            const isTarget = Math.random() > 0.75;
+            hexDiv.innerText = isTarget ? 
+                gameState.targets[gameState.currentIndex] : 
+                generateHex();
+
+            hexDiv.style.left = (Math.random() * 80 + 5) + '%';
+            hexDiv.style.animation = `fall ${settings.speed}s linear forwards`;
+
+            hexDiv.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                checkHit(this.innerText, this);
+            });
+
+            gameBoard.appendChild(hexDiv);
+            setTimeout(() => hexDiv.remove(), settings.speed * 1000);
+        }
+
+        function checkHit(value, element) {
+            if(!gameState.isPlaying) return;
+            const currentTarget = gameState.targets[gameState.currentIndex];
+
+            if (value === currentTarget) {
+                sounds.hit();
+                document.getElementById(`slot-${gameState.currentIndex}`).className = 'hex-slot completed';
+                element.style.color = '#FFF';
+                element.innerText = 'OK';
+                
+                gameState.currentIndex++;
+
+                if (gameState.currentIndex === gameState.targets.length) {
+                    endGame(true);
+                } else {
+                    document.getElementById(`slot-${gameState.currentIndex}`).className = 'hex-slot active';
+                }
+            } else {
+                sounds.error();
+                if (navigator.vibrate) navigator.vibrate(50);
+                gameBoard.classList.add('error-flash');
+                setTimeout(() => gameBoard.classList.remove('error-flash'), 200);
+            }
+        }
+
+        function updateTimer() {
+            const timerInterval = setInterval(() => {
+                if(!gameState.isPlaying) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                gameState.timeLeft -= 0.1;
+                const percent = (gameState.timeLeft / gameState.maxTime) * 100;
+                timerFill.style.width = percent + '%';
+                timerText.innerText = `Time: ${Math.max(0, Math.ceil(gameState.timeLeft))}s`;
+
+                if(gameState.timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame(false);
+                }
+            }, 100);
+        }
+
+        function gameLoop(settings) {
+            if(!gameState.isPlaying) return;
+            spawnHex(settings);
+            setTimeout(() => gameLoop(settings), settings.spawnRate);
+        }
+
+        function endGame(success) {
+            gameState.isPlaying = false;
+            endScreen.classList.remove('hidden');
+            if(success) {
+                sounds.victory();
+                document.getElementById('end-title').innerText = "ACCESS GRANTED";
+                document.getElementById('end-title').style.color = "var(--neon-green)";
+                document.getElementById('end-msg').innerText = "Security Override Successful";
+            } else {
+                sounds.gameOver();
+                document.getElementById('end-title').innerText = "CONNECTION LOST";
+                document.getElementById('end-title').style.color = "var(--error-red)";
+                document.getElementById('end-msg').innerText = "Security Countermeasures Detected";
+            }
+        }
+
+        // Inicializar botones
+        document.querySelectorAll('.btn[data-diff]').forEach(btn => {
+            btn.onclick = () => startGame(btn.dataset.diff);
+        });
+    </script>
+</body>
+</html>

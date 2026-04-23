@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #013E70; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .card { background: #012E55; border: 1px solid #1A5FA8; border-radius: 8px; padding: 20px; width: 200px; box-shadow: 0 2px 8px rgba(1,62,112,0.4); }
+  .card-title { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #fff; margin: 0 0 6px; }
+  .card-body { font-size: 13px; color: #C5D3E0; line-height: 1.5; margin: 0 0 14px; }
+  .card-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+  .card-number { font-size: 32px; font-weight: 900; color: #0276D6; line-height: 1; }
+  .card-sub { font-size: 11px; color: #5A7A99; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+  .card-glow { box-shadow: 0 0 24px rgba(2,118,214,0.3); border-color: #0276D6; }
+  .card-gold { border-color: #F5B800; box-shadow: 0 0 16px rgba(245,184,0,0.2); }
+  .divider { border: none; border-top: 1px solid #1A5FA8; margin: 12px 0; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="card">
+  <div class="card-title">Misión Activa</div>
+  <div class="card-body">Encuentra el código en la sala del director.</div>
+  <span class="card-tag" style="background:rgba(2,118,214,0.15);color:#0276D6;">En Curso</span>
+</div>
+<div class="card card-glow">
+  <div class="card-title">Pista Desbloqueada</div>
+  <div class="card-body">El archivador rojo está cerca del escritorio norte.</div>
+  <span class="card-tag" style="background:rgba(46,204,113,0.12);color:#2ECC71;">Nueva</span>
+</div>
+<div class="card card-gold">
+  <div class="card-number">07</div>
+  <div class="card-sub">Sala de Informática</div>
+  <hr class="divider">
+  <div class="card-body" style="margin:0;font-size:12px;">Acceso restringido. Se requiere tarjeta Nivel B.</div>
+</div>
+<div class="card" style="opacity:0.5;">
+  <div class="card-title">Sala Bloqueada</div>
+  <div class="card-body">Aún no tienes acceso a esta área.</div>
+  <span class="card-tag" style="background:rgba(255,255,255,0.06);color:#3A5A78;">Bloqueado</span>
+</div>
+</body></html>

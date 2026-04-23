@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #013E70; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .glabel { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1A5FA8; margin-bottom: 4px; }
+  button { font-family: 'League Spartan', sans-serif; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border: none; cursor: pointer; transition: all 150ms; }
+
+  .btn-primary { background: #0276D6; color: #fff; padding: 12px 24px; font-size: 14px; border-radius: 0; }
+  .btn-primary:hover { background: #1A8FEF; }
+
+  .btn-secondary { background: transparent; color: #0276D6; padding: 11px 23px; font-size: 14px; border-radius: 0; border: 1px solid #0276D6; }
+  .btn-secondary:hover { background: rgba(2,118,214,0.1); }
+
+  .btn-ghost { background: transparent; color: #E2D6AF; padding: 11px 23px; font-size: 14px; border-radius: 0; border: 1px solid #1A5FA8; }
+  .btn-ghost:hover { border-color: #E2D6AF; }
+
+  .btn-gold { background: #F5B800; color: #013E70; padding: 12px 24px; font-size: 14px; border-radius: 0; }
+  .btn-gold:hover { background: #FFD040; }
+
+  .btn-danger { background: #E74C3C; color: #fff; padding: 12px 24px; font-size: 14px; border-radius: 0; }
+
+  .btn-sm { padding: 8px 16px; font-size: 12px; }
+  .btn-lg { padding: 16px 32px; font-size: 16px; }
+  .btn-disabled { background: #1E3A55; color: #3A5A78; padding: 12px 24px; font-size: 14px; border-radius: 0; cursor: not-allowed; }
+
+  .btn-icon { background: #012E55; border: 1px solid #1A5FA8; color: #0276D6; padding: 10px 12px; font-size: 14px; border-radius: 0; display: flex; align-items: center; gap: 8px; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="group">
+  <div class="glabel">Primary</div>
+  <button class="btn-primary">Continuar</button>
+  <button class="btn-primary btn-sm">Continuar</button>
+  <button class="btn-primary btn-lg">Iniciar Misión</button>
+</div>
+<div class="group">
+  <div class="glabel">Secondary</div>
+  <button class="btn-secondary">Cancelar</button>
+  <button class="btn-ghost">Ver Mapa</button>
+</div>
+<div class="group">
+  <div class="glabel">Accent / Status</div>
+  <button class="btn-gold">⭐ Destacado</button>
+  <button class="btn-danger">Abandonar</button>
+  <button class="btn-disabled" disabled>Bloqueado</button>
+</div>
+<div class="group">
+  <div class="glabel">With Icon</div>
+  <button class="btn-icon">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    Siguiente Sala
+  </button>
+  <button class="btn-icon">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Ver Pista
+  </button>
+</div>
+</body></html>

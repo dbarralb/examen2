@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>El Examen 2 - Seleccion de rol</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="role-select-shell">
+      <section class="role-select-panel panel">
+        <p class="eyebrow">El Examen 2</p>
+        <h1>Selecciona tu rol</h1>
+        <p class="role-select-intro">
+          El codigo de sesion ya esta validado en este navegador. Elige una pantalla para probar su dispositivo y su pull de cartas.
+        </p>
+
+        <div class="role-grid" aria-label="Roles disponibles">
+          <a class="role-card empollon" href="waiting.html?role=empollon">
+            <span class="role-kicker">Interpretar sistemas</span>
+            <strong>El Empollón</strong>
+            <span>Lee protocolos, reduce incertidumbre y prepara resoluciones limpias.</span>
+            <em>Cartas: mirar_bien, consultar_apuntes</em>
+          </a>
+
+          <a class="role-card manitas" href="waiting.html?role=manitas">
+            <span class="role-kicker">Manipular mecanismos</span>
+            <strong>La Manitas</strong>
+            <span>Trastea, desmonta, apana y puentea objetos fisicos o tecnicos.</span>
+            <em>Cartas: apanar, puenteo_rapido, desmontar</em>
+          </a>
+
+          <a class="role-card bruto" href="waiting.html?role=bruto">
+            <span class="role-kicker">Forzar progreso</span>
+            <strong>El Bruto</strong>
+            <span>Empuja, revienta y desbloquea avances aunque pueda causar consecuencias.</span>
+            <em>Cartas: a_lo_bestia, empujar</em>
+          </a>
+
+          <a class="role-card mistica" href="waiting.html?role=mistica">
+            <span class="role-kicker">Logica rara util</span>
+            <strong>La Mística</strong>
+            <span>Encuentra patrones absurdos y soluciones alternativas en objetos comunes.</span>
+            <em>Cartas: y_si, esto_vibra_raro, ritual_improvisado</em>
+          </a>
+        </div>
+      </section>
+    </main>
+    <script>
+      const firebaseBaseUrl = "https://project-butterfly-d0242-default-rtdb.firebaseio.com";
+      const storedCode = window.localStorage.getItem("elExamen2.sessionCode") || "";
+
+      window.requestAnimationFrame(() => {
+        document.body.classList.add("page-ready");
+      });
+
+      function firebaseUrl(path) {
+        return `${firebaseBaseUrl}/${path}.json`;
+      }
+
+      function leaveTo(url) {
+        document.body.classList.add("page-leaving");
+        window.setTimeout(() => {
+          window.location.href = url;
+        }, 220);
+      }
+
+      async function verifyAccess() {
+        try {
+          const response = await fetch(firebaseUrl("session"), { cache: "no-store" });
+          const session = await response.json();
+          const activeCode = session && session.accessCode ? String(session.accessCode) : "";
+
+          if (!activeCode || storedCode !== activeCode) {
+            leaveTo("index.html");
+          }
+        } catch (error) {
+          leaveTo("index.html");
+        }
+      }
+
+      document.querySelectorAll("a[href]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          const href = link.getAttribute("href");
+
+          if (!href || href.startsWith("#") || link.target) {
+            return;
+          }
+
+          event.preventDefault();
+          leaveTo(href);
+        });
+      });
+
+      verifyAccess();
+    </script>
+  </body>
+</html>

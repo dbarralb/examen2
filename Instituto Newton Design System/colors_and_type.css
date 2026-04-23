@@ -1,0 +1,276 @@
+/* ============================================================
+   INSTITUTO NEWTON — Design System Tokens
+   colors_and_type.css
+   ============================================================ */
+
+@font-face {
+  font-family: 'League Spartan';
+  src: url('fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================
+   COLOR TOKENS — Base Palette
+   ============================================================ */
+:root {
+  /* Primary */
+  --color-navy:          #013E70;   /* Primary background, institutional base */
+  --color-navy-deep:     #012E55;   /* Cards, elevated surfaces */
+  --color-navy-darker:   #050F1A;   /* Near-black, overlays, deepest shadow */
+  --color-blue:          #0276D6;   /* Interactive primary, blueprint highlights */
+  --color-blue-light:    #1A8FEF;   /* Hover state for blue */
+  --color-blue-mid:      #1A5FA8;   /* Blueprint lines, dividers, borders */
+
+  /* Accent */
+  --color-cream:         #E2D6AF;   /* Body text, warm contrast */
+  --color-cream-light:   #F0EDD8;   /* Light cream for highlights */
+  --color-gold:          #F5B800;   /* Logo shield only; high-priority callouts */
+  --color-gold-dark:     #C9960A;   /* Gold pressed/hover */
+
+  /* Neutrals */
+  --color-white:         #FFFFFF;
+  --color-gray-100:      #E8EEF5;
+  --color-gray-200:      #C5D3E0;
+  --color-gray-300:      #8FA8C0;
+  --color-gray-400:      #5A7A99;
+  --color-gray-500:      #3A5A78;
+  --color-gray-600:      #1E3A55;
+  --color-gray-700:      #102840;
+
+  /* Semantic */
+  --color-success:       #2ECC71;
+  --color-success-bg:    rgba(46, 204, 113, 0.12);
+  --color-warning:       #F5B800;
+  --color-warning-bg:    rgba(245, 184, 0, 0.12);
+  --color-danger:        #E74C3C;
+  --color-danger-bg:     rgba(231, 76, 60, 0.12);
+  --color-info:          #0276D6;
+  --color-info-bg:       rgba(2, 118, 214, 0.12);
+
+  /* ============================================================
+     SEMANTIC UI COLOR ASSIGNMENTS
+     ============================================================ */
+
+  /* Backgrounds */
+  --bg-base:             var(--color-navy);
+  --bg-surface:          var(--color-navy-deep);
+  --bg-overlay:          rgba(1, 62, 112, 0.85);
+  --bg-blueprint:        var(--color-navy); /* + grid texture */
+
+  /* Foregrounds */
+  --fg-primary:          var(--color-white);
+  --fg-secondary:        var(--color-cream);
+  --fg-muted:            var(--color-gray-300);
+  --fg-inverse:          var(--color-navy);
+
+  /* Borders */
+  --border-subtle:       var(--color-blue-mid);   /* 1px */
+  --border-active:       var(--color-blue);        /* 2px, focus */
+  --border-gold:         var(--color-gold);        /* special callout */
+
+  /* Interactive */
+  --interactive-primary:       var(--color-blue);
+  --interactive-primary-hover: var(--color-blue-light);
+  --interactive-primary-press: #0260B0;
+
+  /* Shadow */
+  --shadow-card:    0 2px 8px rgba(1, 62, 112, 0.4);
+  --shadow-glow:    0 0 24px rgba(2, 118, 214, 0.3);
+  --shadow-deep:    0 8px 32px rgba(5, 15, 26, 0.6);
+
+  /* ============================================================
+     TYPOGRAPHY TOKENS
+     ============================================================ */
+
+  /* Font families */
+  --font-display:   'League Spartan', 'Arial Narrow', sans-serif;
+  --font-body:      'League Spartan', 'Arial Narrow', sans-serif;
+  --font-mono:      'Courier New', 'Courier', monospace;
+
+  /* Font weights */
+  --fw-light:       300;
+  --fw-regular:     400;
+  --fw-medium:      500;
+  --fw-semibold:    600;
+  --fw-bold:        700;
+  --fw-extrabold:   800;
+  --fw-black:       900;
+
+  /* Type scale (px) */
+  --text-xs:    12px;
+  --text-sm:    14px;
+  --text-base:  16px;
+  --text-md:    20px;
+  --text-lg:    24px;
+  --text-xl:    32px;
+  --text-2xl:   48px;
+  --text-3xl:   64px;
+  --text-4xl:   96px;
+
+  /* Line heights */
+  --lh-tight:    1.1;
+  --lh-heading:  1.2;
+  --lh-snug:     1.4;
+  --lh-body:     1.6;
+  --lh-relaxed:  1.8;
+
+  /* Letter spacing */
+  --ls-tight:    -0.02em;
+  --ls-normal:    0em;
+  --ls-wide:      0.05em;
+  --ls-wider:     0.1em;
+  --ls-widest:    0.2em;
+
+  /* ============================================================
+     SPACING TOKENS
+     ============================================================ */
+
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ============================================================
+     BORDER RADIUS TOKENS
+     ============================================================ */
+
+  --radius-none:   0px;
+  --radius-sm:     4px;    /* badges, chips */
+  --radius-md:     8px;    /* cards, tooltips */
+  --radius-full:   9999px; /* pills */
+  --radius-circle: 50%;    /* avatars */
+
+  /* ============================================================
+     ANIMATION TOKENS
+     ============================================================ */
+
+  --ease-standard:  cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-in:        cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:       cubic-bezier(0, 0, 0.2, 1);
+
+  --dur-micro:      150ms;
+  --dur-standard:   300ms;
+  --dur-scene:      600ms;
+}
+
+/* ============================================================
+   SEMANTIC TYPE STYLES
+   ============================================================ */
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--fw-black);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  color: var(--fg-primary);
+  text-transform: uppercase;
+}
+
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-tight);
+  color: var(--fg-primary);
+  text-transform: uppercase;
+}
+
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-normal);
+  color: var(--fg-primary);
+}
+
+h4, .h4 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg-primary);
+}
+
+h5, .h5 {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-snug);
+  color: var(--fg-secondary);
+}
+
+p, .body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+  color: var(--fg-secondary);
+}
+
+.body-sm {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-body);
+  color: var(--fg-secondary);
+}
+
+.caption {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--ls-wide);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+}
+
+code, .mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-blue-light);
+  background: rgba(2, 118, 214, 0.1);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-widest);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  font-weight: var(--fw-black);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  text-transform: uppercase;
+  color: var(--fg-primary);
+}
+
+/* Blueprint grid utility */
+.blueprint-bg {
+  background-color: var(--color-navy);
+  background-image:
+    linear-gradient(rgba(2, 118, 214, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 118, 214, 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+}

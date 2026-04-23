@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>El Examen 2 - Game Master</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body data-role="gm">
+    <main class="game-shell">
+      <section class="gm-monitor-wall panel">
+        <header class="panel-header">
+          <div>
+            <p class="eyebrow">Vista GM</p>
+            <h1>Monitores de jugadores</h1>
+          </div>
+        </header>
+        <div class="gm-monitor-grid" aria-label="Monitores de jugadores">
+          <article class="gm-monitor">
+            <header>El Empollón</header>
+            <iframe title="Monitor El Empollón" src="game-empollon.html?view=gm-monitor"></iframe>
+            <footer data-last-action-role="empollon">Última acción: ninguna</footer>
+          </article>
+          <article class="gm-monitor">
+            <header>La Manitas</header>
+            <iframe title="Monitor La Manitas" src="game-manitas.html?view=gm-monitor"></iframe>
+            <footer data-last-action-role="manitas">Última acción: ninguna</footer>
+          </article>
+          <article class="gm-monitor">
+            <header>El Bruto</header>
+            <iframe title="Monitor El Bruto" src="game-bruto.html?view=gm-monitor"></iframe>
+            <footer data-last-action-role="bruto">Última acción: ninguna</footer>
+          </article>
+          <article class="gm-monitor">
+            <header>La Mística</header>
+            <iframe title="Monitor La Mística" src="game-mistica.html?view=gm-monitor"></iframe>
+            <footer data-last-action-role="mistica">Última acción: ninguna</footer>
+          </article>
+        </div>
+        <div id="selection-status" class="hidden-control">Target seleccionado: ninguno</div>
+      </section>
+
+      <aside id="queue-panel" class="queue-panel panel">
+        <header class="panel-header compact">
+          <div>
+            <p class="eyebrow">Control GM</p>
+            <h2>Cola de acciones</h2>
+          </div>
+          <button id="resolve-pulse-button" class="primary-button" type="button">Comenzar pulso</button>
+          <button id="toggle-auto-pulse-button" class="primary-button" type="button">Auto pulso</button>
+        </header>
+        <div id="queue-list" class="queue-list"></div>
+        <p id="action-warning" class="warning" role="status" aria-live="polite"></p>
+        <button id="enqueue-button" class="enqueue-button hidden-control" type="button">Encolar acción</button>
+      </aside>
+
+      <section class="cards-panel panel">
+        <header class="panel-header compact">
+          <div>
+            <p id="player-role-label" class="eyebrow">Game Master</p>
+            <h2>Partida</h2>
+          </div>
+          <div id="card-status" class="status-pill">Carta: ninguna</div>
+        </header>
+        <div class="gm-controls">
+          <button id="start-game-button" class="primary-button" type="button">Iniciar partida</button>
+          <button id="reset-game-button" class="danger-button" type="button">Resetear partida</button>
+        </div>
+        <div id="game-session-status" class="session-status" data-status="role_select">Estado: sin comenzar</div>
+        <div id="session-code-display" class="session-code-display">Codigo: sin generar</div>
+        <div id="game-timer" class="game-timer gm-game-timer" data-status="idle">Tiempo: 00:00</div>
+        <div id="cards-list" class="cards-list"></div>
+      </section>
+
+      <section class="gm-organigram-panel panel">
+        <details>
+          <summary>
+            <span>
+              <span class="eyebrow">Referencia GM</span>
+              <strong>Organigrama de la partida</strong>
+            </span>
+          </summary>
+          <div class="gm-organigram-body">
+            <p>
+              Código fuente guardado en
+              <a href="organigrama_gm_gimnasio_react.jsx" target="_blank" rel="noreferrer">organigrama_gm_gimnasio_react.jsx</a>.
+            </p>
+            <iframe title="Código del organigrama GM" src="organigrama_gm_gimnasio_react.jsx"></iframe>
+          </div>
+        </details>
+      </section>
+
+      <section class="log-panel panel">
+        <header class="panel-header compact">
+          <div>
+            <p class="eyebrow">Sistema</p>
+            <h2>Historial</h2>
+          </div>
+        </header>
+        <ul id="log-list" class="log-list"></ul>
+      </section>
+
+      <section class="chat-panel panel">
+        <header class="panel-header compact">
+          <div>
+            <p class="eyebrow">GM</p>
+            <h2>Chat</h2>
+          </div>
+        </header>
+        <ul id="chat-list" class="chat-list"></ul>
+        <form id="chat-form" class="chat-form">
+          <input id="chat-input" type="text" placeholder="Mensaje del GM..." autocomplete="off" />
+          <button class="primary-button" type="submit">Enviar</button>
+        </form>
+      </section>
+
+      <aside class="role-device panel">
+        <header class="panel-header compact">
+          <div>
+            <p class="eyebrow">Estado global</p>
+            <h2>Dispositivo de rol</h2>
+          </div>
+        </header>
+        <div id="device-screen" class="device-screen"></div>
+      </aside>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

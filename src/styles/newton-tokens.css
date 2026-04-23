@@ -1,0 +1,31 @@
+@font-face {
+  font-family: "League Spartan";
+  src: url("/Instituto Newton Design System/fonts/LeagueSpartan-VariableFont_wght.ttf") format("truetype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 100 900;
+}
+
+:root {
+  --color-navy: #013e70;
+  --color-navy-deep: #012e55;
+  --color-navy-darker: #050f1a;
+  --color-blue: #0276d6;
+  --color-blue-light: #1a8fef;
+  --color-blue-mid: #1a5fa8;
+  --color-cream: #e2d6af;
+  --color-cream-light: #f0edd8;
+  --color-gold: #f5b800;
+  --color-danger: #e74c3c;
+  --color-success: #2ecc71;
+  --color-gray-300: #8fa8c0;
+  --color-gray-400: #5a7a99;
+  --color-gray-600: #1e3a55;
+  --font-display: "League Spartan", "Arial Narrow", sans-serif;
+  --font-body: "League Spartan", "Arial Narrow", sans-serif;
+  --font-mono: "Courier New", monospace;
+  --shadow-card: 0 2px 8px rgba(1, 62, 112, 0.4);
+  --shadow-glow: 0 0 24px rgba(2, 118, 214, 0.3);
+  --shadow-deep: 0 8px 32px rgba(5, 15, 26, 0.6);
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+}

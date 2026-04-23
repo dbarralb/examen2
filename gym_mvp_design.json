@@ -1,0 +1,425 @@
+﻿{
+  "sceneId": "gym_mvp",
+  "name": "Gimnasio",
+  "goal": "Abrir la salida de emergencia",
+  "initialState": {
+    "doorState": "closed",
+    "panelState": "active",
+    "sensorState": "active",
+    "lockerState": "closed",
+    "noteState": "hidden",
+    "alarmState": "off",
+    "loreFlagTestRevealed": false,
+    "hiddenRouteFlag": false
+  },
+  "pulseFlags": {
+    "panelHintKnown": false,
+    "lockerPrepared": false,
+    "doorPrepared": false,
+    "sensorPatternDetected": false,
+    "sensorTrickedThisPulse": false
+  },
+  "targets": [
+    "panel",
+    "sensor",
+    "door",
+    "locker",
+    "note",
+    "electrical_box",
+    "sports_gear"
+  ],
+  "rules": [
+    {
+      "id": "panel_empollon_mirar_bien",
+      "when": {
+        "cardId": "mirar_bien",
+        "targetId": "panel"
+      },
+      "effects": [
+        {
+          "set": "panelState",
+          "to": "understood"
+        },
+        {
+          "set": "panelHintKnown",
+          "to": true
+        }
+      ],
+      "messages": [
+        "El Empollón interpreta el protocolo 7-B: cierre por intrusión con evaluación activa."
+      ]
+    },
+    {
+      "id": "panel_empollon_consultar_apuntes",
+      "when": {
+        "cardId": "consultar_apuntes",
+        "targetId": "panel"
+      },
+      "effects": [
+        {
+          "set": "panelState",
+          "to": "understood"
+        },
+        {
+          "set": "panelHintKnown",
+          "to": true
+        }
+      ],
+      "messages": [
+        "Los apuntes revelan que el sistema combina bloqueo digital con redundancia física."
+      ]
+    },
+    {
+      "id": "panel_manitas_puenteo_rapido",
+      "when": {
+        "cardId": "puenteo_rapido",
+        "targetId": "panel"
+      },
+      "effects": [
+        {
+          "set": "panelState",
+          "to": "tampered"
+        }
+      ],
+      "messages": [
+        "La Manitas fuerza un bypass temporal del panel."
+      ],
+      "conditionalEffects": [
+        {
+          "if": {
+            "panelStateWasNot": "understood"
+          },
+          "effects": [
+            {
+              "set": "alarmState",
+              "to": "on"
+            }
+          ],
+          "messages": [
+            "El bypass activa una alerta secundaria por manipulación insegura."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "locker_manitas_apanar",
+      "when": {
+        "cardId": "apañar",
+        "targetId": "locker"
+      },
+      "effects": [
+        {
+          "set": "lockerPrepared",
+          "to": true
+        }
+      ],
+      "messages": [
+        "La Manitas afloja la cerradura de la taquilla."
+      ]
+    },
+    {
+      "id": "locker_bruto_a_lo_bestia",
+      "when": {
+        "cardId": "a_lo_bestia",
+        "targetId": "locker"
+      },
+      "conditionalEffects": [
+        {
+          "if": {
+            "lockerPrepared": true
+          },
+          "effects": [
+            {
+              "set": "lockerState",
+              "to": "clean_open"
+            },
+            {
+              "set": "noteState",
+              "to": "complete"
+            }
+          ],
+          "messages": [
+            "La taquilla se abre sin destrozar el contenido."
+          ]
+        },
+        {
+          "else": true,
+          "effects": [
+            {
+              "set": "lockerState",
+              "to": "broken_open"
+            },
+            {
+              "set": "noteState",
+              "to": "partial"
+            }
+          ],
+          "messages": [
+            "La taquilla se revienta. La nota aparece rota."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "locker_mistica_y_si",
+      "when": {
+        "cardId": "y_si",
+        "targetId": "locker"
+      },
+      "effects": [
+        {
+          "set": "lockerState",
+          "to": "clean_open"
+        },
+        {
+          "set": "noteState",
+          "to": "complete"
+        }
+      ],
+      "messages": [
+        "La Mística prueba una secuencia absurda de golpecitos y la taquilla cede."
+      ]
+    },
+    {
+      "id": "note_complete_reveal",
+      "whenState": {
+        "noteState": "complete"
+      },
+      "effects": [
+        {
+          "set": "loreFlagTestRevealed",
+          "to": true
+        }
+      ],
+      "messages": [
+        "La nota completa revela que la prueba evalúa cómo colaboráis."
+      ]
+    },
+    {
+      "id": "note_partial_reveal",
+      "whenState": {
+        "noteState": "partial"
+      },
+      "messages": [
+        "Solo se puede leer un fragmento: '...no todos... elegidos...'"
+      ]
+    },
+    {
+      "id": "sensor_mistica_vibra_raro",
+      "when": {
+        "cardId": "esto_vibra_raro",
+        "targetId": "sensor"
+      },
+      "effects": [
+        {
+          "set": "sensorPatternDetected",
+          "to": true
+        }
+      ],
+      "messages": [
+        "La Mística detecta que el sensor responde a un patrón extraño."
+      ]
+    },
+    {
+      "id": "sensor_mistica_y_si",
+      "when": {
+        "cardId": "y_si",
+        "targetId": "sensor"
+      },
+      "conditionalEffects": [
+        {
+          "if": {
+            "sensorPatternDetected": true
+          },
+          "effects": [
+            {
+              "set": "sensorState",
+              "to": "fooled"
+            },
+            {
+              "set": "sensorTrickedThisPulse",
+              "to": true
+            }
+          ],
+          "messages": [
+            "La Mística engaña el sensor con una interacción absurda pero efectiva."
+          ]
+        },
+        {
+          "else": true,
+          "messages": [
+            "La Mística prueba algo raro, pero el sensor no cae tan fácil."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sensor_manitas_desmontar",
+      "when": {
+        "cardId": "desmontar",
+        "targetId": "sensor"
+      },
+      "effects": [
+        {
+          "set": "sensorState",
+          "to": "disabled"
+        }
+      ],
+      "messages": [
+        "La Manitas abre la carcasa del sensor y lo inutiliza."
+      ]
+    },
+    {
+      "id": "door_empollon_mirar_bien",
+      "when": {
+        "cardId": "mirar_bien",
+        "targetId": "door"
+      },
+      "effects": [
+        {
+          "set": "doorPrepared",
+          "to": true
+        }
+      ],
+      "messages": [
+        "El Empollón detecta cómo empujar la puerta sin forzar el mecanismo principal."
+      ]
+    },
+    {
+      "id": "door_bruto_empujar",
+      "when": {
+        "cardId": "empujar",
+        "targetId": "door"
+      },
+      "conditionalEffects": [
+        {
+          "if": {
+            "panelStateIn": [
+              "understood",
+              "tampered"
+            ],
+            "sensorStateIn": [
+              "fooled",
+              "disabled"
+            ],
+            "doorPrepared": true
+          },
+          "effects": [
+            {
+              "set": "doorState",
+              "to": "clean_open"
+            }
+          ],
+          "messages": [
+            "La puerta se abre limpiamente."
+          ]
+        },
+        {
+          "if": {
+            "sensorStateIn": [
+              "fooled",
+              "disabled"
+            ]
+          },
+          "effects": [
+            {
+              "set": "doorState",
+              "to": "forced_open"
+            }
+          ],
+          "messages": [
+            "La puerta cede, pero el sistema detecta una apertura brusca."
+          ]
+        },
+        {
+          "else": true,
+          "effects": [
+            {
+              "set": "doorState",
+              "to": "forced_open"
+            },
+            {
+              "set": "alarmState",
+              "to": "on"
+            }
+          ],
+          "messages": [
+            "La puerta se fuerza y salta la alarma."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "door_bruto_a_lo_bestia",
+      "when": {
+        "cardId": "a_lo_bestia",
+        "targetId": "door"
+      },
+      "effects": [
+        {
+          "set": "doorState",
+          "to": "forced_open"
+        }
+      ],
+      "messages": [
+        "El Bruto revienta la salida de emergencia."
+      ],
+      "conditionalEffects": [
+        {
+          "if": {
+            "anyOf": [
+              {
+                "sensorState": "active"
+              },
+              {
+                "panelState": "active"
+              }
+            ]
+          },
+          "effects": [
+            {
+              "set": "alarmState",
+              "to": "on"
+            }
+          ],
+          "messages": [
+            "La alarma del gimnasio se activa."
+          ]
+        }
+      ]
+    }
+  ],
+  "optimalOutcome": {
+    "if": {
+      "doorState": "clean_open",
+      "panelStateIn": [
+        "understood",
+        "tampered"
+      ],
+      "sensorStateIn": [
+        "fooled",
+        "disabled"
+      ],
+      "doorPrepared": true
+    },
+    "messages": [
+      "Habéis salido sin destrozar la sala."
+    ],
+    "conditionalEffects": [
+      {
+        "if": {
+          "loreFlagTestRevealed": true
+        },
+        "effects": [
+          {
+            "set": "hiddenRouteFlag",
+            "to": true
+          }
+        ],
+        "messages": [
+          "Se desbloquea una pista oculta hacia la verdadera prueba."
+        ]
+      }
+    ]
+  }
+}

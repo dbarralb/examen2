@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #013E70; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .group { display: flex; flex-direction: column; gap: 10px; min-width: 220px; }
+  .glabel { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1A5FA8; margin-bottom: 2px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8FA8C0; }
+  input, select, textarea {
+    font-family: 'League Spartan', sans-serif; font-size: 14px;
+    background: #012E55; border: 1px solid #1A5FA8; color: #E2D6AF;
+    padding: 10px 14px; outline: none; width: 100%; box-sizing: border-box;
+    border-radius: 0; transition: border-color 150ms;
+  }
+  input:focus, select:focus { border-color: #0276D6; box-shadow: 0 0 0 2px rgba(2,118,214,0.2); }
+  input::placeholder { color: #3A5A78; }
+  .field-error input { border-color: #E74C3C; }
+  .error-msg { font-size: 11px; color: #E74C3C; font-weight: 600; }
+  .field-success input { border-color: #2ECC71; }
+  .helper { font-size: 11px; color: #5A7A99; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="group">
+  <div class="glabel">Text Inputs</div>
+  <div class="field">
+    <label>Código de Acceso</label>
+    <input type="text" placeholder="Introduce el código...">
+    <div class="helper">6 caracteres alfanuméricos</div>
+  </div>
+  <div class="field field-error">
+    <label>Contraseña</label>
+    <input type="password" value="error">
+    <div class="error-msg">Código incorrecto. Inténtalo de nuevo.</div>
+  </div>
+  <div class="field field-success">
+    <label>Usuario</label>
+    <input type="text" value="newton_player_01">
+  </div>
+</div>
+<div class="group">
+  <div class="glabel">Select & Textarea</div>
+  <div class="field">
+    <label>Sala Destino</label>
+    <select>
+      <option>Selecciona una sala...</option>
+      <option>Laboratorio de Ciencias</option>
+      <option>Biblioteca</option>
+      <option>Sala de Profesores</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Notas del Jugador</label>
+    <textarea rows="3" placeholder="Escribe tus pistas aquí..."></textarea>
+  </div>
+</div>
+</body></html>

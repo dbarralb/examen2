@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #050F1A; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; gap: 32px; align-items: center; }
+
+  /* Logo recreation based on LoadingScreen */
+  .logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .logo-shield {
+    width: 96px; height: 110px;
+    background: #0276D6;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .logo-shield-inner {
+    width: 80px; height: 92px;
+    background: #013E70;
+    clip-path: polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+  }
+  .logo-n { font-size: 36px; font-weight: 900; color: #F5B800; line-height: 1; letter-spacing: -0.02em; }
+  .logo-atom { font-size: 14px; color: #E2D6AF; line-height: 1; }
+  .logo-text { text-align: center; }
+  .logo-text .inst { font-size: 9px; font-weight: 700; letter-spacing: 0.2em; color: #E2D6AF; text-transform: uppercase; display: block; }
+  .logo-text .name { font-size: 20px; font-weight: 900; color: #F5B800; text-transform: uppercase; letter-spacing: 0.05em; display: block; line-height: 1; }
+  .logo-text .since { font-size: 8px; font-weight: 700; letter-spacing: 0.15em; color: #5A7A99; text-transform: uppercase; }
+
+  .variants { display: flex; flex-direction: column; gap: 16px; }
+  .vrow { display: flex; align-items: center; gap: 16px; }
+  .vlabel { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #1A5FA8; width: 80px; }
+  .logo-sm .logo-shield { width: 48px; height: 55px; }
+  .logo-sm .logo-shield-inner { width: 40px; height: 46px; }
+  .logo-sm .logo-n { font-size: 18px; }
+  .logo-sm .logo-atom { font-size: 7px; }
+  .logo-sm .logo-text .inst { font-size: 6px; }
+  .logo-sm .logo-text .name { font-size: 11px; }
+  .logo-sm .logo-text .since { font-size: 5px; }
+
+  .on-light { background: #E2D6AF; padding: 12px 16px; border-radius: 4px; }
+  .on-light .logo-n { color: #013E70; }
+  .on-light .logo-text .name { color: #013E70; }
+  .on-light .logo-text .inst { color: #013E70; }
+  .on-light .logo-text .since { color: #5A7A99; }
+  .on-light .logo-shield { background: #013E70; }
+  .on-light .logo-shield-inner { background: #E2D6AF; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="logo-wrap">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="logo-shield"><div class="logo-shield-inner"><div class="logo-n">N</div><div class="logo-atom">⚛</div></div></div>
+    <div class="logo-text"><span class="inst">Instituto</span><span class="name">Newton</span><span class="since">Desde 1922</span></div>
+  </div>
+</div>
+<div class="variants">
+  <div class="vrow"><div class="vlabel">Small</div>
+    <div class="logo-sm" style="display:flex;align-items:center;gap:8px;">
+      <div class="logo-shield"><div class="logo-shield-inner"><div class="logo-n">N</div><div class="logo-atom">⚛</div></div></div>
+      <div class="logo-text"><span class="inst">Instituto</span><span class="name">Newton</span><span class="since">Desde 1922</span></div>
+    </div>
+  </div>
+  <div class="vrow"><div class="vlabel">On Cream</div>
+    <div class="logo-sm on-light" style="display:flex;align-items:center;gap:8px;">
+      <div class="logo-shield"><div class="logo-shield-inner"><div class="logo-n">N</div><div class="logo-atom" style="color:#013E70;">⚛</div></div></div>
+      <div class="logo-text"><span class="inst">Instituto</span><span class="name">Newton</span><span class="since">Desde 1922</span></div>
+    </div>
+  </div>
+  <div class="vrow"><div class="vlabel">Icon Only</div>
+    <div class="logo-shield" style="width:48px;height:55px;"><div class="logo-shield-inner" style="width:40px;height:46px;"><div class="logo-n" style="font-size:18px;">N</div><div class="logo-atom" style="font-size:7px;">⚛</div></div></div>
+  </div>
+</div>
+</body></html>

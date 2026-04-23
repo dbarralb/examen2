@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body { margin: 0; background: #013E70; font-family: 'League Spartan', sans-serif; padding: 24px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .section { display: flex; flex-direction: column; gap: 8px; margin-right: 16px; }
+  .slabel { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #1A5FA8; margin-bottom: 2px; }
+  .pill { border-radius: 9999px; }
+</style>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+</style>
+</head><body>
+<div class="section">
+  <div class="slabel">Status</div>
+  <span class="badge" style="background:rgba(2,118,214,0.15);color:#0276D6;"><div class="dot" style="background:#0276D6;"></div>En Curso</span>
+  <span class="badge" style="background:rgba(46,204,113,0.12);color:#2ECC71;"><div class="dot" style="background:#2ECC71;"></div>Completado</span>
+  <span class="badge" style="background:rgba(231,76,60,0.12);color:#E74C3C;"><div class="dot" style="background:#E74C3C;"></div>Fallido</span>
+  <span class="badge" style="background:rgba(245,184,0,0.12);color:#F5B800;"><div class="dot" style="background:#F5B800;"></div>Pendiente</span>
+  <span class="badge" style="background:rgba(255,255,255,0.05);color:#5A7A99;"><div class="dot" style="background:#5A7A99;"></div>Bloqueado</span>
+</div>
+<div class="section">
+  <div class="slabel">Level / Tier</div>
+  <span class="badge pill" style="background:#F5B800;color:#013E70;">★ Élite</span>
+  <span class="badge pill" style="background:#0276D6;color:#fff;">Nivel A</span>
+  <span class="badge pill" style="background:#012E55;border:1px solid #1A5FA8;color:#E2D6AF;">Nivel B</span>
+</div>
+<div class="section">
+  <div class="slabel">Room Tags</div>
+  <span class="badge" style="background:rgba(26,95,168,0.3);color:#C5D3E0;">Laboratorio</span>
+  <span class="badge" style="background:rgba(26,95,168,0.3);color:#C5D3E0;">Biblioteca</span>
+  <span class="badge" style="background:rgba(26,95,168,0.3);color:#C5D3E0;">Dirección</span>
+  <span class="badge" style="background:rgba(26,95,168,0.3);color:#C5D3E0;">Enfermería</span>
+</div>
+</body></html>
