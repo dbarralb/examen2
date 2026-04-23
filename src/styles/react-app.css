@@ -790,8 +790,8 @@ a {
 
 .player-scene-live {
   background:
+    radial-gradient(circle at 50% 36%, rgba(255, 255, 255, 0.08), transparent 28%),
     linear-gradient(rgba(5, 15, 26, 0.08), rgba(5, 15, 26, 0.08)),
-    url("/assets/maps/instituto_newton_plano.png"),
     var(--color-navy-darker);
   background-position: center;
   background-repeat: no-repeat;
