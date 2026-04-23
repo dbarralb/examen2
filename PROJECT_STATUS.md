@@ -1,5 +1,22 @@
 ﻿# El Examen 2 - Estado del prototipo
 
+## Plan activo - Nuevo panel de lobby tipo expediente
+
+- [x] Descartar la arquitectura por secciones/rasgos del panel anterior.
+- [x] Colocar imagen fija real en `assets/Lobby/UI/Lobby_panel_empollon.png`.
+- [x] Sustituir el panel azul actual de `LobbyStage.jsx` por un panel basado en imagen fija.
+- [x] Mantener el input de nombre como elemento funcional superpuesto bajo la imagen.
+- [x] Ajustar responsive desktop/tablet/movil sin romper la posicion de personajes.
+- [x] Verificar con `npm.cmd run build`.
+- [x] Revisar visualmente antes de hacer commit.
+
+## Cambios cerrados - Lobby React
+
+- El lobby usa paneles fijos por rol desde `assets/Lobby/UI`.
+- `LobbyRolePanel.jsx` conserva solo la imagen del panel, el input de nombre y el estado de seleccion.
+- La seleccion visual de personaje es inmediata y la previsualizacion se sincroniza con Firebase en segundo plano cada 2 segundos como maximo.
+- Los personajes del lobby tienen escala y alineacion inferior ajustadas para escritorio/tablet.
+
 ## Estado actual
 
 - `index.html` es la seleccion de rol.

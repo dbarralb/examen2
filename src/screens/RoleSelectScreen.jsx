@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LobbyStage } from "../components/LobbyStage.jsx";
 import { getRole } from "../data/roles.js";
 import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, touchLobbyPlayer, updatePlayerName, updatePreviewRole } from "../services/lobbyService.js";
@@ -10,6 +10,9 @@ export function RoleSelectScreen({ navigation }) {
   const [nameDraft, setNameDraft] = useState("");
   const [status, setStatus] = useState("Validando sesion...");
   const [isBusy, setIsBusy] = useState(false);
+  const hasLocalSelectionRef = useRef(false);
+  const previewSyncTimerRef = useRef(null);
+  const pendingPreviewRoleRef = useRef(null);
 
   const selectedRole = useMemo(() => getRole(selectedRoleId), [selectedRoleId]);
   const ownPlayer = getOwnLobbyPlayer(lobby);
@@ -34,7 +37,10 @@ export function RoleSelectScreen({ navigation }) {
         const nextOwnPlayer = getOwnLobbyPlayer(nextLobby);
 
         setLobby(nextLobby);
-        setSelectedRoleId(nextOwnPlayer?.previewRole || selectedRoleId || "empollon");
+
+        if (!hasLocalSelectionRef.current && nextOwnPlayer?.previewRole) {
+          setSelectedRoleId(nextOwnPlayer.previewRole);
+        }
 
         if (document.activeElement?.id !== "lobby-player-name" && nextOwnPlayer) {
           setNameDraft(getPlayerDisplayName(nextOwnPlayer, nextLobby.players));
@@ -60,19 +66,47 @@ export function RoleSelectScreen({ navigation }) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [navigation, selectedRoleId]);
+  }, [navigation]);
+
+  useEffect(() => {
+    return () => {
+      if (previewSyncTimerRef.current) {
+        window.clearTimeout(previewSyncTimerRef.current);
+      }
+    };
+  }, []);
+
+  function schedulePreviewSync(roleId) {
+    pendingPreviewRoleRef.current = roleId;
+
+    if (previewSyncTimerRef.current) {
+      return;
+    }
+
+    previewSyncTimerRef.current = window.setTimeout(async () => {
+      const nextRoleId = pendingPreviewRoleRef.current;
+      previewSyncTimerRef.current = null;
+      pendingPreviewRoleRef.current = null;
+
+      if (!nextRoleId) {
+        return;
+      }
+
+      try {
+        await updatePreviewRole(nextRoleId);
+        const snapshot = await getLobbySnapshot();
+        setLobby(snapshot.lobby);
+      } catch (error) {
+        setStatus("No se pudo sincronizar la previsualizacion.");
+      }
+    }, 2000);
+  }
 
   async function handleSelectRole(roleId) {
+    hasLocalSelectionRef.current = true;
     setSelectedRoleId(roleId);
     setStatus("Rol en previsualizacion. Pulsa Continuar para reservarlo.");
-
-    try {
-      await updatePreviewRole(roleId);
-      const snapshot = await getLobbySnapshot();
-      setLobby(snapshot.lobby);
-    } catch (error) {
-      setStatus("No se pudo sincronizar la previsualizacion.");
-    }
+    schedulePreviewSync(roleId);
   }
 
   async function handleCommitName() {

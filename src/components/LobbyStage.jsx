@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { NBadge, NButton, NewtonLogo } from "./newton";
+import { NButton, NewtonLogo } from "./newton";
+import { LobbyRolePanel } from "./LobbyRolePanel.jsx";
 import { getLobbyRoles } from "../data/roles.js";
 import { getClaimForRole, getPlayerDisplayName, isRoleClaimedByOther } from "../services/lobbyService.js";
 
@@ -59,28 +60,13 @@ export function LobbyStage({
         <h1>{title}</h1>
       </header>
 
-      <aside className="lobby-role-panel">
-        <NBadge status={selectedRole.status}>{selectedRole.kicker}</NBadge>
-        <h2>{selectedRole.label}</h2>
-        <p>{selectedRole.text}</p>
-        <small>Cartas: {selectedRole.cards}</small>
-        <section className="lobby-player-name" aria-label="Nombre de jugador">
-          <label htmlFor="lobby-player-name">Nombre</label>
-          <input
-            id="lobby-player-name"
-            value={nameDraft}
-            maxLength={24}
-            onChange={(event) => onNameChange?.(event.target.value)}
-            onBlur={onNameCommit}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-            }}
-          />
-        </section>
-        <span>{isRoleClaimedByOther(lobby, selectedRole.id) ? "Rol ocupado" : "Seleccionar"}</span>
-      </aside>
+      <LobbyRolePanel
+        role={selectedRole}
+        nameDraft={nameDraft}
+        isClaimedByOther={isRoleClaimedByOther(lobby, selectedRole.id)}
+        onNameChange={onNameChange}
+        onNameCommit={onNameCommit}
+      />
 
       <section className="lobby-character-row" aria-label="Personajes disponibles">
         {roles.map((role) => {
@@ -94,7 +80,7 @@ export function LobbyStage({
           return (
             <button
               key={role.id}
-              className={`lobby-character ${isOwnPreview ? "previewed" : ""} ${claim ? "claimed" : ""}`}
+              className={`lobby-character lobby-character-${role.id} ${isOwnPreview ? "previewed" : ""} ${claim ? "claimed" : ""}`}
               type="button"
               onClick={() => onSelectRole?.(role.id)}
             >
