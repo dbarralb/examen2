@@ -522,17 +522,72 @@ a {
   line-height: 1;
 }
 
-.lobby-panel-action-area {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  width: 76%;
-  margin: 10px auto 0;
+.lobby-image-action-button {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  isolation: isolate;
+  transition: filter 160ms ease, transform 160ms ease;
 }
 
-.lobby-panel-action-area .n-btn {
+.lobby-image-action-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.72) 48%, rgba(255, 244, 187, 0.44)),
+    linear-gradient(90deg, rgba(255, 244, 187, 0.18), rgba(255, 244, 187, 0.42));
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-102%);
+}
+
+.lobby-image-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.lobby-image-action-button:not(:disabled):hover {
+  filter: brightness(1.4);
+}
+
+.lobby-image-action-button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.lobby-image-action-button:focus-visible {
+  outline: 3px solid rgba(255, 244, 187, 0.95);
+  outline-offset: 4px;
+}
+
+.lobby-image-action-button img {
+  position: relative;
+  z-index: 1;
+  display: block;
   width: 100%;
-  min-width: 0;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.lobby-image-action-button.is-holding::after {
+  opacity: 0.78;
+  animation: lobbyHoldFill var(--lobby-hold-duration, 3000ms) linear forwards;
+}
+
+@keyframes lobbyHoldFill {
+  from {
+    transform: translateX(-102%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .lobby-character-row {
@@ -540,7 +595,7 @@ a {
   left: calc(var(--lobby-panel-left) + var(--lobby-panel-width) + var(--lobby-panel-gap));
   right: 64px;
   top: 126px;
-  bottom: 138px;
+  bottom: 221px;
   z-index: 5;
   display: flex;
   align-items: flex-end;
@@ -553,7 +608,7 @@ a {
 .lobby-character {
   --lobby-character-scale: 1;
   position: relative;
-  width: clamp(180px, 15vw, 300px);
+  width: clamp(144px, 12vw, 240px);
   height: 100%;
   border: 0;
   padding: 0 0 128px;
@@ -583,7 +638,7 @@ a {
   bottom: 128px;
   z-index: 3;
   width: auto;
-  height: min(58vh, 640px, calc(100% - 152px));
+  height: min(46.4vh, 512px, calc(100% - 152px));
   max-width: 128%;
   object-fit: contain;
   object-position: center bottom;
@@ -604,7 +659,7 @@ a {
   left: 50%;
   bottom: 128px;
   z-index: 2;
-  width: clamp(250px, 142%, 426px);
+  width: clamp(200px, 114%, 341px);
   max-width: 158%;
   max-height: calc(100% - 44px);
   transform: translateX(-50%);
@@ -690,6 +745,14 @@ a {
   cursor: text;
 }
 
+.lobby-panel-action-area {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(260px, 62%);
+  margin: 12px auto 0;
+}
+
 .lobby-footer {
   position: absolute;
   left: 36px;
@@ -698,13 +761,40 @@ a {
   z-index: 12;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
 }
 
 .lobby-footer .newton-logo img {
-  width: 232px;
-  height: 232px;
+  width: 116px;
+  height: 116px;
+}
+
+.lobby-footer-action-area {
+  display: none;
+}
+
+.lobby-hold-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 0.78vw, 12px);
+  width: max-content;
+  max-width: min(273px, 22.1vw);
+  margin-right: 6px;
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 0.91vw, 16px);
+  line-height: 1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
+}
+
+.lobby-hold-hint img {
+  width: clamp(23px, 2.21vw, 36px);
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .lobby-countdown {
@@ -739,6 +829,24 @@ a {
   font-weight: 800;
   line-height: 1.2;
   pointer-events: none;
+}
+
+@media (min-width: 1600px) and (min-height: 850px) {
+  .lobby-character-row {
+    bottom: 120px;
+  }
+
+  .lobby-character {
+    width: clamp(180px, 15vw, 300px);
+  }
+
+  .lobby-character-image {
+    height: min(58vh, 640px, calc(100% - 152px));
+  }
+
+  .lobby-selector {
+    width: clamp(250px, 142%, 426px);
+  }
 }
 
 .lobby-transitioning {
@@ -1088,7 +1196,7 @@ code {
     left: 16px;
     right: 16px;
     top: clamp(365px, 48vh, 460px);
-    bottom: 180px;
+    bottom: 288px;
     gap: 4px;
   }
 
@@ -1101,13 +1209,13 @@ code {
 
   .lobby-character-image {
     bottom: 104px;
-    height: min(46vh, calc(100% - 124px));
+    height: min(36.8vh, calc(100% - 124px));
     max-width: 146%;
   }
 
   .lobby-selector {
     bottom: 104px;
-    width: 152%;
+    width: 122%;
     max-width: 176%;
   }
 
@@ -1133,12 +1241,24 @@ code {
   }
 
   .lobby-footer .newton-logo img {
-    width: 152px;
-    height: 152px;
+    width: 76px;
+    height: 76px;
   }
 
   .lobby-panel-action-area {
-    width: 82%;
+    width: min(210px, 70%);
+    margin-top: 10px;
+  }
+
+  .lobby-hold-hint {
+    gap: 5px;
+    max-width: 38vw;
+    margin-right: 0;
+    font-size: 10px;
+  }
+
+  .lobby-hold-hint img {
+    width: 21px;
   }
 
   .lobby-status {

@@ -159,27 +159,44 @@ export async function updatePreviewRole(roleId) {
   });
 }
 
-export async function releaseOwnRoleClaim() {
+export async function releaseOwnRoleClaim({ roleId = null, holdId = null } = {}) {
   const clientId = getOrCreateClientId();
   const snapshot = await getLobbySnapshot();
-  const ownClaimEntry = Object.entries(snapshot.lobby.roleClaims).find(([, claim]) => claim?.clientId === clientId);
+  const normalizedRoleId = roleId ? normalizeRoleId(roleId) : null;
+  const ownClaimEntry = Object.entries(snapshot.lobby.roleClaims).find(([claimedRoleId, claim]) => {
+    if (claim?.clientId !== clientId) {
+      return false;
+    }
+
+    if (normalizedRoleId && normalizeRoleId(claimedRoleId) !== normalizedRoleId) {
+      return false;
+    }
+
+    if (holdId && claim.holdId !== holdId) {
+      return false;
+    }
+
+    return true;
+  });
 
   if (ownClaimEntry) {
     await firebasePut(`lobby/roleClaims/${ownClaimEntry[0]}`, null);
   }
 
-  await firebasePatch(`lobby/players/${clientId}`, {
-    status: "selecting",
-    confirmedRole: null,
-    lastSeenAt: Date.now(),
-  });
-  await firebasePatch("lobby", {
-    countdownStartedAt: null,
-    updatedAt: Date.now(),
-  });
+  if (!holdId || ownClaimEntry) {
+    await firebasePatch(`lobby/players/${clientId}`, {
+      status: "selecting",
+      confirmedRole: null,
+      lastSeenAt: Date.now(),
+    });
+    await firebasePatch("lobby", {
+      countdownStartedAt: null,
+      updatedAt: Date.now(),
+    });
+  }
 }
 
-export async function claimRole(roleId) {
+export async function claimRole(roleId, { holdId = null } = {}) {
   const normalizedRoleId = normalizeRoleId(roleId);
   const clientId = getOrCreateClientId();
   const now = Date.now();
@@ -212,12 +229,19 @@ export async function claimRole(roleId) {
       clientId,
       name: displayName,
       claimedAt: now,
+      holdId,
       sessionCode: getStoredSessionCode(),
     }, etag);
 
     if (!result.ok) {
       return { ok: false, reason: "race" };
     }
+  } else if (currentClaim.clientId === clientId) {
+    await firebasePatch(`lobby/roleClaims/${normalizedRoleId}`, {
+      name: displayName,
+      holdId,
+      sessionCode: getStoredSessionCode(),
+    });
   }
 
   await firebasePatch(`lobby/players/${clientId}`, {
@@ -227,6 +251,7 @@ export async function claimRole(roleId) {
     confirmedRole: normalizedRoleId,
     status: "ready",
     readyAt: now,
+    holdId,
     joinedAt: ownPlayer.joinedAt || now,
     lastSeenAt: now,
   });

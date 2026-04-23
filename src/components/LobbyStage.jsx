@@ -1,8 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NewtonLogo } from "./newton";
 import { LobbyRolePanel } from "./LobbyRolePanel.jsx";
 import { getLobbyRoles } from "../data/roles.js";
 import { getClaimForRole, getPlayerDisplayName } from "../services/lobbyService.js";
+import changeButtonImage from "../../assets/Lobby/UI/Lobby_Button_Change.png";
+import continueButtonImage from "../../assets/Lobby/UI/Lobby_Button_Continue.png";
+import mouseHoldIcon from "../../assets/Lobby/UI/Icons/Mouse_Hold_icon.png";
 
 const selectorImage = "/assets/Lobby/Selector.png";
 
@@ -16,17 +19,42 @@ export function LobbyStage({
   countdownSeconds,
   isBusy,
   isTransitioning,
+  holdCancelVersion = 0,
   nameDraft,
   onNameChange,
   onNameCommit,
   onSelectRole,
-  onContinue,
+  onContinueHoldStart,
+  onContinueHoldCancel,
+  onContinueHoldComplete,
   onChangeRole,
 }) {
   const roles = getLobbyRoles();
   const isWaiting = mode === "waiting";
   const title = isWaiting ? "Esperando jugadores..." : "Selecciona un rol";
   const ownDisplayName = getPlayerDisplayName(ownPlayer, lobby.players);
+  const actionImage = isWaiting ? changeButtonImage : continueButtonImage;
+  const actionLabel = isWaiting ? "Cambiar rol" : "Continuar";
+  const isActionDisabled = isBusy || (!isWaiting && !selectedRoleId);
+  const holdDurationMs = 3000;
+  const [isHoldingAction, setIsHoldingAction] = useState(false);
+  const holdTimerRef = useRef(null);
+  const holdCompletedRef = useRef(false);
+  const isHoldingActionRef = useRef(false);
+
+  function clearHoldTimer() {
+    if (holdTimerRef.current) {
+      window.clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }
+
+  function resetContinueHoldFeedback() {
+    clearHoldTimer();
+    holdCompletedRef.current = false;
+    isHoldingActionRef.current = false;
+    setIsHoldingAction(false);
+  }
 
   useEffect(() => {
     function preventLobbyZoom(event) {
@@ -54,6 +82,61 @@ export function LobbyStage({
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      clearHoldTimer();
+      holdCompletedRef.current = false;
+      isHoldingActionRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    resetContinueHoldFeedback();
+  }, [holdCancelVersion]);
+
+  function startContinueHold(event) {
+    if (isWaiting || isActionDisabled || event.button !== 0 || isHoldingAction) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    holdCompletedRef.current = false;
+    isHoldingActionRef.current = true;
+    setIsHoldingAction(true);
+    onContinueHoldStart?.();
+
+    clearHoldTimer();
+    holdTimerRef.current = window.setTimeout(() => {
+      holdTimerRef.current = null;
+      holdCompletedRef.current = true;
+      isHoldingActionRef.current = false;
+      setIsHoldingAction(false);
+      onContinueHoldComplete?.();
+    }, holdDurationMs);
+  }
+
+  function cancelContinueHold() {
+    if (!isHoldingActionRef.current || holdCompletedRef.current) {
+      return;
+    }
+
+    clearHoldTimer();
+    holdCompletedRef.current = false;
+    isHoldingActionRef.current = false;
+    setIsHoldingAction(false);
+    onContinueHoldCancel?.();
+  }
+
+  function handleActionClick(event) {
+    if (isWaiting) {
+      onChangeRole?.();
+      return;
+    }
+
+    event.preventDefault();
+  }
+
   return (
     <main className={`react-screen lobby-screen ${isWaiting ? "lobby-screen-waiting" : "lobby-screen-select"} ${isTransitioning ? "lobby-transitioning" : ""}`}>
       <header className="lobby-banner">
@@ -63,14 +146,35 @@ export function LobbyStage({
       <LobbyRolePanel
         role={selectedRole}
         nameDraft={nameDraft}
-        isBusy={isBusy}
-        isWaiting={isWaiting}
-        canContinue={Boolean(selectedRoleId)}
-        countdownSeconds={countdownSeconds}
+        actionSlot={(
+          <div className="lobby-panel-action-area">
+            {countdownSeconds !== null && (
+              <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
+            )}
+            {!isWaiting && (
+              <div className="lobby-hold-hint" aria-hidden="true">
+                <span>MantÃ©n</span>
+                <img src={mouseHoldIcon} alt="" draggable="false" />
+                <span>para confirmar</span>
+              </div>
+            )}
+            <button
+              className={`lobby-image-action-button ${isHoldingAction ? "is-holding" : ""}`}
+              type="button"
+              onPointerDown={startContinueHold}
+              onPointerUp={cancelContinueHold}
+              onPointerCancel={cancelContinueHold}
+              onClick={handleActionClick}
+              disabled={isActionDisabled}
+              aria-label={actionLabel}
+              style={{ "--lobby-hold-duration": `${holdDurationMs}ms` }}
+            >
+              <img src={actionImage} alt="" aria-hidden="true" draggable="false" />
+            </button>
+          </div>
+        )}
         onNameChange={onNameChange}
         onNameCommit={onNameCommit}
-        onContinue={onContinue}
-        onChangeRole={onChangeRole}
       />
 
       <section className="lobby-character-row" aria-label="Personajes disponibles">
@@ -118,6 +222,31 @@ export function LobbyStage({
 
       <footer className="lobby-footer">
         <NewtonLogo compact />
+        <div className="lobby-footer-action-area">
+          {countdownSeconds !== null && (
+            <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
+          )}
+          {!isWaiting && (
+            <div className="lobby-hold-hint" aria-hidden="true">
+              <span>Mantén</span>
+              <img src={mouseHoldIcon} alt="" draggable="false" />
+              <span>para confirmar</span>
+            </div>
+          )}
+          <button
+            className={`lobby-image-action-button ${isHoldingAction ? "is-holding" : ""}`}
+            type="button"
+            onPointerDown={startContinueHold}
+            onPointerUp={cancelContinueHold}
+            onPointerCancel={cancelContinueHold}
+            onClick={handleActionClick}
+            disabled={isActionDisabled}
+            aria-label={actionLabel}
+            style={{ "--lobby-hold-duration": `${holdDurationMs}ms` }}
+          >
+            <img src={actionImage} alt="" aria-hidden="true" draggable="false" />
+          </button>
+        </div>
       </footer>
 
       <p className="lobby-status-debug" role="status" aria-live="polite">{status}</p>

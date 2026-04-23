@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LobbyStage } from "../components/LobbyStage.jsx";
 import { getRole, normalizeRoleId } from "../data/roles.js";
-import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, touchLobbyPlayer, updatePlayerName, updatePreviewRole } from "../services/lobbyService.js";
+import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, releaseOwnRoleClaim, touchLobbyPlayer, updatePlayerName, updatePreviewRole } from "../services/lobbyService.js";
 import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
 
 export function RoleSelectScreen({ navigation }) {
@@ -10,9 +10,12 @@ export function RoleSelectScreen({ navigation }) {
   const [nameDraft, setNameDraft] = useState("");
   const [status, setStatus] = useState("Validando sesion...");
   const [isBusy, setIsBusy] = useState(false);
+  const [holdCancelVersion, setHoldCancelVersion] = useState(0);
   const hasLocalSelectionRef = useRef(false);
   const previewSyncTimerRef = useRef(null);
   const pendingPreviewRoleRef = useRef(null);
+  const holdAttemptRef = useRef(null);
+  const holdAttemptIdRef = useRef(0);
 
   const selectedRole = useMemo(() => getRole(selectedRoleId), [selectedRoleId]);
   const ownPlayer = getOwnLobbyPlayer(lobby);
@@ -51,7 +54,7 @@ export function RoleSelectScreen({ navigation }) {
           return;
         }
 
-        setStatus("Elige un personaje y pulsa Continuar para reservarlo.");
+        setStatus("Elige un personaje y mantén pulsado Continuar para reservarlo.");
       } catch (error) {
         if (!cancelled) {
           setStatus("Sin conexion con el lobby. Reintentando...");
@@ -103,10 +106,19 @@ export function RoleSelectScreen({ navigation }) {
   }
 
   async function handleSelectRole(roleId) {
+    const activeAttempt = holdAttemptRef.current;
+
+    if (activeAttempt && !activeAttempt.completed) {
+      activeAttempt.cancelled = true;
+      holdAttemptRef.current = null;
+      setHoldCancelVersion((version) => version + 1);
+      releaseOwnRoleClaim({ roleId: activeAttempt.roleId, holdId: activeAttempt.holdId }).catch(() => {});
+    }
+
     const normalizedRoleId = normalizeRoleId(roleId);
     hasLocalSelectionRef.current = true;
     setSelectedRoleId(normalizedRoleId);
-    setStatus("Rol en previsualizacion. Pulsa Continuar para reservarlo.");
+    setStatus("Rol en previsualizacion. Mantén pulsado Continuar para reservarlo.");
     schedulePreviewSync(normalizedRoleId);
   }
 
@@ -120,26 +132,123 @@ export function RoleSelectScreen({ navigation }) {
     }
   }
 
-  async function handleContinue() {
-    setIsBusy(true);
-    setStatus("Reservando rol...");
+  function handleContinueHoldStart() {
+    if (isBusy || !selectedRoleId) {
+      return;
+    }
+
+    const holdId = `role-hold-${Date.now()}-${holdAttemptIdRef.current + 1}`;
+    const attempt = {
+      id: holdAttemptIdRef.current + 1,
+      holdId,
+      roleId: selectedRoleId,
+      cancelled: false,
+      completed: false,
+      claimResult: null,
+    };
+
+    holdAttemptIdRef.current = attempt.id;
+    holdAttemptRef.current = attempt;
+    setStatus("Reservando rol... mantén pulsado para confirmar.");
+
+    attempt.claimPromise = (async () => {
+      await updatePlayerName(nameDraft);
+      return claimRole(attempt.roleId, { holdId: attempt.holdId });
+    })();
+
+    attempt.claimPromise
+      .then((result) => {
+        attempt.claimResult = result;
+
+        if (holdAttemptRef.current?.id !== attempt.id || attempt.cancelled) {
+          if (result.ok) {
+            releaseOwnRoleClaim({ roleId: attempt.roleId, holdId: attempt.holdId }).catch(() => {});
+          }
+          return;
+        }
+
+        if (!result.ok) {
+          holdAttemptRef.current = null;
+          setIsBusy(false);
+          setHoldCancelVersion((version) => version + 1);
+          setStatus("Ese rol acaba de ser reservado. Puedes ver su tarjeta o elegir otro.");
+          getLobbySnapshot().then((snapshot) => setLobby(snapshot.lobby)).catch(() => {});
+          return;
+        }
+
+        if (attempt.completed) {
+          holdAttemptRef.current = null;
+          navigation.go("waiting", { role: attempt.roleId });
+        }
+      })
+      .catch(() => {
+        if (holdAttemptRef.current?.id !== attempt.id || attempt.cancelled) {
+          return;
+        }
+
+        holdAttemptRef.current = null;
+        setIsBusy(false);
+        setHoldCancelVersion((version) => version + 1);
+        setStatus("No se pudo reservar el rol. Reintenta en un momento.");
+      });
+  }
+
+  async function handleContinueHoldCancel() {
+    const attempt = holdAttemptRef.current;
+
+    if (!attempt || attempt.completed) {
+      return;
+    }
+
+    attempt.cancelled = true;
+    holdAttemptRef.current = null;
+    setIsBusy(false);
+    setStatus("Seleccion cancelada. Mantén pulsado Continuar para reservar.");
 
     try {
-      await updatePlayerName(nameDraft);
-      const result = await claimRole(selectedRoleId);
+      await releaseOwnRoleClaim({ roleId: attempt.roleId, holdId: attempt.holdId });
+      const snapshot = await getLobbySnapshot();
+      setLobby(snapshot.lobby);
+    } catch (error) {
+      setStatus("Seleccion cancelada. Si el rol quedo ocupado, pulsa Cambiar rol o reintenta.");
+    }
+  }
+
+  async function handleContinueHoldComplete() {
+    const attempt = holdAttemptRef.current;
+
+    if (!attempt || attempt.cancelled) {
+      return;
+    }
+
+    attempt.completed = true;
+    setIsBusy(true);
+    setStatus("Rol confirmado. Entrando...");
+
+    try {
+      const result = attempt.claimResult || await attempt.claimPromise;
+
+      if (holdAttemptRef.current?.id !== attempt.id || attempt.cancelled) {
+        return;
+      }
+
+      holdAttemptRef.current = null;
 
       if (!result.ok) {
+        setIsBusy(false);
         setStatus("Ese rol acaba de ser reservado. Puedes ver su tarjeta o elegir otro.");
         const snapshot = await getLobbySnapshot();
         setLobby(snapshot.lobby);
         return;
       }
 
-      navigation.go("waiting", { role: selectedRoleId });
+      navigation.go("waiting", { role: attempt.roleId });
     } catch (error) {
-      setStatus("No se pudo reservar el rol. Reintenta en un momento.");
-    } finally {
-      setIsBusy(false);
+      if (holdAttemptRef.current?.id === attempt.id) {
+        holdAttemptRef.current = null;
+        setIsBusy(false);
+        setStatus("No se pudo reservar el rol. Reintenta en un momento.");
+      }
     }
   }
 
@@ -157,7 +266,10 @@ export function RoleSelectScreen({ navigation }) {
       onNameChange={setNameDraft}
       onNameCommit={handleCommitName}
       onSelectRole={handleSelectRole}
-      onContinue={handleContinue}
+      onContinueHoldStart={handleContinueHoldStart}
+      onContinueHoldCancel={handleContinueHoldCancel}
+      onContinueHoldComplete={handleContinueHoldComplete}
+      holdCancelVersion={holdCancelVersion}
     />
   );
 }

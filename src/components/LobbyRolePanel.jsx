@@ -1,4 +1,3 @@
-import { NButton } from "./newton";
 import empollonPanelImage from "../../assets/Lobby/UI/Lobby_panel_empollon.png";
 import guaperasPanelImage from "../../assets/Lobby/UI/Lobby_panel_guaperas.png";
 import inputNameCardImage from "../../assets/Lobby/UI/Lobby_inputNamecard.png";
@@ -16,14 +15,9 @@ const panelImagesByRole = {
 export function LobbyRolePanel({
   role,
   nameDraft,
-  isBusy,
-  isWaiting,
-  canContinue,
-  countdownSeconds,
+  actionSlot = null,
   onNameChange,
   onNameCommit,
-  onContinue,
-  onChangeRole,
 }) {
   const panelImage = panelImagesByRole[role.id] || empollonPanelImage;
 
@@ -48,19 +42,7 @@ export function LobbyRolePanel({
         />
       </div>
 
-      <div className="lobby-panel-action-area">
-        {countdownSeconds !== null && (
-          <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
-        )}
-        <NButton
-          variant={isWaiting ? "danger" : "primary"}
-          size="lg"
-          onClick={isWaiting ? onChangeRole : onContinue}
-          disabled={isBusy || (!isWaiting && !canContinue)}
-        >
-          {isWaiting ? "Cambiar rol" : "Continuar"}
-        </NButton>
-      </div>
+      {actionSlot}
     </aside>
   );
 }

@@ -15,7 +15,9 @@
 - El lobby usa paneles fijos por rol desde `assets/Lobby/UI`.
 - `LobbyRolePanel.jsx` conserva solo la imagen del panel, el input de nombre y el estado de seleccion.
 - El input de nombre queda superpuesto sobre `Lobby_inputNamecard.png` y mantiene la funcionalidad editable.
-- El boton `Continuar` / `Cambiar rol` vive bajo el input para que el jugador no tenga que bajar al footer.
+- El boton `Continuar` / `Cambiar rol` vive bajo la ficha de rol y el input de nombre, con imagen dedicada para cada estado.
+- `Continuar` se confirma con hold de 3 segundos: inicia reserva en Firebase al pulsar, muestra relleno/brillo progresivo y libera el intento si se suelta antes.
+- El logo Newton queda reducido y anclado al extremo derecho del footer para equilibrar visualmente el panel izquierdo.
 - El rol antes llamado `bruto` pasa a llamarse `guaperas` en textos y codigo React, con alias legacy para datos/rutas antiguas.
 - La seleccion visual de personaje es inmediata y la previsualizacion se sincroniza con Firebase en segundo plano cada 2 segundos como maximo.
 - El selector sigue al personaje clicado tambien despues de confirmar rol, permitiendo consultar otras fichas.
