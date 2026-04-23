@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { LobbyStage } from "../components/LobbyStage.jsx";
-import { getRole } from "../data/roles.js";
+import { getRole, normalizeRoleId } from "../data/roles.js";
 import {
   areAllRolesClaimed,
   ensureLobbyCountdown,
@@ -17,7 +17,7 @@ import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
 
 export function WaitingScreen({ navigation, params }) {
   const [lobby, setLobby] = useState(() => normalizeLobby(null));
-  const [selectedRoleId, setSelectedRoleId] = useState(params.get("role") || "empollon");
+  const [selectedRoleId, setSelectedRoleId] = useState(normalizeRoleId(params.get("role") || "empollon"));
   const [nameDraft, setNameDraft] = useState("");
   const [status, setStatus] = useState("Esperando jugadores...");
   const [now, setNow] = useState(Date.now());
@@ -25,7 +25,7 @@ export function WaitingScreen({ navigation, params }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const ownPlayer = getOwnLobbyPlayer(lobby);
-  const confirmedRoleId = ownPlayer?.confirmedRole || selectedRoleId;
+  const confirmedRoleId = normalizeRoleId(ownPlayer?.confirmedRole || selectedRoleId);
   const selectedRole = useMemo(() => getRole(selectedRoleId || confirmedRoleId), [selectedRoleId, confirmedRoleId]);
   const remainingMs = getCountdownRemainingMs(lobby, now);
   const countdownSeconds = remainingMs === null ? null : Math.max(1, Math.ceil(remainingMs / 1000));
@@ -60,7 +60,7 @@ export function WaitingScreen({ navigation, params }) {
         }
 
         setLobby(nextLobby);
-        setSelectedRoleId((current) => current || nextOwnPlayer.confirmedRole);
+        setSelectedRoleId((current) => normalizeRoleId(current || nextOwnPlayer.confirmedRole));
 
         if (document.activeElement?.id !== "lobby-player-name") {
           setNameDraft(getPlayerDisplayName(nextOwnPlayer, nextLobby.players));
@@ -71,7 +71,7 @@ export function WaitingScreen({ navigation, params }) {
           setIsTransitioning(true);
           window.setTimeout(() => {
             if (!cancelled) {
-              navigation.go("player", { role: nextOwnPlayer.confirmedRole });
+              navigation.go("player", { role: normalizeRoleId(nextOwnPlayer.confirmedRole) });
             }
           }, 650);
           return;

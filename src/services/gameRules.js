@@ -10,7 +10,8 @@
 const roleLabels = {
   empollon: "El Empollón",
   manitas: "La Manitas",
-  bruto: "El Bruto",
+  guaperas: "El guaperas",
+  bruto: "El guaperas",
   mistica: "La Mística",
   gm: "Game Master",
 };
@@ -221,8 +222,8 @@ function resolveAction(context, action, pulseFlags) {
 
   if (action.card === "a_lo_bestia" && action.target === "door") {
     gameState.doorState = "forced_open";
-    setTargetFeedback(context, "door", "El Bruto revienta la salida de emergencia.", action);
-    emit(context, "El Bruto revienta la salida de emergencia.");
+    setTargetFeedback(context, "door", "El guaperas revienta la salida de emergencia.", action);
+    emit(context, "El guaperas revienta la salida de emergencia.");
 
     if (gameState.sensorState === "active" || gameState.panelState === "active") {
       gameState.alarmState = "on";

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { NButton, NewtonLogo } from "./newton";
+import { NewtonLogo } from "./newton";
 import { LobbyRolePanel } from "./LobbyRolePanel.jsx";
 import { getLobbyRoles } from "../data/roles.js";
-import { getClaimForRole, getPlayerDisplayName, isRoleClaimedByOther } from "../services/lobbyService.js";
+import { getClaimForRole, getPlayerDisplayName } from "../services/lobbyService.js";
 
 const selectorImage = "/assets/Lobby/Selector.png";
 
@@ -63,17 +63,22 @@ export function LobbyStage({
       <LobbyRolePanel
         role={selectedRole}
         nameDraft={nameDraft}
-        isClaimedByOther={isRoleClaimedByOther(lobby, selectedRole.id)}
+        isBusy={isBusy}
+        isWaiting={isWaiting}
+        canContinue={Boolean(selectedRoleId)}
+        countdownSeconds={countdownSeconds}
         onNameChange={onNameChange}
         onNameCommit={onNameCommit}
+        onContinue={onContinue}
+        onChangeRole={onChangeRole}
       />
 
       <section className="lobby-character-row" aria-label="Personajes disponibles">
         {roles.map((role) => {
           const claim = getClaimForRole(lobby, role.id);
           const isOwnPreview = selectedRoleId === role.id;
-          const isSelected = isWaiting ? Boolean(claim) : Boolean(claim || isOwnPreview);
-          const showSelector = isWaiting ? Boolean(claim) : isOwnPreview;
+          const isSelected = Boolean(claim || isOwnPreview);
+          const showSelector = isOwnPreview;
           const playerForClaim = claim?.clientId ? lobby.players[claim.clientId] : null;
           const labelName = claim?.name || getPlayerDisplayName(playerForClaim, lobby.players);
 
@@ -113,22 +118,9 @@ export function LobbyStage({
 
       <footer className="lobby-footer">
         <NewtonLogo compact />
-        <div className="lobby-action-area">
-          {countdownSeconds !== null && (
-            <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
-          )}
-          <NButton
-            variant={isWaiting ? "danger" : "primary"}
-            size="lg"
-            onClick={isWaiting ? onChangeRole : onContinue}
-            disabled={isBusy || (!isWaiting && !selectedRoleId)}
-          >
-            {isWaiting ? "Cambiar rol" : "Continuar"}
-          </NButton>
-        </div>
       </footer>
 
-      <p className="lobby-status" role="status" aria-live="polite">{status}</p>
+      <p className="lobby-status-debug" role="status" aria-live="polite">{status}</p>
     </main>
   );
 }

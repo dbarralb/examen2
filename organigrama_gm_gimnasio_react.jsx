@@ -28,8 +28,8 @@ const puzzleData = {
     { id: "apañar", role: "La Manitas", targets: ["locker"] },
     { id: "puenteo_rapido", role: "La Manitas", targets: ["panel"] },
     { id: "desmontar", role: "La Manitas", targets: ["sensor"] },
-    { id: "a_lo_bestia", role: "El Bruto", targets: ["locker", "door"] },
-    { id: "empujar", role: "El Bruto", targets: ["door"] },
+    { id: "a_lo_bestia", role: "El guaperas", targets: ["locker", "door"] },
+    { id: "empujar", role: "El guaperas", targets: ["door"] },
     { id: "y_si", role: "La Mística", targets: ["locker", "sensor"] },
     { id: "esto_vibra_raro", role: "La Mística", targets: ["sensor"] },
     { id: "ritual_improvisado", role: "La Mística", targets: ["sensor"] },
@@ -44,9 +44,9 @@ const puzzleData = {
         "El Empollón · mirar_bien → panel",
         "La Manitas · desmontar → sensor",
         "La Manitas · apañar → locker",
-        "El Bruto · a_lo_bestia → locker",
+        "El guaperas · a_lo_bestia → locker",
         "El Empollón · mirar_bien → door",
-        "El Bruto · empujar → door",
+        "El guaperas · empujar → door",
       ],
       outcomes: [
         "doorState = clean_open",
@@ -67,7 +67,7 @@ const puzzleData = {
         "La Mística · y_si → locker",
         "La Mística · esto_vibra_raro → sensor",
         "La Mística · y_si → sensor",
-        "El Bruto · empujar → door",
+        "El guaperas · empujar → door",
       ],
       outcomes: [
         "doorState = clean_open",
@@ -85,7 +85,7 @@ const puzzleData = {
       steps: [
         "El Empollón · consultar_apuntes → panel",
         "La Manitas · desmontar → sensor",
-        "El Bruto · empujar → door",
+        "El guaperas · empujar → door",
       ],
       outcomes: [
         "doorState = forced_open",
@@ -100,7 +100,7 @@ const puzzleData = {
       grade: "bad",
       summary: "Se sale, pero rompiendo la sala y disparando consecuencias.",
       steps: [
-        "El Bruto · a_lo_bestia → door",
+        "El guaperas · a_lo_bestia → door",
         "La Mística · y_si → locker",
         "La Manitas · puenteo_rapido → panel",
       ],

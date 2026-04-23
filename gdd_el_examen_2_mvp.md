@@ -245,7 +245,7 @@ Abrir la salida de emergencia sin activar la respuesta más agresiva del sistema
 ### 11.4 Enfoque del diseño
 - El Empollón interpreta mensajes, protocolos y manuales.
 - El Manitas manipula componentes físicos y sistemas.
-- El Bruto puede forzar el avance.
+- El guaperas puede forzar el avance.
 - La Mística encuentra usos extraños y alternativos en objetos comunes.
 
 ### 11.5 Resultados posibles
@@ -357,4 +357,3 @@ Construir un prototipo navegable que permita validar tres cosas:
 1. si el flujo de entrada a partida funciona bien,  
 2. si la cooperación se entiende desde la UI,  
 3. si el sistema de cola de acciones evita que los jugadores se pierdan lo que hacen sus compañeros.
-

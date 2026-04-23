@@ -3,10 +3,18 @@ const SESSION_CODE_STORAGE_KEY = "elExamen2.sessionCode";
 
 const localClientId = getOrCreateClientId();
 
+const legacyRoleAliases = {
+  bruto: "guaperas",
+};
+
+function normalizeRoleId(roleId) {
+  return legacyRoleAliases[roleId] || roleId;
+}
+
 const config = {
   clientId: localClientId,
   playerName: `Jugador ${localClientId.slice(-4).toUpperCase()}`,
-  currentRole: document.body.dataset.role || "empollon",
+  currentRole: normalizeRoleId(document.body.dataset.role || "empollon"),
   firebaseBaseUrl: "https://project-butterfly-d0242-default-rtdb.firebaseio.com",
 };
 
@@ -38,8 +46,8 @@ const roles = {
     deviceTitle: "Kit de apaños",
     deviceText: "Herramientas improvisadas para preparar cerraduras, puentear paneles y desmontar sensores.",
   },
-  bruto: {
-    label: "El Bruto",
+  guaperas: {
+    label: "El guaperas",
     className: "role-bruto",
     deviceTitle: "Medidor de empuje",
     deviceText: "Panel placeholder para acciones físicas directas y consecuencias de fuerza bruta.",
@@ -64,8 +72,8 @@ const cards = [
   { id: "apañar", label: "apañar", roles: ["manitas"], image: "assets/actions/apanar.png" },
   { id: "puenteo_rapido", label: "puenteo_rapido", roles: ["manitas"], image: "assets/actions/puenteo_rapido.png" },
   { id: "desmontar", label: "desmontar", roles: ["manitas"], image: "assets/actions/desmontar.png" },
-  { id: "a_lo_bestia", label: "a_lo_bestia", roles: ["bruto"], image: "assets/actions/a_lo_bestia.png" },
-  { id: "empujar", label: "empujar", roles: ["bruto"], image: "assets/actions/empujar.png" },
+  { id: "a_lo_bestia", label: "a_lo_bestia", roles: ["guaperas"], image: "assets/actions/a_lo_bestia.png" },
+  { id: "empujar", label: "empujar", roles: ["guaperas"], image: "assets/actions/empujar.png" },
   { id: "y_si", label: "y_si", roles: ["mistica"], image: "assets/actions/y_si.png" },
   { id: "esto_vibra_raro", label: "esto_vibra_raro", roles: ["mistica"], image: "assets/actions/esto_vibra_raro.png" },
   { id: "ritual_improvisado", label: "ritual_improvisado", roles: ["mistica"], image: "assets/actions/ritual_improvisado.png" },
@@ -1037,7 +1045,7 @@ function getLogMessageClass(message) {
     return "log-message log-manitas";
   }
 
-  if (text.includes("bruto")) {
+  if (text.includes("guaperas") || text.includes("bruto")) {
     return "log-message log-bruto";
   }
 
@@ -1078,7 +1086,7 @@ function getChatMessageClass(message) {
     return "chat-message chat-manitas";
   }
 
-  if (author.includes("bruto")) {
+  if (author.includes("guaperas") || author.includes("bruto")) {
     return "chat-message chat-bruto";
   }
 
@@ -1334,8 +1342,8 @@ function resolveAction(action, pulseFlags = buildPulseFlags([], gameState)) {
 
   if (action.card === "a_lo_bestia" && action.target === "door") {
     gameState.doorState = "forced_open";
-    setTargetFeedback("door", "El Bruto revienta la salida de emergencia.", action);
-    emit("El Bruto revienta la salida de emergencia.");
+    setTargetFeedback("door", "El guaperas revienta la salida de emergencia.", action);
+    emit("El guaperas revienta la salida de emergencia.");
 
     if (gameState.sensorState === "active" || gameState.panelState === "active") {
       gameState.alarmState = "on";

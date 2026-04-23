@@ -24,8 +24,8 @@ export const playerRoles = [
     },
   },
   {
-    id: "bruto",
-    label: "El Bruto",
+    id: "guaperas",
+    label: "El guaperas",
     kicker: "Forzar progreso",
     text: "Empuja, revienta y desbloquea avances con riesgo.",
     cards: "a_lo_bestia, empujar",
@@ -49,10 +49,19 @@ export const playerRoles = [
   },
 ];
 
-export const lobbyRoleOrder = ["bruto", "empollon", "mistica", "manitas"];
+export const lobbyRoleOrder = ["guaperas", "empollon", "mistica", "manitas"];
+
+export const legacyRoleAliases = {
+  bruto: "guaperas",
+};
+
+export function normalizeRoleId(roleId) {
+  return legacyRoleAliases[roleId] || roleId;
+}
 
 export function getRole(roleId) {
-  return playerRoles.find((role) => role.id === roleId) || playerRoles[0];
+  const normalizedRoleId = normalizeRoleId(roleId);
+  return playerRoles.find((role) => role.id === normalizedRoleId) || playerRoles[0];
 }
 
 export function getLobbyRoles() {

@@ -14,8 +14,18 @@
 
 - El lobby usa paneles fijos por rol desde `assets/Lobby/UI`.
 - `LobbyRolePanel.jsx` conserva solo la imagen del panel, el input de nombre y el estado de seleccion.
+- El input de nombre queda superpuesto sobre `Lobby_inputNamecard.png` y mantiene la funcionalidad editable.
+- El boton `Continuar` / `Cambiar rol` vive bajo el input para que el jugador no tenga que bajar al footer.
+- El rol antes llamado `bruto` pasa a llamarse `guaperas` en textos y codigo React, con alias legacy para datos/rutas antiguas.
 - La seleccion visual de personaje es inmediata y la previsualizacion se sincroniza con Firebase en segundo plano cada 2 segundos como maximo.
+- El selector sigue al personaje clicado tambien despues de confirmar rol, permitiendo consultar otras fichas.
 - Los personajes del lobby tienen escala y alineacion inferior ajustadas para escritorio/tablet.
+- Los textos de debug del lobby se muestran en la zona superior derecha sobre el fondo azul.
+
+## Deudas tecnicas
+
+- Reemplazar `assets/Lobby/UI/Lobby_panel_guaperas.png` por una version final exportada desde diseno. La actual puede generarse o sobrescribirse desde el asset oficial del rol.
+- Revisar si los assets `Lobby_Button_*`, `Lobby_Waiting_Icon.png` y `assets/Lobby/UI/Orlas/` se integran en el flujo real o quedan como material descartable.
 
 ## Estado actual
 
@@ -134,7 +144,7 @@
 - La parte superior contiene cuatro monitores horizontales:
   - El Empollón,
   - La Manitas,
-  - El Bruto,
+  - El guaperas,
   - La Mística.
 - Cada monitor carga la pantalla del jugador correspondiente con `?view=gm-monitor`.
 - Bajo cada monitor se muestra la ultima accion conocida de ese rol.
@@ -400,7 +410,7 @@
 - Estado: primer corte implementado en React.
 - Objetivo completado: sustituir las 4 tarjetas actuales por una sala/lobby compartido tras introducir codigo de sesion.
 - Orden visual confirmado:
-  - El Bruto,
+  - El guaperas,
   - El Empollón,
   - La Mística,
   - La Manitas.
@@ -459,7 +469,7 @@
   - redirigir `gm.html` a `react.html?screen=gm`,
   - redirigir `game-empollon.html` a `react.html?screen=player&role=empollon`,
   - redirigir `game-manitas.html` a `react.html?screen=player&role=manitas`,
-  - redirigir `game-bruto.html` a `react.html?screen=player&role=bruto`,
+  - redirigir `game-bruto.html` a `react.html?screen=player&role=guaperas`,
   - redirigir `game-mistica.html` a `react.html?screen=player&role=mistica`.
 - Mantener una copia legacy o rama de respaldo hasta validar partida completa.
 
@@ -478,6 +488,7 @@
 - Media: generar un asset específico para el panel digital para diferenciarlo claramente del cuadro eléctrico.
 - Media: revisar el modo `Auto pulso`; existe como control, pero el flujo estable probado es manual.
 - Media: retirar el boton temporal `Forzar inicio` del GM cuando pueda testearse el lobby con 4 jugadores reales o sustituirlo por un modo simulacion claramente separado.
+- Baja: reemplazar `assets/Lobby/UI/Lobby_panel_guaperas.png` por una version final exportada del diseno; ahora es un placeholder tecnico para completar el renombrado desde Bruto.
 - Baja: normalizar nombres internos y textos entre inglés/español (`target`, `queued`, `pulse`, etc.) cuando el prototipo deje de moverse tan rápido.
 
 ## Deudas resueltas

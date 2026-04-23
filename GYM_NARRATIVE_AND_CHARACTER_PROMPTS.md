@@ -195,7 +195,7 @@ Prompt:
 Use the provided silhouette as pose and body shape reference. Create a grounded stylized teenage high school student character for a narrative adventure video game, role: the tinkerer / La Manitas, believable Spanish teenager, practical confident expression, casual worn jacket with pockets, small improvised tool kit, screwdriver, tape, zip ties, maybe a patched backpack, hands ready to fix or dismantle something, grounded realistic materials, clear readable silhouette, no sci-fi mechanic armor, no fantasy, no anime, no caricature, realistic stylized game character render, neutral background, full body character concept art
 ```
 
-## Personaje 3 - El Bruto
+## Personaje 3 - El guaperas
 
 Estereotipo:
 
@@ -214,7 +214,7 @@ Detalles visuales:
 Prompt:
 
 ```txt
-Use the provided silhouette as pose and body shape reference. Create a grounded stylized teenage high school student character for a narrative adventure video game, role: the strong impulsive kid / El Bruto, believable Spanish teenager, athletic build but still a normal student, school sportswear, basketball sneakers, hoodie or team shirt, maybe a Newton Guays Katz detail, confident energetic stance, friendly but impatient expression, clear readable silhouette, realistic fabrics, no superhero muscles, no bully stereotype, no anime, no caricature, grounded stylized game character render, neutral background, full body character concept art
+Use the provided silhouette as pose and body shape reference. Create a grounded stylized teenage high school student character for a narrative adventure video game, role: the strong impulsive kid / El guaperas, believable Spanish teenager, athletic build but still a normal student, school sportswear, basketball sneakers, hoodie or team shirt, maybe a Newton Guays Katz detail, confident energetic stance, friendly but impatient expression, clear readable silhouette, realistic fabrics, no superhero muscles, no bully stereotype, no anime, no caricature, grounded stylized game character render, neutral background, full body character concept art
 ```
 
 ## Personaje 4 - La Mística
@@ -243,16 +243,16 @@ Use the provided silhouette as pose and body shape reference. Create a grounded 
 ## Prompt conjunto para los cuatro personajes
 
 ```txt
-Create four grounded stylized teenage high school student characters for a narrative adventure video game, based on the provided silhouettes, believable Spanish students from Instituto Newton, each with a clear role and readable silhouette: smart nerd El Empollón with notebook and backpack, tinkerer La Manitas with small tools and practical jacket, athletic impulsive El Bruto with sportswear and Guays Katz basketball detail, weird intuitive La Mística with alternative school clothes and handmade charms. Grounded realistic materials, expressive but believable faces, casual modern school clothing, cohesive group, no fantasy costumes, no superhero outfits, no anime, no exaggerated cartoon proportions, realistic stylized game character concept art, neutral background, full body lineup
+Create four grounded stylized teenage high school student characters for a narrative adventure video game, based on the provided silhouettes, believable Spanish students from Instituto Newton, each with a clear role and readable silhouette: smart nerd El Empollón with notebook and backpack, tinkerer La Manitas with small tools and practical jacket, athletic impulsive El guaperas with sportswear and Guays Katz basketball detail, weird intuitive La Mística with alternative school clothes and handmade charms. Grounded realistic materials, expressive but believable faces, casual modern school clothing, cohesive group, no fantasy costumes, no superhero outfits, no anime, no exaggerated cartoon proportions, realistic stylized game character concept art, neutral background, full body lineup
 ```
 
 ## Notas para mantener coherencia
 
 - Todos deben parecer del mismo instituto.
 - Añadir pequeños detalles `N` o Newton en ropa/mochila si no sobrecarga.
-- Solo El Bruto debería tener una referencia fuerte a Guays Katz.
+- Solo El guaperas debería tener una referencia fuerte a Guays Katz.
 - Evitar que El Empollón sea demasiado adulto.
 - Evitar que La Manitas parezca mecánico profesional.
-- Evitar que El Bruto parezca villano.
+- Evitar que El guaperas parezca villano.
 - Evitar que La Mística parezca bruja literal.
 - Que todos tengan pinta de poder estar juntos un sábado por la mañana dentro del instituto.

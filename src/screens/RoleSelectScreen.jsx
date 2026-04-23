@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LobbyStage } from "../components/LobbyStage.jsx";
-import { getRole } from "../data/roles.js";
+import { getRole, normalizeRoleId } from "../data/roles.js";
 import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, touchLobbyPlayer, updatePlayerName, updatePreviewRole } from "../services/lobbyService.js";
 import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
 
@@ -39,7 +39,7 @@ export function RoleSelectScreen({ navigation }) {
         setLobby(nextLobby);
 
         if (!hasLocalSelectionRef.current && nextOwnPlayer?.previewRole) {
-          setSelectedRoleId(nextOwnPlayer.previewRole);
+          setSelectedRoleId(normalizeRoleId(nextOwnPlayer.previewRole));
         }
 
         if (document.activeElement?.id !== "lobby-player-name" && nextOwnPlayer) {
@@ -77,7 +77,7 @@ export function RoleSelectScreen({ navigation }) {
   }, []);
 
   function schedulePreviewSync(roleId) {
-    pendingPreviewRoleRef.current = roleId;
+    pendingPreviewRoleRef.current = normalizeRoleId(roleId);
 
     if (previewSyncTimerRef.current) {
       return;
@@ -103,10 +103,11 @@ export function RoleSelectScreen({ navigation }) {
   }
 
   async function handleSelectRole(roleId) {
+    const normalizedRoleId = normalizeRoleId(roleId);
     hasLocalSelectionRef.current = true;
-    setSelectedRoleId(roleId);
+    setSelectedRoleId(normalizedRoleId);
     setStatus("Rol en previsualizacion. Pulsa Continuar para reservarlo.");
-    schedulePreviewSync(roleId);
+    schedulePreviewSync(normalizedRoleId);
   }
 
   async function handleCommitName() {

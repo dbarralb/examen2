@@ -1,4 +1,5 @@
 import { getLobbyRoles } from "../data/roles.js";
+import { normalizeRoleId } from "../data/roles.js";
 import { getOrCreateClientId } from "./clientIdentity.js";
 import { firebaseGet, firebaseGetWithEtag, firebasePatch, firebasePut, firebasePutIfMatch } from "./firebaseClient.js";
 import { getStoredSessionCode } from "./sessionAccess.js";
@@ -82,7 +83,9 @@ export function getOwnLobbyPlayer(lobby) {
 }
 
 export function getClaimForRole(lobby, roleId) {
-  return lobby?.roleClaims?.[roleId] || null;
+  const normalizedRoleId = normalizeRoleId(roleId);
+  const legacyRoleId = normalizedRoleId === "guaperas" ? "bruto" : null;
+  return lobby?.roleClaims?.[normalizedRoleId] || (legacyRoleId ? lobby?.roleClaims?.[legacyRoleId] : null) || null;
 }
 
 export function isRoleClaimedByOther(lobby, roleId) {
@@ -147,9 +150,10 @@ export async function updatePlayerName(name) {
 
 export async function updatePreviewRole(roleId) {
   const clientId = getOrCreateClientId();
+  const normalizedRoleId = normalizeRoleId(roleId);
 
   await firebasePatch(`lobby/players/${clientId}`, {
-    previewRole: roleId,
+    previewRole: normalizedRoleId,
     status: "selecting",
     lastSeenAt: Date.now(),
   });
@@ -176,20 +180,21 @@ export async function releaseOwnRoleClaim() {
 }
 
 export async function claimRole(roleId) {
+  const normalizedRoleId = normalizeRoleId(roleId);
   const clientId = getOrCreateClientId();
   const now = Date.now();
   const snapshot = await getLobbySnapshot();
   const ownPlayer = snapshot.lobby.players[clientId] || { clientId, joinedAt: now };
   const displayName = getPlayerDisplayName(ownPlayer, snapshot.lobby.players);
   storePlayerName(displayName);
-  const currentClaim = snapshot.lobby.roleClaims[roleId];
+  const currentClaim = getClaimForRole(snapshot.lobby, normalizedRoleId);
 
   if (currentClaim && currentClaim.clientId !== clientId) {
     return { ok: false, reason: "taken", claim: currentClaim };
   }
 
   const previousClaimEntry = Object.entries(snapshot.lobby.roleClaims).find(([claimedRoleId, claim]) => {
-    return claimedRoleId !== roleId && claim?.clientId === clientId;
+    return normalizeRoleId(claimedRoleId) !== normalizedRoleId && claim?.clientId === clientId;
   });
 
   if (previousClaimEntry) {
@@ -197,13 +202,13 @@ export async function claimRole(roleId) {
   }
 
   if (!currentClaim) {
-    const { data, etag } = await firebaseGetWithEtag(`lobby/roleClaims/${roleId}`);
+    const { data, etag } = await firebaseGetWithEtag(`lobby/roleClaims/${normalizedRoleId}`);
 
     if (data && data.clientId !== clientId) {
       return { ok: false, reason: "taken", claim: data };
     }
 
-    const result = await firebasePutIfMatch(`lobby/roleClaims/${roleId}`, {
+    const result = await firebasePutIfMatch(`lobby/roleClaims/${normalizedRoleId}`, {
       clientId,
       name: displayName,
       claimedAt: now,
@@ -218,8 +223,8 @@ export async function claimRole(roleId) {
   await firebasePatch(`lobby/players/${clientId}`, {
     clientId,
     sessionCode: getStoredSessionCode(),
-    previewRole: roleId,
-    confirmedRole: roleId,
+    previewRole: normalizedRoleId,
+    confirmedRole: normalizedRoleId,
     status: "ready",
     readyAt: now,
     joinedAt: ownPlayer.joinedAt || now,
@@ -229,7 +234,7 @@ export async function claimRole(roleId) {
     updatedAt: now,
   });
 
-  return { ok: true, roleId };
+  return { ok: true, roleId: normalizedRoleId };
 }
 
 export async function ensureLobbyCountdown(lobby) {

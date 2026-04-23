@@ -18,7 +18,7 @@ No voy a meter arquitectura pesada. Te lo dejo como sistema de reglas claro.
 **Sala:** Gimnasio  
 **Objetivo:** salir por la puerta de emergencia  
 **Bloqueos:** panel digital, sensor, cerradura física  
-**Óptima:** El Empollón interpreta, La Manitas prepara, La Mística engaña el sensor y El Bruto remata la apertura limpia.  
+**Óptima:** El Empollón interpreta, La Manitas prepara, La Mística engaña el sensor y El guaperas remata la apertura limpia.  
 **Malas pero válidas:** romper, puentear o improvisar sin preparación; avanzan, pero con pérdida narrativa o consecuencias.
 
 ---
@@ -91,7 +91,7 @@ La Manitas:
 - puenteo_rapido
 - desmontar
 
-El Bruto:
+El guaperas:
 - a_lo_bestia
 - empujar
 
@@ -186,7 +186,7 @@ THEN
 
 ## B. Taquilla
 
-### El Bruto -> a_lo_bestia -> locker
+### El guaperas -> a_lo_bestia -> locker
 
 ```ts
 IF action.cardId === "a_lo_bestia" AND action.targetId === "locker"
@@ -283,7 +283,7 @@ THEN
   emit("El Empollón detecta cómo empujar la puerta sin forzar el mecanismo principal.")
 ```
 
-### El Bruto -> empujar -> door
+### El guaperas -> empujar -> door
 
 ```ts
 IF action.cardId === "empujar" AND action.targetId === "door"
@@ -304,13 +304,13 @@ THEN
      emit("La puerta se fuerza y salta la alarma.")
 ```
 
-### El Bruto -> a_lo_bestia -> door
+### El guaperas -> a_lo_bestia -> door
 
 ```ts
 IF action.cardId === "a_lo_bestia" AND action.targetId === "door"
 THEN
   doorState = "forced_open"
-  emit("El Bruto revienta la salida de emergencia.")
+  emit("El guaperas revienta la salida de emergencia.")
 
   IF sensorState === "active" OR panelState === "active"
   THEN
@@ -351,7 +351,7 @@ THEN
 ## Resolución rápida y mala
 
 ```ts
-IF El Bruto uses "a_lo_bestia" on "door"
+IF El guaperas uses "a_lo_bestia" on "door"
 AND panelState === "active"
 THEN
   doorState = "forced_open"
@@ -368,7 +368,7 @@ Resultado:
 
 ```ts
 IF sensorState !== "active"
-AND El Bruto uses "empujar" on "door"
+AND El guaperas uses "empujar" on "door"
 BUT doorPrepared === false
 THEN
   doorState = "forced_open"
@@ -385,7 +385,7 @@ Resultado:
 IF panel understood/tampered
 AND sensor fooled/disabled
 AND doorPrepared
-AND El Bruto pushes door
+AND El guaperas pushes door
 THEN
   doorState = "clean_open"
   hiddenRouteFlag = true if full note was found
@@ -741,7 +741,7 @@ Eso te permite validar rápido si:
         { "set": "doorState", "to": "forced_open" }
       ],
       "messages": [
-        "El Bruto revienta la salida de emergencia."
+        "El guaperas revienta la salida de emergencia."
       ],
       "conditionalEffects": [
         {
