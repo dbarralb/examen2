@@ -153,7 +153,7 @@ export function LobbyStage({
             )}
             {!isWaiting && (
               <div className="lobby-hold-hint" aria-hidden="true">
-                <span>MantÃ©n</span>
+                <span>Manten</span>
                 <img src={mouseHoldIcon} alt="" draggable="false" />
                 <span>para confirmar</span>
               </div>

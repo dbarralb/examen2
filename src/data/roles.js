@@ -1,7 +1,7 @@
 export const playerRoles = [
   {
     id: "empollon",
-    label: "El Empollón",
+    label: "El Empollon",
     kicker: "Interpretar sistemas",
     text: "Lee protocolos y prepara resoluciones limpias.",
     cards: "mirar_bien, consultar_apuntes",
@@ -25,7 +25,7 @@ export const playerRoles = [
   },
   {
     id: "guaperas",
-    label: "El guaperas",
+    label: "El Guaperas",
     kicker: "Forzar progreso",
     text: "Empuja, revienta y desbloquea avances con riesgo.",
     cards: "a_lo_bestia, empujar",
@@ -37,7 +37,7 @@ export const playerRoles = [
   },
   {
     id: "mistica",
-    label: "La Mística",
+    label: "La Mistica",
     kicker: "Logica rara util",
     text: "Encuentra patrones absurdos y soluciones alternativas.",
     cards: "y_si, esto_vibra_raro, ritual_improvisado",

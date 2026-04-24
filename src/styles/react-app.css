@@ -933,6 +933,179 @@ a {
   line-height: 1.35;
 }
 
+.action-queue-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.action-queue-stack.gm {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.action-queue-chip {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(122, 174, 221, 0.2);
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(5, 15, 26, 0.9), rgba(1, 46, 85, 0.86));
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.24);
+}
+
+.action-queue-chip.compact {
+  padding: 12px 14px 10px;
+}
+
+.action-queue-chip-queued {
+  border-color: rgba(2, 118, 214, 0.38);
+}
+
+.action-queue-chip-executing {
+  border-color: rgba(245, 184, 0, 0.42);
+  box-shadow: 0 0 18px rgba(245, 184, 0, 0.18);
+}
+
+.action-queue-chip-resolved {
+  border-color: rgba(46, 204, 113, 0.36);
+}
+
+.action-queue-chip-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-queue-chip-visual {
+  position: relative;
+  width: 96px;
+  min-width: 96px;
+}
+
+.action-queue-chip.compact .action-queue-chip-visual {
+  width: 82px;
+  min-width: 82px;
+}
+
+.action-queue-chip-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.22));
+}
+
+.action-queue-chip-sticker {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(5, 15, 26, 0.88);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+}
+
+.action-queue-chip.compact .action-queue-chip-sticker {
+  right: 6px;
+  bottom: 6px;
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.action-queue-chip-sticker-door,
+.action-queue-chip-sticker-container,
+.action-queue-chip-sticker-device,
+.action-queue-chip-sticker-sensor,
+.action-queue-chip-sticker-generic {
+  background: rgba(5, 15, 26, 0.88);
+}
+
+.action-queue-chip-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.action-queue-chip-copy strong {
+  color: #fff;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.action-queue-chip.compact .action-queue-chip-copy strong {
+  font-size: 14px;
+}
+
+.action-queue-chip-copy span {
+  color: var(--color-cream);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.action-queue-chip.compact .action-queue-chip-copy span {
+  font-size: 11px;
+}
+
+.action-queue-chip-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.action-queue-chip-meta small {
+  color: var(--color-gray-300);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.action-queue-chip-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.action-queue-chip.compact .action-queue-chip-status {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.action-queue-chip-status-queued {
+  background: rgba(2, 118, 214, 0.16);
+  color: var(--color-blue-light);
+}
+
+.action-queue-chip-status-executing {
+  background: rgba(245, 184, 0, 0.15);
+  color: var(--color-gold);
+}
+
+.action-queue-chip-status-resolved {
+  background: rgba(46, 204, 113, 0.14);
+  color: var(--color-success);
+}
+
 .react-player-screen {
   display: grid;
   grid-template-columns: 1fr minmax(280px, 360px);
@@ -986,14 +1159,57 @@ a {
   pointer-events: none;
 }
 
-.react-gym-floor {
+.scene-map-viewport {
   position: absolute;
   inset: 0;
   z-index: 3;
-  pointer-events: none;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.react-hotspot {
+.scene-map-viewport.is-panning {
+  cursor: grabbing;
+}
+
+.scene-focus-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.scene-map-viewport.is-focus-transitioning .scene-focus-fade {
+  animation: scene-focus-fade 420ms ease-in-out;
+}
+
+.scene-map-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scene-map-world.is-focus-transitioning {
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), filter 420ms ease-in-out;
+}
+
+.scene-map-background {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.scene-map-hotspot {
   position: absolute;
   z-index: 4;
   border: 2px solid var(--color-blue);
@@ -1005,13 +1221,13 @@ a {
   box-shadow: var(--shadow-glow);
 }
 
-.react-hotspot.selected,
-.react-hotspot:hover {
+.scene-map-hotspot.selected,
+.scene-map-hotspot:hover {
   border-color: var(--color-gold);
   background: rgba(245, 184, 0, 0.16);
 }
 
-.react-hotspot span {
+.scene-map-hotspot span {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 6px);
@@ -1027,27 +1243,56 @@ a {
   text-transform: uppercase;
 }
 
-.target-popover {
+.scene-object-card {
   position: absolute;
-  right: 24px;
-  bottom: 24px;
   z-index: 9;
-  width: min(360px, calc(100% - 48px));
+  width: 280px;
+  border: 1px solid var(--color-blue);
+  border-radius: 14px;
+  padding: 18px;
+  background: rgba(2, 31, 58, 0.96);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
-.target-popover-image {
+.scene-object-card.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.scene-object-card h3 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.scene-object-card-image {
   width: 100%;
-  max-height: 150px;
+  height: 132px;
   object-fit: contain;
   margin-bottom: 14px;
   border: 1px solid var(--color-blue-mid);
-  background: rgba(5, 15, 26, 0.32);
+  background: rgba(1, 46, 85, 0.42);
+}
+
+.scene-object-card p {
+  margin: 12px 0 0;
+  color: #dbe9f8;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 .react-drop-slot {
   display: grid;
   gap: 10px;
-  min-height: 110px;
+  min-height: 90px;
   margin-top: 16px;
   border: 1px dashed var(--color-blue);
   border-radius: 8px;
@@ -1056,6 +1301,10 @@ a {
   color: var(--color-cream);
   background: rgba(2, 118, 214, 0.08);
   text-align: center;
+}
+
+.scene-object-card .n-badge {
+  margin-top: 6px;
 }
 
 .react-drop-slot.loading {
@@ -1100,6 +1349,23 @@ a {
   height: 100%;
   object-fit: contain;
   pointer-events: none;
+}
+
+@keyframes scene-focus-fade {
+  0% {
+    opacity: 0;
+    background: rgba(4, 12, 24, 0);
+  }
+
+  35% {
+    opacity: 1;
+    background: rgba(4, 12, 24, 0.12);
+  }
+
+  100% {
+    opacity: 0;
+    background: rgba(4, 12, 24, 0);
+  }
 }
 
 .player-side-card {

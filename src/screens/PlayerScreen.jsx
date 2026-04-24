@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { NBadge, NButton, NCard, NProgress, NTimer, NewtonLogo } from "../components/newton";
-import { cards, getCard, getTargetImage, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
+import { NBadge, NCard, NProgress, NTimer, NewtonLogo } from "../components/newton";
+import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
+import { SceneMap } from "../components/SceneMap.jsx";
+import { cards, getCard, objectImages, targets } from "../data/gameData.js";
 import { getRole } from "../data/roles.js";
+import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
+import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
@@ -27,7 +31,7 @@ export function PlayerScreen({ navigation, params }) {
   const role = getRole(params.get("role") || "empollon");
   const visibleCards = useMemo(() => cards.filter((card) => card.roles.includes(role.id)), [role.id]);
   const [remoteState, setRemoteState] = useState(null);
-  const [selectedTargetId, setSelectedTargetId] = useState("door");
+  const [selectedTargetId, setSelectedTargetId] = useState(null);
   const [selectedCardId, setSelectedCardId] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -41,17 +45,18 @@ export function PlayerScreen({ navigation, params }) {
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 5), [remoteState]);
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
-  const selectedTarget = targets.find((target) => target.id === selectedTargetId) || targets[0];
-  const selectedCard = getCard(selectedCardId);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function tick() {
+  usePollingRefresh({
+    intervalMs: 1000,
+    task: async ({ isCancelled }) => {
       try {
         const sessionState = await getSession();
+
+        if (isCancelled()) {
+          return;
+        }
 
         if (!hasValidStoredSessionCode(sessionState)) {
           navigation.go("access");
@@ -65,24 +70,17 @@ export function PlayerScreen({ navigation, params }) {
 
         const state = await getRemoteState();
 
-        if (!cancelled) {
+        if (!isCancelled()) {
           setRemoteState(state);
           setStatus("Sincronizado.");
         }
       } catch (error) {
-        if (!cancelled) {
+        if (!isCancelled()) {
           setStatus("No se pudo refrescar Firebase.");
         }
       }
-    }
-
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [navigation]);
+    },
+  });
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 150);
@@ -98,12 +96,12 @@ export function PlayerScreen({ navigation, params }) {
       try {
         const action = await enqueueLoadedAction(pendingAction);
         setPendingAction(null);
-        setStatus(`${action.card} queda lista para el siguiente pulso.`);
+        setStatus(`${formatCardLabel(action)} queda lista para el siguiente pulso.`);
         const state = await getRemoteState();
         setRemoteState(state);
       } catch (error) {
         setPendingAction(null);
-        setStatus("No se pudo encolar la acción. Reintenta cuando vuelva Firebase.");
+        setStatus("No se pudo encolar la accion. Reintenta cuando vuelva Firebase.");
       }
     }, Math.max(0, pendingAction.endsAt - Date.now()));
 
@@ -114,12 +112,12 @@ export function PlayerScreen({ navigation, params }) {
     const card = getCard(cardId);
 
     if (session.status !== "in_game") {
-      setStatus("La partida no está en curso.");
+      setStatus("La partida no esta en curso.");
       return;
     }
 
     if (overlayActive) {
-      setStatus("Espera a que termine la notificación del pulso.");
+      setStatus("Espera a que termine la notificacion del pulso.");
       return;
     }
 
@@ -129,17 +127,17 @@ export function PlayerScreen({ navigation, params }) {
     }
 
     if (pendingAction) {
-      setStatus("Ya hay una acción cargándose.");
+      setStatus("Ya hay una accion cargandose.");
       return;
     }
 
     if (queuedForPlayer) {
-      setStatus("Ya tienes una acción esperando este pulso.");
+      setStatus("Ya tienes una accion esperando este pulso.");
       return;
     }
 
     setPendingAction(createPendingAction({ card, targetId, roleId: role.id }));
-    setStatus(`${card.id} cargando sobre ${targets.find((target) => target.id === targetId)?.label || targetId}.`);
+    setStatus(`${formatCardLabel(card)} cargando sobre ${targets.find((target) => target.id === targetId)?.label || targetId}.`);
   }
 
   function handleDrop(event, targetId) {
@@ -150,7 +148,7 @@ export function PlayerScreen({ navigation, params }) {
 
   function cancelPendingAction() {
     if (pendingAction) {
-      setStatus(`${pendingAction.card} cancelada antes de entrar en cola.`);
+      setStatus(`${formatCardLabel(pendingAction)} cancelada antes de entrar en cola.`);
       setPendingAction(null);
     }
   }
@@ -175,48 +173,25 @@ export function PlayerScreen({ navigation, params }) {
           <NBadge status={role.status}>{role.label}</NBadge>
           <NTimer seconds={elapsedSeconds} />
         </div>
-        <div className="react-gym-floor" aria-label="Escenario del gimnasio">
-          {targets.map((target) => (
-            <button
-              key={target.id}
-              className={`react-hotspot ${selectedTargetId === target.id ? "selected" : ""}`}
-              style={{ left: `${target.x}%`, top: `${target.y}%`, width: `${target.w}%`, height: `${target.h}%` }}
-              type="button"
-              title={target.label}
-              onClick={() => setSelectedTargetId(target.id)}
-            >
-              <span>{target.label}</span>
-            </button>
-          ))}
-        </div>
+        <SceneMap
+          gameState={gameState}
+          targetFeedback={targetFeedback}
+          selectedTargetId={selectedTargetId}
+          pendingAction={pendingAction}
+          queuedForPlayer={queuedForPlayer}
+          overlayActive={overlayActive}
+          pendingProgress={pendingProgress}
+          onSelectTarget={setSelectedTargetId}
+          onCloseTarget={() => setSelectedTargetId(null)}
+          onDrop={handleDrop}
+          onCancelPendingAction={cancelPendingAction}
+        />
         {overlayActive && (
           <aside className="react-result-overlay">
-            <strong>{pulseState.resultOverlay.message || "Acción resuelta."}</strong>
+            <strong>{pulseState.resultOverlay.message || "Accion resuelta."}</strong>
             <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
           </aside>
         )}
-        <NCard className="target-popover" title={selectedTarget.label} glow>
-          {getTargetImage(selectedTarget, gameState) && <img className="target-popover-image" src={getTargetImage(selectedTarget, gameState)} alt={selectedTarget.label} />}
-          <NBadge status="info">Estado: {getTargetStateLabel(selectedTarget, gameState)}</NBadge>
-          <p>{targetFeedback[selectedTarget.id]}</p>
-          <section
-            className={`react-drop-slot ${pendingAction?.target === selectedTarget.id ? "loading" : ""}`}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => handleDrop(event, selectedTarget.id)}
-          >
-            {pendingAction?.target === selectedTarget.id ? (
-              <>
-                <strong>{pendingAction.card} cargando</strong>
-                <NProgress value={pendingProgress} label="Carga local" />
-                <NButton variant="danger" size="sm" onClick={cancelPendingAction}>Cancelar</NButton>
-              </>
-            ) : queuedForPlayer?.target === selectedTarget.id ? (
-              <strong>{queuedForPlayer.card} espera pulso</strong>
-            ) : (
-              <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta aquí"}</span>
-            )}
-          </section>
-        </NCard>
         <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
           {visibleCards.map((card) => (
             <button
@@ -257,11 +232,13 @@ export function PlayerScreen({ navigation, params }) {
           <p className="react-status" role="status" aria-live="polite">{status}</p>
         </NCard>
         <NCard title="Cola" className="player-side-card">
-          {queuedForPlayer ? (
-            <p>{queuedForPlayer.card} → {queuedForPlayer.target} · {queuedForPlayer.status || "queued"}</p>
-          ) : (
-            <p>No tienes acciones esperando pulso.</p>
-          )}
+          <ActionQueuePanel
+            pulseState={pulseState}
+            queuedActions={queuedActions}
+            emptyMessage="No hay acciones esperando pulso."
+            ariaLabel="Cola de acciones"
+            compactChips
+          />
         </NCard>
         <NCard title="Historial" className="player-side-card">
           <div className="react-list">

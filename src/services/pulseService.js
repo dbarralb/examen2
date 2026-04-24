@@ -23,7 +23,7 @@ function createPulseResultOverlay(message, actionId) {
   const now = Date.now();
   return {
     visible: true,
-    message: message || "Acción resuelta.",
+    message: message || "Accion resuelta.",
     startedAt: now,
     endsAt: now + timing.resultOverlaySeconds * 1000,
     actionId,
@@ -91,7 +91,7 @@ export async function startManualPulse({ onStatus } = {}) {
     const gameState = { ...createInitialGameState(), ...((await firebaseGet("gameState")) || {}) };
     const targetFeedback = { ...createInitialTargetFeedback(), ...((await firebaseGet("targetFeedback")) || {}) };
     const lastRoleActions = { ...((await firebaseGet("lastRoleActions")) || {}) };
-    let lastRoleDebug = (await firebaseGet("lastRoleDebug")) || "Sin acciones resueltas todavía.";
+    let lastRoleDebug = (await firebaseGet("lastRoleDebug")) || "Sin acciones resueltas todavia.";
     const context = { gameState, targetFeedback, actionLog, lastRoleDebug };
 
     pulseState = {
@@ -103,9 +103,9 @@ export async function startManualPulse({ onStatus } = {}) {
     };
 
     const pulseFlags = buildPulseFlags(pulseActions, gameState);
-    actionLog.unshift(`Pulso cargado: ${pulseActions.length} acciones entran en ejecución.`);
+    actionLog.unshift(`Pulso cargado: ${pulseActions.length} acciones entran en ejecucion.`);
     await firebasePatch("", { pulseState, actionLog });
-    onStatus?.(`Pulso cargado: ${pulseActions.length} acciones entran en ejecución.`);
+    onStatus?.(`Pulso cargado: ${pulseActions.length} acciones entran en ejecucion.`);
 
     for (let index = 0; index < pulseActions.length; index += 1) {
       const liveAction = { ...pulseActions[index] };
@@ -160,7 +160,7 @@ export async function startManualPulse({ onStatus } = {}) {
       return deletes;
     }, {});
     pulseState = createInitialPulseState();
-    actionLog.unshift("Pulso resuelto. Las acciones tardías esperan al siguiente.");
+    actionLog.unshift("Pulso resuelto. Las acciones tardias esperan al siguiente.");
 
     await firebasePatch("", {
       gameState: context.gameState,
@@ -171,7 +171,7 @@ export async function startManualPulse({ onStatus } = {}) {
       lastRoleActions,
       lastRoleDebug,
     });
-    onStatus?.("Pulso resuelto. Las acciones tardías esperan al siguiente.");
+    onStatus?.("Pulso resuelto. Las acciones tardias esperan al siguiente.");
   } catch (error) {
     pulseState = createInitialPulseState();
     await firebasePatch("", { pulseState });

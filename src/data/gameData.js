@@ -1,7 +1,7 @@
 export const cards = [
   { id: "mirar_bien", label: "mirar_bien", roles: ["empollon"], image: "/assets/actions/Mirar_bien_accion.png" },
   { id: "consultar_apuntes", label: "consultar_apuntes", roles: ["empollon"], image: "/assets/actions/Consultar_apuntes_accion.png" },
-  { id: "apañar", label: "apañar", roles: ["manitas"], image: "/assets/actions/apanar.png" },
+  { id: "apanar", label: "apanar", roles: ["manitas"], image: "/assets/actions/apanar.png" },
   { id: "puenteo_rapido", label: "puenteo_rapido", roles: ["manitas"], image: "/assets/actions/puenteo_rapido.png" },
   { id: "desmontar", label: "desmontar", roles: ["manitas"], image: "/assets/actions/desmontar.png" },
   { id: "a_lo_bestia", label: "a_lo_bestia", roles: ["guaperas"], image: "/assets/actions/a_lo_bestia.png" },
@@ -16,7 +16,7 @@ export const targets = [
   { id: "panel", label: "panel", stateKey: "panelState", x: 66, y: 36, w: 5, h: 8 },
   { id: "sensor", label: "sensor", stateKey: "sensorState", x: 50, y: 18, w: 5, h: 8 },
   { id: "locker", label: "taquilla", stateKey: "lockerState", x: 18, y: 42, w: 5, h: 8 },
-  { id: "electrical_box", label: "cuadro eléctrico", stateKey: "electricalBoxState", x: 35, y: 32, w: 5, h: 8 },
+  { id: "electrical_box", label: "cuadro electrico", stateKey: "electricalBoxState", x: 35, y: 32, w: 5, h: 8 },
   { id: "sports_gear", label: "material deportivo", stateKey: "sportsGearState", x: 48, y: 68, w: 5, h: 8 },
 ];
 
@@ -88,7 +88,7 @@ export function getTargetStateLabel(target, gameState) {
   }
 
   if (target.id === "sensor" && gameState.sensorPatternDetected && gameState.sensorState === "active") {
-    return "active / patrón detectado";
+    return "active / patron detectado";
   }
 
   return getTargetState(target, gameState);

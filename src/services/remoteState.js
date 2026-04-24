@@ -56,10 +56,10 @@ export function createInitialGameState() {
 export function createInitialTargetFeedback() {
   return {
     door: "Sin revisar.",
-    panel: "Activo. Esperando lectura o manipulación.",
+    panel: "Activo. Esperando lectura o manipulacion.",
     sensor: "Activo. Detectando el entorno.",
     locker: "Cerrada.",
-    electrical_box: "Sin interacción todavía.",
+    electrical_box: "Sin interaccion todavia.",
     sports_gear: "Material tirado por el gimnasio.",
   };
 }
@@ -84,12 +84,12 @@ export function buildInitialRemoteState(status = "role_select") {
     },
     lastRoleActions: {},
     queuedActions: null,
-    actionLog: ["Sistema listo. Selecciona carta y target para encolar una acción."],
+    actionLog: ["Sistema listo. Selecciona carta y target para encolar una accion."],
     chatMessages: [
       { id: "gm-welcome", author: "GM", text: "Bienvenidos al gimnasio.", createdAt: 1 },
       { id: "player2-dummy", author: "Jugador 2", text: "Voy a mirar el panel.", createdAt: 2 },
     ],
-    lastRoleDebug: "Sin acciones resueltas todavía.",
+    lastRoleDebug: "Sin acciones resueltas todavia.",
   };
 }
 

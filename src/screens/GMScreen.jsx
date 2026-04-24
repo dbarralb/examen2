@@ -1,49 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { NBadge, NButton, NCard, NProgress, NTimer, NewtonLogo } from "../components/newton";
+import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton";
+import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
+import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { forceStartDebugGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { startManualPulse } from "../services/pulseService.js";
 import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 
 function getSessionBadgeStatus(status) {
   return status === "in_game" ? "success" : "muted";
-}
-
-function getPulseBadgeStatus(status) {
-  if (status === "executing") {
-    return "warning";
-  }
-
-  if (status === "charging") {
-    return "info";
-  }
-
-  return "muted";
-}
-
-function getPulseProgress(pulseState) {
-  const now = Date.now();
-
-  if (pulseState.status === "charging" && pulseState.pulseChargeStartedAt && pulseState.pulseChargeEndsAt) {
-    return {
-      label: "Aviso de pulso",
-      value: now - pulseState.pulseChargeStartedAt,
-      max: pulseState.pulseChargeEndsAt - pulseState.pulseChargeStartedAt,
-    };
-  }
-
-  if (pulseState.status === "executing") {
-    return {
-      label: "Ejecución",
-      value: 1,
-      max: 1,
-    };
-  }
-
-  return {
-    label: "Pulso",
-    value: 0,
-    max: 1,
-  };
 }
 
 export function GMScreen() {
@@ -66,29 +30,26 @@ export function GMScreen() {
     setStatusMessage("Sincronizado.");
   }
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function tick() {
+  usePollingRefresh({
+    intervalMs: 1000,
+    task: async ({ isCancelled }) => {
       try {
         const nextState = await getRemoteState();
 
-        if (cancelled) {
-          return;
+        if (!isCancelled()) {
+          setRemoteState(nextState);
+          setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
+          setStatusMessage("Sincronizado.");
         }
-
-        setRemoteState(nextState);
-        setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
-        setStatusMessage("Sincronizado.");
       } catch (error) {
-        if (!cancelled) {
+        if (!isCancelled()) {
           setStatusMessage("No se pudo refrescar Firebase.");
         }
       }
-    }
+    },
+  });
 
-    tick();
-    const remoteTimer = window.setInterval(tick, 1000);
+  useEffect(() => {
     const clockTimer = window.setInterval(() => {
       setElapsedSeconds((current) => {
         const gameTimer = remoteState?.session?.gameTimer;
@@ -97,8 +58,6 @@ export function GMScreen() {
     }, 500);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(remoteTimer);
       window.clearInterval(clockTimer);
     };
   }, [remoteState?.session?.gameTimer]);
@@ -170,21 +129,19 @@ export function GMScreen() {
     }
   }
 
-  const pulseProgress = getPulseProgress(pulseState);
-
   return (
     <main className="react-screen react-gm-screen">
       <header className="react-screen-header">
         <NewtonLogo />
         <div>
           <NBadge status="info">Panel GM</NBadge>
-          <h1>Control de sesión</h1>
+          <h1>Control de sesion</h1>
         </div>
       </header>
       <section className="react-gm-grid">
         <NCard title="Partida" gold>
           <NBadge status={getSessionBadgeStatus(session.status)}>{session.status === "in_game" ? "Partida en curso" : "Sin comenzar"}</NBadge>
-          <p className="session-code">Código: {session.accessCode || "sin generar"}</p>
+          <p className="session-code">Codigo: {session.accessCode || "sin generar"}</p>
           <NTimer seconds={elapsedSeconds} />
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">
@@ -205,25 +162,13 @@ export function GMScreen() {
           </div>
         </NCard>
         <NCard title="Cola de acciones" glow>
-          <div className="gm-card-header-line">
-            <NBadge status={getPulseBadgeStatus(pulseState.status)}>Pulso: {pulseState.status || "idle"}</NBadge>
-            <span>{queuedActions.length} acciones</span>
-          </div>
-          {pulseState.status !== "idle" && (
-            <NProgress value={pulseProgress.value} max={pulseProgress.max} label={pulseProgress.label} color={pulseState.status === "executing" ? "gold" : "blue"} />
-          )}
-          <div className="react-list">
-            {queuedActions.length === 0 ? (
-              <p>No hay acciones esperando pulso.</p>
-            ) : (
-              queuedActions.map((action) => (
-                <article key={action.id || `${action.role}-${action.loadedAt}`} className="react-list-item">
-                  <strong>{action.card} → {action.target}</strong>
-                  <span>{action.player || action.role} · {action.status || "queued"}</span>
-                </article>
-              ))
-            )}
-          </div>
+          <ActionQueuePanel
+            pulseState={pulseState}
+            queuedActions={queuedActions}
+            emptyMessage="No hay acciones esperando pulso."
+            ariaLabel="Cola de acciones del pulso"
+            stackClassName="gm"
+          />
           <div className="button-row">
             <NButton onClick={handleStartPulse} disabled={isBusy || isPulseBusy || pulseState.status !== "idle"}>
               {isPulseBusy ? "Pulso en curso" : "Comenzar pulso"}
@@ -234,7 +179,7 @@ export function GMScreen() {
         <NCard title="Historial">
           <div className="react-list">
             {actionLog.length === 0 ? (
-              <p>Sin historial todavía.</p>
+              <p>Sin historial todavia.</p>
             ) : (
               actionLog.map((message, index) => (
                 <article key={`${message}-${index}`} className="react-list-item">
@@ -243,7 +188,7 @@ export function GMScreen() {
               ))
             )}
           </div>
-          <p className="react-status">Los monitores y resolución de pulsos se portarán en la siguiente fase.</p>
+          <p className="react-status">Los monitores y resolucion de pulsos se portaran en la siguiente fase.</p>
         </NCard>
       </section>
     </main>

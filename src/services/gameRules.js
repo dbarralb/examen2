@@ -73,7 +73,7 @@ export function buildPulseFlags(actions, state) {
       flags.doorPrepared = true;
     }
 
-    if (action.card === "apañar" && action.target === "locker") {
+    if (action.card === "apanar" && action.target === "locker") {
       flags.lockerPrepared = true;
     }
 
@@ -131,7 +131,7 @@ function resolveAction(context, action, pulseFlags) {
     return;
   }
 
-  if (action.card === "apañar" && action.target === "locker") {
+  if (action.card === "apanar" && action.target === "locker") {
     gameState.lockerPrepared = true;
     setTargetFeedback(context, "locker", "Cerradura aflojada. Lista para abrir sin destrozar.", action);
     emit(context, "La Manitas afloja la cerradura de la taquilla.");
@@ -233,7 +233,7 @@ function resolveAction(context, action, pulseFlags) {
     return;
   }
 
-  setTargetFeedback(context, action.target, "Acción sin regla todavía. Feedback de debug generado.", action);
+  setTargetFeedback(context, action.target, "Accion sin regla todavia. Feedback de debug generado.", action);
   emit(context, `No hay regla MVP para ${action.card} sobre ${getTargetLabel(action.target)}.`);
 }
 

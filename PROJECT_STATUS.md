@@ -28,6 +28,8 @@
 
 - Reemplazar `assets/Lobby/UI/Lobby_panel_guaperas.png` por una version final exportada desde diseno. La actual puede generarse o sobrescribirse desde el asset oficial del rol.
 - Revisar si los assets `Lobby_Button_*`, `Lobby_Waiting_Icon.png` y `assets/Lobby/UI/Orlas/` se integran en el flujo real o quedan como material descartable.
+- Escenario de juego React: revisar el zoom automatico que se aplica al clicar un hotspot para que el encuadre de sala/hotspot/card sea mas preciso.
+- Escenario de juego React: inhabilitar el comportamiento nativo de clic izquierdo/seleccion del navegador en esta pantalla para que no interfiera con el pan del mapa.
 
 ## Estado actual
 
@@ -43,6 +45,10 @@
 - Debajo de cada monitor GM se muestra la ultima accion conocida de ese rol.
 - El GM conserva paneles externos de cola, controles de partida, historial, chat, estado global y organigrama.
 - El panel GM muestra estado de partida: `sin comenzar` o `partida en curso`.
+- La pantalla de jugador React ya usa un mapa paneable y zoomable sobre `assets/Pantalla de juego/Mapa_Background_temporal.png`.
+- Los hotspots viven sobre el mapa y sus cards de objeto aparecen junto a cada hotspot dentro del mismo sistema de coordenadas.
+- Solo puede haber una card de objeto abierta; click fuera cierra la seleccion.
+- Click en hotspot hace foco y zoom relativo sobre la zona para mostrar hotspot + card.
 
 ## Sincronizacion
 
