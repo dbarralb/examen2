@@ -10,6 +10,18 @@
 - [x] Verificar con `npm.cmd run build`.
 - [x] Revisar visualmente antes de hacer commit.
 
+## Testing
+
+- [ ] Validacion manual completa multi-pestana / varios jugadores:
+  - abrir 1 pestana GM y 4 pestanas de jugador,
+  - confirmar rol, nombre y estado independiente por jugador,
+  - iniciar y resetear partida desde GM comprobando redirecciones,
+  - cargar una accion por jugador sin duplicados ni cruces de rol,
+  - comprobar que las acciones aparecen en cola GM sin pisarse,
+  - resolver pulso manual y verificar resultados en pantallas de jugador,
+  - confirmar que acciones tardias quedan para el siguiente pulso,
+  - probar varias pestanas en Firefox manteniendo polling puro.
+
 ## Cambios cerrados - Lobby React
 
 - El lobby usa paneles fijos por rol desde `assets/Lobby/UI`.
@@ -43,6 +55,7 @@
 - Los monitores del GM estan bloqueados con `pointer-events: none`; son solo observacion.
 - En los monitores GM se ve escenario, hotspots y acciones del jugador. Se ocultan chat, historial, cola, dispositivo, seleccion y popovers.
 - Debajo de cada monitor GM se muestra la ultima accion conocida de ese rol.
+- Los monitores GM React usan `?view=gm-monitor` y consumen `playerViews/<role>` para reproducir la camara, hotspot abierto y carga local del jugador en modo solo observacion.
 - El GM conserva paneles externos de cola, controles de partida, historial, chat, estado global y organigrama.
 - El panel GM muestra estado de partida: `sin comenzar` o `partida en curso`.
 - La pantalla de jugador React ya usa un mapa paneable y zoomable sobre `assets/Pantalla de juego/Mapa_Background_temporal.png`.
@@ -60,6 +73,7 @@
   - cola de acciones,
   - estado de pulso,
   - ultimas acciones por rol,
+  - vista espejo efimera de jugador (`playerViews/<role>`: camara, hotspot abierto, carta seleccionada y carga local),
   - historial,
   - chat,
   - estado de sesion.
@@ -270,7 +284,7 @@
   - borrar solo acciones resueltas,
   - aplicar reglas MVP portadas a React.
 - `GMScreen` React todavia NO tiene `Auto pulso`.
-- Los monitores GM React todavia no estan portados.
+- Los monitores GM React estan portados: 4 iframes con `?view=gm-monitor` y ultima accion por rol bajo cada monitor.
 - `PlayerScreen` React ya tiene primer corte jugable:
   - polling de estado remoto,
   - validacion de codigo de sesion,
@@ -283,16 +297,15 @@
   - drag/drop a slot de accion,
   - carga local de 5 segundos,
   - cancelacion de carga local,
+  - cancelacion automatica si cambia el estado remoto del objeto durante la carga,
   - encolado seguro por `queuedActions/<id>`,
   - cola propia resumida,
   - historial resumido,
+  - chat,
+  - modo `?view=gm-monitor` sin controles de jugador,
+  - publicacion de telemetria visual efimera para monitores GM,
   - overlay de resultado de pulso.
 - `PlayerScreen` React todavia NO es equivalente al legacy completo:
-  - falta chat,
-  - falta layout final responsive,
-  - falta modo `?view=gm-monitor`,
-  - falta cancelacion por cambio remoto de estado del objeto mientras carga,
-  - faltan monitores GM React,
   - falta validacion manual completa multi-pestana.
 
 ### Checklist de test React actual
@@ -384,8 +397,10 @@
 - Completado parcial: historial resumido.
 - Completado primer corte: overlay de resultado de pulso.
 - Completado: retirada la pantalla embebible `?screen=map` y la capa `iframe`; queda preparado el asset fijo `assets/maps/instituto_newton_plano.png`.
-- Pendiente: portar chat.
-- Pendiente: portar `?view=gm-monitor` para que el GM observe pantallas jugador sin controles.
+- Completado: chat de jugador en React.
+- Completado: layout responsive final de jugador.
+- Completado: `?view=gm-monitor` para observar pantallas de jugador sin controles.
+- Completado: monitores GM React con 4 iframes de observacion y ultima accion por rol.
 - Pendiente: test manual completo del lobby con 4 pestanas Firefox:
   - entrada por codigo,
   - edicion de nombres,
