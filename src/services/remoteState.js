@@ -83,6 +83,7 @@ export function buildInitialRemoteState(status = "role_select") {
       updatedAt: Date.now(),
     },
     lastRoleActions: {},
+    playerViews: {},
     queuedActions: null,
     actionLog: ["Sistema listo. Selecciona carta y target para encolar una accion."],
     chatMessages: [

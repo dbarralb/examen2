@@ -25,6 +25,19 @@ export const actionChipBlueprint = {
   },
 };
 
+export const actionInfoCopy = {
+  mirar_bien: "Observa detalles y protocolos para descubrir como interactuar con seguridad.",
+  consultar_apuntes: "Contrasta pistas con teoria y revela la logica oculta de un sistema.",
+  apanar: "Ajusta mecanismos con precision para preparar una apertura o reparacion limpia.",
+  puenteo_rapido: "Improvisa un bypass tecnico rapido con riesgo si el sistema no esta entendido.",
+  desmontar: "Abre, separa o inutiliza componentes fisicos de un dispositivo.",
+  a_lo_bestia: "Aplica fuerza bruta para romper bloqueos cuando la delicadeza deja de importar.",
+  empujar: "Aplica presion directa para mover, abrir o forzar un objeto fisico.",
+  y_si: "Prueba una solucion improbable que puede conectar patrones que nadie esperaba.",
+  esto_vibra_raro: "Percibe senales extranas y detecta patrones ocultos en el entorno.",
+  ritual_improvisado: "Convierte intuicion rara en una secuencia experimental de activacion.",
+};
+
 export function getActionChipType(action) {
   const roleId = action?.role || getCard(action?.card)?.roles?.[0];
 
@@ -65,7 +78,7 @@ export function getTargetFamily(targetId) {
 
 export function formatCardLabel(cardOrAction) {
   const card = typeof cardOrAction?.card === "string" ? getCard(cardOrAction.card) : null;
-  const rawLabel = cardOrAction?.label || cardOrAction?.id || card?.label || cardOrAction?.card || "accion";
+  const rawLabel = cardOrAction?.label || card?.label || cardOrAction?.card || cardOrAction?.id || "accion";
   const normalized = rawLabel.replaceAll("_", " ").trim();
 
   if (!normalized) {
@@ -73,6 +86,18 @@ export function formatCardLabel(cardOrAction) {
   }
 
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+export function buildActionInfoModel(card) {
+  const actionType = getActionChipType({ card: card?.id });
+  const actionBlueprint = actionChipBlueprint.actionTypes[actionType] || actionChipBlueprint.actionTypes.engineering;
+
+  return {
+    id: card?.id || "accion",
+    cardLabel: formatCardLabel(card),
+    actionLabel: actionBlueprint.label,
+    description: actionInfoCopy[card?.id] || "Ejecuta una accion narrativa sobre el objeto elegido.",
+  };
 }
 
 export function buildQueuedActionChipModel(action) {

@@ -36,7 +36,7 @@ export function LobbyStage({
   const actionImage = isWaiting ? changeButtonImage : continueButtonImage;
   const actionLabel = isWaiting ? "Cambiar rol" : "Continuar";
   const isActionDisabled = isBusy || (!isWaiting && !selectedRoleId);
-  const holdDurationMs = 3000;
+  const holdDurationMs = 1000;
   const [isHoldingAction, setIsHoldingAction] = useState(false);
   const holdTimerRef = useRef(null);
   const holdCompletedRef = useRef(false);

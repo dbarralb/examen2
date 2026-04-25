@@ -1,31 +1,158 @@
 @font-face {
-  font-family: "League Spartan";
-  src: url("/Instituto Newton Design System/fonts/LeagueSpartan-VariableFont_wght.ttf") format("truetype");
-  font-display: swap;
-  font-style: normal;
+  font-family: 'League Spartan';
+  src: url('/Instituto Newton Design System/fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
+/* ============================================================
+   INSTITUTO NEWTON — Design System Tokens v2 — Dark Academic
+   ============================================================ */
+
 :root {
-  --color-navy: #013e70;
-  --color-navy-deep: #012e55;
-  --color-navy-darker: #050f1a;
-  --color-blue: #0276d6;
-  --color-blue-light: #1a8fef;
-  --color-blue-mid: #1a5fa8;
-  --color-cream: #e2d6af;
-  --color-cream-light: #f0edd8;
-  --color-gold: #f5b800;
-  --color-danger: #e74c3c;
-  --color-success: #2ecc71;
-  --color-gray-300: #8fa8c0;
-  --color-gray-400: #5a7a99;
-  --color-gray-600: #1e3a55;
-  --font-display: "League Spartan", "Arial Narrow", sans-serif;
-  --font-body: "League Spartan", "Arial Narrow", sans-serif;
-  --font-mono: "Courier New", monospace;
-  --shadow-card: 0 2px 8px rgba(1, 62, 112, 0.4);
-  --shadow-glow: 0 0 24px rgba(2, 118, 214, 0.3);
-  --shadow-deep: 0 8px 32px rgba(5, 15, 26, 0.6);
-  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  /* ── Dark Backgrounds ───────────────────────────────────── */
+  --color-teal-deep:     #182625;
+  --color-teal-darker:   #0F1918;
+  --color-teal-mid:      #1E3230;
+  --color-teal-border:   #2A3F3C;
+
+  --color-slate:         #384173;
+  --color-slate-light:   #4A5B8C;
+  --color-slate-dim:     #2B3159;
+
+  --color-olive:         #495925;
+  --color-olive-dim:     #333F19;
+  --color-brown:         #403C27;
+  --color-maroon:        #402C2A;
+
+  /* ── Accent / Interactive ───────────────────────────────── */
+  --color-lime:          #C2F779;
+  --color-lime-hover:    #D4FF8A;
+  --color-lime-press:    #A8E055;
+  --color-lime-dim:      rgba(194, 247, 121, 0.12);
+
+  --color-amber:         #D97D0D;
+  --color-amber-hover:   #F08D1A;
+  --color-amber-dim:     rgba(217, 125, 13, 0.12);
+
+  --color-crimson:       #A61212;
+  --color-crimson-hover: #C01515;
+  --color-crimson-dim:   rgba(166, 18, 18, 0.12);
+
+  /* ── Neutrals / Text ────────────────────────────────────── */
+  --color-cream:         #E2D6AF;
+  --color-cream-light:   #F0EDD8;
+  --color-cream-dim:     #C8BC95;
+  --color-white:         #FFFFFF;
+  --color-gray-100:      #D4CEB8;
+  --color-gray-200:      #A89F88;
+  --color-gray-300:      #7A7363;
+  --color-gray-400:      #524D40;
+  --color-gray-500:      #332E24;
+  --color-near-black:    #0A100F;
+
+  /* ── Semantic ────────────────────────────────────────────── */
+  --color-success:       #C2F779;
+  --color-success-bg:    rgba(194, 247, 121, 0.10);
+  --color-warning:       #D97D0D;
+  --color-warning-bg:    rgba(217, 125, 13, 0.12);
+  --color-danger:        #A61212;
+  --color-danger-bg:     rgba(166, 18, 18, 0.12);
+  --color-info:          #4A5B8C;
+  --color-info-bg:       rgba(74, 91, 140, 0.15);
+
+  /* ── Semantic UI Assignments ────────────────────────────── */
+  --bg-base:             var(--color-teal-deep);
+  --bg-surface:          var(--color-teal-mid);
+  --bg-deep:             var(--color-teal-darker);
+  --bg-overlay:          rgba(15, 25, 24, 0.88);
+
+  --fg-primary:          var(--color-cream);
+  --fg-secondary:        var(--color-cream-dim);
+  --fg-muted:            var(--color-gray-200);
+  --fg-inverse:          var(--color-teal-deep);
+  --fg-accent:           var(--color-lime);
+
+  --border-subtle:       var(--color-teal-border);
+  --border-active:       var(--color-lime);
+  --border-amber:        var(--color-amber);
+  --border-slate:        var(--color-slate-light);
+
+  --interactive-primary:       var(--color-lime);
+  --interactive-primary-hover: var(--color-lime-hover);
+  --interactive-primary-press: var(--color-lime-press);
+  --interactive-on-primary:    var(--color-teal-deep);
+
+  /* ── Shadows & Glows ─────────────────────────────────────── */
+  --shadow-card:    0 2px 8px rgba(10, 16, 15, 0.5);
+  --shadow-raised:  0 4px 16px rgba(10, 16, 15, 0.6);
+  --shadow-deep:    0 8px 32px rgba(10, 16, 15, 0.8);
+  --glow-lime:      0 0 20px rgba(194, 247, 121, 0.25);
+  --glow-amber:     0 0 20px rgba(217, 125, 13, 0.3);
+  --glow-crimson:   0 0 20px rgba(166, 18, 18, 0.3);
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-display:   'League Spartan', 'Arial Narrow', sans-serif;
+  --font-body:      'League Spartan', 'Arial Narrow', sans-serif;
+  --font-mono:      'Courier New', 'Courier', monospace;
+
+  --fw-light:       300;
+  --fw-regular:     400;
+  --fw-medium:      500;
+  --fw-semibold:    600;
+  --fw-bold:        700;
+  --fw-extrabold:   800;
+  --fw-black:       900;
+
+  --text-xs:    12px;
+  --text-sm:    14px;
+  --text-base:  16px;
+  --text-md:    20px;
+  --text-lg:    24px;
+  --text-xl:    32px;
+  --text-2xl:   48px;
+  --text-3xl:   64px;
+  --text-4xl:   96px;
+
+  --lh-tight:    1.1;
+  --lh-heading:  1.2;
+  --lh-snug:     1.4;
+  --lh-body:     1.6;
+  --lh-relaxed:  1.8;
+
+  --ls-tight:    -0.02em;
+  --ls-normal:    0em;
+  --ls-wide:      0.05em;
+  --ls-wider:     0.1em;
+  --ls-widest:    0.2em;
+
+  /* ── Spacing ─────────────────────────────────────────────── */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── Border Radius ───────────────────────────────────────── */
+  --radius-none:   0px;
+  --radius-sm:     4px;
+  --radius-md:     8px;
+  --radius-full:   9999px;
+  --radius-circle: 50%;
+
+  /* ── Animation ───────────────────────────────────────────── */
+  --ease-standard:  cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-in:        cubic-bezier(0.4, 0, 1, 1);
+  --ease-out:       cubic-bezier(0, 0, 0.2, 1);
+  --dur-micro:      150ms;
+  --dur-standard:   300ms;
+  --dur-scene:      600ms;
 }

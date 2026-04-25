@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NBadge, NCard, NProgress, NTimer, NewtonLogo } from "../components/newton";
-import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
+import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
+import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
-import { cards, getCard, objectImages, targets } from "../data/gameData.js";
+import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
+import { cards, getCard, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
 import { getRole } from "../data/roles.js";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, getPlayerName } from "../services/playerService.js";
+import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, getPlayerName, sendPlayerChatMessage, updatePlayerView } from "../services/playerService.js";
 import { updatePlayerName } from "../services/lobbyService.js";
+
+const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
+const SUCCESS_CLOSE_DELAY_MS = 2000;
+const PLAYER_VIEW_STALE_MS = 15000;
 
 function isResultOverlayActive(pulseState) {
   const overlay = pulseState?.resultOverlay;
@@ -27,16 +33,31 @@ function getOverlayProgress(pulseState) {
   return ((Date.now() - overlay.startedAt) / (overlay.endsAt - overlay.startedAt)) * 100;
 }
 
+function getTargetStateSignature(targetId, gameState) {
+  const target = targets.find((item) => item.id === targetId);
+
+  if (!target) {
+    return "";
+  }
+
+  return getTargetStateLabel(target, gameState);
+}
+
 export function PlayerScreen({ navigation, params }) {
   const role = getRole(params.get("role") || "empollon");
+  const isGmMonitorView = params.get("view") === "gm-monitor";
   const visibleCards = useMemo(() => cards.filter((card) => card.roles.includes(role.id)), [role.id]);
   const [remoteState, setRemoteState] = useState(null);
   const [selectedTargetId, setSelectedTargetId] = useState(null);
   const [selectedCardId, setSelectedCardId] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
-  const [now, setNow] = useState(Date.now());
   const [status, setStatus] = useState("Conectando con Firebase...");
   const [nameDraft, setNameDraft] = useState(() => getPlayerName());
+  const [chatDraft, setChatDraft] = useState("");
+  const successCloseTimerRef = useRef(null);
+  const chatListRef = useRef(null);
+  const latestCameraRef = useRef(null);
+  const viewPublishTimerRef = useRef(null);
 
   const session = remoteState?.session || {};
   const gameState = { ...createInitialGameState(), ...(remoteState?.gameState || {}) };
@@ -44,6 +65,13 @@ export function PlayerScreen({ navigation, params }) {
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 5), [remoteState]);
+  const chatMessages = useMemo(() => normalizeRemoteList(remoteState?.chatMessages).slice(-18), [remoteState]);
+  const lastRoleAction = remoteState?.lastRoleActions?.[role.id];
+  const mirroredView = isGmMonitorView ? remoteState?.playerViews?.[role.id] : null;
+  const isMirrorFresh = Boolean(mirroredView?.updatedAt && Date.now() - mirroredView.updatedAt < PLAYER_VIEW_STALE_MS);
+  const effectiveSelectedTargetId = isGmMonitorView ? (isMirrorFresh ? mirroredView.selectedTargetId : null) : selectedTargetId;
+  const effectivePendingAction = isGmMonitorView ? (isMirrorFresh ? mirroredView.pendingAction : null) : pendingAction;
+  const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
@@ -52,27 +80,45 @@ export function PlayerScreen({ navigation, params }) {
     intervalMs: 1000,
     task: async ({ isCancelled }) => {
       try {
-        const sessionState = await getSession();
+        if (!isGmMonitorView) {
+          const sessionState = await getSession();
 
-        if (isCancelled()) {
-          return;
-        }
+          if (isCancelled()) {
+            return;
+          }
 
-        if (!hasValidStoredSessionCode(sessionState)) {
-          navigation.go("access");
-          return;
-        }
+          if (!hasValidStoredSessionCode(sessionState)) {
+            navigation.go("access");
+            return;
+          }
 
-        if (sessionState.status !== "in_game") {
-          navigation.go("access");
-          return;
+          if (sessionState.status !== "in_game") {
+            navigation.go("access");
+            return;
+          }
         }
 
         const state = await getRemoteState();
 
         if (!isCancelled()) {
+          let cancelledRemoteLoad = false;
+
+          if (pendingAction) {
+            const nextGameState = { ...createInitialGameState(), ...(state?.gameState || {}) };
+            const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState);
+
+            if (pendingAction.targetStateSignature && nextSignature !== pendingAction.targetStateSignature) {
+              cancelledRemoteLoad = true;
+              setPendingAction(null);
+              setSelectedTargetId(pendingAction.target);
+              setStatus("Carga cancelada: el objeto cambio de estado remoto.");
+            }
+          }
+
           setRemoteState(state);
-          setStatus("Sincronizado.");
+          if (!pendingAction && !cancelledRemoteLoad) {
+            setStatus("Sincronizado.");
+          }
         }
       } catch (error) {
         if (!isCancelled()) {
@@ -82,31 +128,51 @@ export function PlayerScreen({ navigation, params }) {
     },
   });
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 150);
-    return () => window.clearInterval(timer);
+  useEffect(() => () => {
+    window.clearTimeout(successCloseTimerRef.current);
+    window.clearTimeout(viewPublishTimerRef.current);
   }, []);
 
   useEffect(() => {
-    if (!pendingAction) {
-      return undefined;
+    const chatList = chatListRef.current;
+
+    if (chatList) {
+      chatList.scrollTop = chatList.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  function createSoftwareLoadSequence() {
+    return Array.from({ length: 10 }, () => SOFTWARE_LOAD_DIRECTIONS[Math.floor(Math.random() * SOFTWARE_LOAD_DIRECTIONS.length)]);
+  }
+
+  function queuePlayerViewPublish() {
+    if (isGmMonitorView) {
+      return;
     }
 
-    const timeout = window.setTimeout(async () => {
+    window.clearTimeout(viewPublishTimerRef.current);
+    viewPublishTimerRef.current = window.setTimeout(async () => {
       try {
-        const action = await enqueueLoadedAction(pendingAction);
-        setPendingAction(null);
-        setStatus(`${formatCardLabel(action)} queda lista para el siguiente pulso.`);
-        const state = await getRemoteState();
-        setRemoteState(state);
+        await updatePlayerView(role, {
+          selectedTargetId,
+          selectedCardId,
+          camera: latestCameraRef.current,
+          pendingAction,
+        });
       } catch (error) {
-        setPendingAction(null);
-        setStatus("No se pudo encolar la accion. Reintenta cuando vuelva Firebase.");
+        // La vista espejo es telemetria de GM; no debe bloquear al jugador.
       }
-    }, Math.max(0, pendingAction.endsAt - Date.now()));
+    }, 120);
+  }
 
-    return () => window.clearTimeout(timeout);
-  }, [pendingAction]);
+  const handleCameraChange = useCallback((nextCamera) => {
+    latestCameraRef.current = nextCamera;
+    queuePlayerViewPublish();
+  }, [isGmMonitorView, pendingAction, role, selectedCardId, selectedTargetId]);
+
+  useEffect(() => {
+    queuePlayerViewPublish();
+  }, [selectedTargetId, selectedCardId, pendingAction?.id, pendingAction?.target, pendingAction?.card, pendingAction?.status, pendingAction?.minigame?.status, pendingAction?.minigame?.result]);
 
   function startLoad(cardId, targetId) {
     const card = getCard(cardId);
@@ -136,8 +202,13 @@ export function PlayerScreen({ navigation, params }) {
       return;
     }
 
-    setPendingAction(createPendingAction({ card, targetId, roleId: role.id }));
-    setStatus(`${formatCardLabel(card)} cargando sobre ${targets.find((target) => target.id === targetId)?.label || targetId}.`);
+    const minigame = createSoftwareLoadMinigame(createSoftwareLoadSequence());
+    setPendingAction({
+      ...createPendingAction({ card, targetId, roleId: role.id, minigame }),
+      targetStateSignature: getTargetStateSignature(targetId, gameState),
+    });
+    setSelectedTargetId(targetId);
+    setStatus(`${formatCardLabel(card)} cargando software sobre ${targets.find((target) => target.id === targetId)?.label || targetId}.`);
   }
 
   function handleDrop(event, targetId) {
@@ -153,6 +224,60 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
+  function updatePendingMinigame(nextMinigame) {
+    setPendingAction((current) => current ? { ...current, minigame: nextMinigame } : current);
+  }
+
+  function retryPendingMinigame() {
+    setPendingAction((current) => {
+      if (!current?.minigame) {
+        return current;
+      }
+
+      return {
+        ...current,
+        minigame: createSoftwareLoadMinigame(current.minigame.sequence),
+      };
+    });
+    setStatus("Reintentando carga de software.");
+  }
+
+  async function completePendingMinigame() {
+    const actionToQueue = pendingAction;
+
+    if (!actionToQueue) {
+      return;
+    }
+
+    try {
+      const action = await enqueueLoadedAction(actionToQueue);
+      setStatus(`${formatCardLabel(action)} queda lista para el siguiente pulso.`);
+      const state = await getRemoteState();
+      setRemoteState(state);
+      window.clearTimeout(successCloseTimerRef.current);
+      successCloseTimerRef.current = window.setTimeout(() => {
+        setPendingAction(null);
+        setSelectedTargetId(null);
+      }, SUCCESS_CLOSE_DELAY_MS);
+    } catch (error) {
+      setStatus("No se pudo encolar la accion. Reintenta cuando vuelva Firebase.");
+      setPendingAction((current) => {
+        if (!current?.minigame) {
+          return current;
+        }
+
+        return {
+          ...current,
+          minigame: {
+            ...current.minigame,
+            status: "failed",
+            result: "failed",
+          },
+        };
+      });
+    }
+  }
+
   async function handleNameCommit() {
     try {
       await updatePlayerName(nameDraft);
@@ -162,10 +287,38 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
-  const pendingProgress = pendingAction ? ((now - pendingAction.loadStartedAt) / pendingAction.durationMs) * 100 : 0;
+  async function handleChatSubmit(event) {
+    event.preventDefault();
+
+    try {
+      const message = await sendPlayerChatMessage(role, chatDraft);
+
+      if (!message) {
+        return;
+      }
+
+      setChatDraft("");
+      setRemoteState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          chatMessages: {
+            ...(current.chatMessages || {}),
+            [message.id]: message,
+          },
+        };
+      });
+      setStatus("Mensaje enviado.");
+    } catch (error) {
+      setStatus("No se pudo enviar el mensaje.");
+    }
+  }
 
   return (
-    <main className="react-screen react-player-screen react-player-functional">
+    <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
       <section className="player-scene-preview player-scene-live">
         {gameState.alarmState === "on" && <img className="react-alarm-overlay" src={objectImages.alarm.on} alt="Alarma activa" />}
         <div className="player-topbar">
@@ -176,15 +329,20 @@ export function PlayerScreen({ navigation, params }) {
         <SceneMap
           gameState={gameState}
           targetFeedback={targetFeedback}
-          selectedTargetId={selectedTargetId}
-          pendingAction={pendingAction}
+          selectedTargetId={effectiveSelectedTargetId}
+          pendingAction={effectivePendingAction}
           queuedForPlayer={queuedForPlayer}
           overlayActive={overlayActive}
-          pendingProgress={pendingProgress}
           onSelectTarget={setSelectedTargetId}
           onCloseTarget={() => setSelectedTargetId(null)}
           onDrop={handleDrop}
           onCancelPendingAction={cancelPendingAction}
+          onMinigameChange={updatePendingMinigame}
+          onMinigameRetry={retryPendingMinigame}
+          onMinigameSuccess={completePendingMinigame}
+          isMonitorView={isGmMonitorView}
+          externalCamera={effectiveCamera}
+          onCameraChange={isGmMonitorView ? undefined : handleCameraChange}
         />
         {overlayActive && (
           <aside className="react-result-overlay">
@@ -192,26 +350,45 @@ export function PlayerScreen({ navigation, params }) {
             <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
           </aside>
         )}
-        <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
-          {visibleCards.map((card) => (
-            <button
-              key={card.id}
-              className={`react-action-card ${selectedCardId === card.id ? "selected" : ""}`}
-              type="button"
-              draggable
-              onClick={() => setSelectedCardId(card.id)}
-              onDragStart={(event) => {
-                setSelectedCardId(card.id);
-                event.dataTransfer.setData("application/x-card-id", card.id);
-                event.dataTransfer.effectAllowed = "copy";
-              }}
-            >
-              <img src={card.image} alt={card.label} />
-            </button>
-          ))}
-        </div>
+        {!isGmMonitorView && <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
+          {visibleCards.map((card) => {
+            const isCharging = pendingAction?.card === card.id;
+            return (
+              <PlayerActionCard
+                key={card.id}
+                card={card}
+                isSelected={selectedCardId === card.id}
+                isCharging={isCharging}
+                onSelect={setSelectedCardId}
+                onDragStart={(event, draggedCard, charging) => {
+                  if (isCharging) {
+                    event.preventDefault();
+                    return;
+                  }
+
+                  setSelectedCardId(draggedCard.id);
+                  event.dataTransfer.setData("application/x-card-id", draggedCard.id);
+                  event.dataTransfer.effectAllowed = "copy";
+                }}
+              />
+            );
+          })}
+        </div>}
+        {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} />}
+        {isGmMonitorView && (
+          <aside className="player-monitor-action-strip">
+            <strong>{role.label}</strong>
+            <span>
+              {isMirrorFresh && mirroredView?.selectedTargetId
+                ? `Viendo ${targets.find((target) => target.id === mirroredView.selectedTargetId)?.label || mirroredView.selectedTargetId}`
+                : lastRoleAction
+                  ? `${formatCardLabel(lastRoleAction)} -> ${targets.find((target) => target.id === lastRoleAction.target)?.label || lastRoleAction.target}`
+                  : "Sin accion registrada."}
+            </span>
+          </aside>
+        )}
       </section>
-      <aside className="player-hud-panel">
+      {!isGmMonitorView && <aside className="player-hud-panel">
         <NCard title={`Dispositivo: ${role.label}`} glow>
           <label className="player-name-editor" htmlFor="player-name-in-game">
             <span>Jugador</span>
@@ -231,15 +408,6 @@ export function PlayerScreen({ navigation, params }) {
           <p>{role.text}</p>
           <p className="react-status" role="status" aria-live="polite">{status}</p>
         </NCard>
-        <NCard title="Cola" className="player-side-card">
-          <ActionQueuePanel
-            pulseState={pulseState}
-            queuedActions={queuedActions}
-            emptyMessage="No hay acciones esperando pulso."
-            ariaLabel="Cola de acciones"
-            compactChips
-          />
-        </NCard>
         <NCard title="Historial" className="player-side-card">
           <div className="react-list">
             {actionLog.map((message, index) => (
@@ -249,7 +417,31 @@ export function PlayerScreen({ navigation, params }) {
             ))}
           </div>
         </NCard>
-      </aside>
+        <NCard title="Chat" className="player-side-card player-chat-card">
+          <div ref={chatListRef} className="react-chat-list" aria-label="Mensajes de chat">
+            {chatMessages.length === 0 ? (
+              <p>Sin mensajes todavia.</p>
+            ) : (
+              chatMessages.map((message) => (
+                <article key={message.id || `${message.author}-${message.createdAt}`} className={`react-chat-message role-${message.role || "event"}`}>
+                  <strong>{message.author || "Sistema"}</strong>
+                  <span>{message.text}</span>
+                </article>
+              ))
+            )}
+          </div>
+          <form className="react-chat-form" onSubmit={handleChatSubmit}>
+            <input
+              value={chatDraft}
+              maxLength={120}
+              placeholder="Mensaje..."
+              aria-label="Mensaje de chat"
+              onChange={(event) => setChatDraft(event.target.value)}
+            />
+            <button type="submit" disabled={!chatDraft.trim()}>Enviar</button>
+          </form>
+        </NCard>
+      </aside>}
     </main>
   );
 }

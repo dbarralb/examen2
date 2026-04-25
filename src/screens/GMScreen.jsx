@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton";
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
+import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
+import { targets } from "../data/gameData.js";
+import { playerRoles } from "../data/roles.js";
+import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { forceStartDebugGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { startManualPulse } from "../services/pulseService.js";
 import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
@@ -10,12 +14,33 @@ function getSessionBadgeStatus(status) {
   return status === "in_game" ? "success" : "muted";
 }
 
+function getMonitorSrc(roleId) {
+  const params = new URLSearchParams({
+    screen: "player",
+    role: roleId,
+    view: "gm-monitor",
+  });
+
+  return `${window.location.pathname}?${params.toString()}`;
+}
+
+function getActionSummary(action) {
+  if (!action) {
+    return "Sin accion registrada.";
+  }
+
+  const target = targets.find((item) => item.id === action.target);
+  return `${formatCardLabel(action)} -> ${target?.label || action.target || "objetivo"}`;
+}
+
 export function GMScreen() {
   const [remoteState, setRemoteState] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [statusMessage, setStatusMessage] = useState("Conectando con Firebase...");
   const [isBusy, setIsBusy] = useState(false);
   const [isPulseBusy, setIsPulseBusy] = useState(false);
+  const [showCoordinates, setShowCoordinates] = useState(false);
+  const [monitorsExpanded, setMonitorsExpanded] = useState(false);
 
   const session = remoteState?.session || {};
   const pulseState = remoteState?.pulseState || { status: "idle" };
@@ -138,6 +163,54 @@ export function GMScreen() {
           <h1>Control de sesion</h1>
         </div>
       </header>
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${monitorsExpanded ? "expanded" : ""}`}
+          onClick={() => setMonitorsExpanded((v) => !v)}
+          aria-expanded={monitorsExpanded}
+        >
+          <span>Monitores de jugadores</span>
+          <span className="react-gm-monitors-toggle-badges">
+            {playerRoles.map((role) => {
+              const claim = remoteState?.lobby?.roleClaims?.[role.id];
+              return <NBadge key={role.id} status={claim ? "success" : "muted"}>{role.label}</NBadge>;
+            })}
+          </span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{monitorsExpanded ? "▲" : "▼"}</span>
+        </button>
+        {monitorsExpanded && (
+          <section className="react-gm-monitor-wall" aria-label="Monitores de jugadores">
+            {playerRoles.map((role) => {
+              const claim = remoteState?.lobby?.roleClaims?.[role.id];
+              const lastAction = remoteState?.lastRoleActions?.[role.id];
+
+              return (
+                <article key={role.id} className="react-gm-monitor">
+                  <header>
+                    <strong>{role.label}</strong>
+                    <NBadge status={claim ? "success" : "muted"}>{claim ? "Conectado" : "Sin jugador"}</NBadge>
+                  </header>
+                  <iframe title={`Monitor ${role.label}`} src={getMonitorSrc(role.id)} />
+                  <footer>{getActionSummary(lastAction)}</footer>
+                </article>
+              );
+            })}
+          </section>
+        )}
+      </div>
+      {showCoordinates && (
+        <section className="react-gm-coordinate-map" aria-label="Mapa de coordenadas">
+          <SceneMap
+            gameState={remoteState?.gameState || {}}
+            targetFeedback={remoteState?.targetFeedback || {}}
+            selectedTargetId={null}
+            pendingAction={null}
+            queuedForPlayer={null}
+            overlayActive={false}
+            showCoordinates
+          />
+        </section>
+      )}
       <section className="react-gm-grid">
         <NCard title="Partida" gold>
           <NBadge status={getSessionBadgeStatus(session.status)}>{session.status === "in_game" ? "Partida en curso" : "Sin comenzar"}</NBadge>
@@ -158,6 +231,13 @@ export function GMScreen() {
               disabled={isBusy || session.status === "in_game" || lobbyClaims.length < 1}
             >
               Forzar inicio
+            </NButton>
+            <NButton
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCoordinates((v) => !v)}
+            >
+              {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
             </NButton>
           </div>
         </NCard>

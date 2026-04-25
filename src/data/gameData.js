@@ -1,14 +1,14 @@
 export const cards = [
-  { id: "mirar_bien", label: "mirar_bien", roles: ["empollon"], image: "/assets/actions/Mirar_bien_accion.png" },
-  { id: "consultar_apuntes", label: "consultar_apuntes", roles: ["empollon"], image: "/assets/actions/Consultar_apuntes_accion.png" },
-  { id: "apanar", label: "apanar", roles: ["manitas"], image: "/assets/actions/apanar.png" },
-  { id: "puenteo_rapido", label: "puenteo_rapido", roles: ["manitas"], image: "/assets/actions/puenteo_rapido.png" },
-  { id: "desmontar", label: "desmontar", roles: ["manitas"], image: "/assets/actions/desmontar.png" },
-  { id: "a_lo_bestia", label: "a_lo_bestia", roles: ["guaperas"], image: "/assets/actions/a_lo_bestia.png" },
-  { id: "empujar", label: "empujar", roles: ["guaperas"], image: "/assets/actions/empujar.png" },
-  { id: "y_si", label: "y_si", roles: ["mistica"], image: "/assets/actions/y_si.png" },
-  { id: "esto_vibra_raro", label: "esto_vibra_raro", roles: ["mistica"], image: "/assets/actions/esto_vibra_raro.png" },
-  { id: "ritual_improvisado", label: "ritual_improvisado", roles: ["mistica"], image: "/assets/actions/ritual_improvisado.png" },
+  { id: "mirar_bien", label: "mirar_bien", roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/mirar_bien.png" },
+  { id: "consultar_apuntes", label: "consultar_apuntes", roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/consultar_apuntes.png" },
+  { id: "apanar", label: "apanar", roles: ["manitas"], image: "/assets/Pantalla de juego/Actions/apanar.png" },
+  { id: "puenteo_rapido", label: "puenteo_rapido", roles: ["manitas"], image: "/assets/Pantalla de juego/Actions/puenteo_rapido.png" },
+  { id: "desmontar", label: "desmontar", roles: ["manitas"], image: "/assets/Pantalla de juego/Actions/desmontar.png" },
+  { id: "a_lo_bestia", label: "a_lo_bestia", roles: ["guaperas"], image: "/assets/Pantalla de juego/Actions/a_lo_bestia.png" },
+  { id: "empujar", label: "empujar", roles: ["guaperas"], image: "/assets/Pantalla de juego/Actions/empujar.png" },
+  { id: "y_si", label: "y_si", roles: ["mistica"], image: "/assets/Pantalla de juego/Actions/y_si.png" },
+  { id: "esto_vibra_raro", label: "esto_vibra_raro", roles: ["mistica"], image: "/assets/Pantalla de juego/Actions/esto_vibra_raro.png" },
+  { id: "ritual_improvisado", label: "ritual_improvisado", roles: ["mistica"], image: "/assets/Pantalla de juego/Actions/ritual_improvisado.png" },
 ];
 
 export const targets = [

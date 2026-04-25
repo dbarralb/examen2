@@ -1,5 +1,5 @@
 import { createId, getOrCreateClientId } from "./clientIdentity.js";
-import { firebasePatch } from "./firebaseClient.js";
+import { firebasePatch, firebasePut } from "./firebaseClient.js";
 import { createLastRoleAction } from "./gameRules.js";
 import { getStoredPlayerName } from "./lobbyService.js";
 import { getStoredSessionCode } from "./sessionAccess.js";
@@ -24,7 +24,7 @@ export function findQueuedActionForCurrentPlayer(queuedActions, roleId) {
   });
 }
 
-export function createPendingAction({ card, targetId, roleId }) {
+export function createPendingAction({ card, targetId, roleId, minigame = null }) {
   const now = Date.now();
   const loadTimeSeconds = card.loadTimeSeconds || 5;
 
@@ -36,13 +36,14 @@ export function createPendingAction({ card, targetId, roleId }) {
     role: roleId,
     card: card.id,
     target: targetId,
-    status: "pendingLoad",
+    status: "charging",
     createdAt: now,
     loadStartedAt: now,
     endsAt: now + loadTimeSeconds * 1000,
     durationMs: loadTimeSeconds * 1000,
     loadTimeSeconds,
     executionTimeSeconds: card.executionTimeSeconds || 3,
+    minigame,
   };
 }
 
@@ -54,6 +55,8 @@ export async function enqueueLoadedAction(pendingAction) {
   };
   delete action.endsAt;
   delete action.durationMs;
+  delete action.minigame;
+  delete action.targetStateSignature;
 
   const lastRoleAction = createLastRoleAction(action, "esperando pulso");
   await firebasePatch("", {
@@ -62,4 +65,65 @@ export async function enqueueLoadedAction(pendingAction) {
   });
 
   return action;
+}
+
+export async function sendPlayerChatMessage(role, text) {
+  const trimmedText = text.trim();
+
+  if (!trimmedText) {
+    return null;
+  }
+
+  const message = {
+    id: createId(),
+    clientId: getOrCreateClientId(),
+    sessionCode: getStoredSessionCode(),
+    author: role.label,
+    role: role.id,
+    text: trimmedText,
+    createdAt: Date.now(),
+  };
+
+  await firebasePut(`chatMessages/${message.id}`, message);
+  return message;
+}
+
+function createMirrorPendingAction(pendingAction) {
+  if (!pendingAction) {
+    return null;
+  }
+
+  return {
+    id: pendingAction.id,
+    player: pendingAction.player,
+    role: pendingAction.role,
+    card: pendingAction.card,
+    target: pendingAction.target,
+    status: pendingAction.status,
+    loadStartedAt: pendingAction.loadStartedAt,
+    endsAt: pendingAction.endsAt,
+    minigameStatus: pendingAction.minigame?.status || null,
+    minigameResult: pendingAction.minigame?.result || null,
+  };
+}
+
+export async function updatePlayerView(role, viewState) {
+  const now = Date.now();
+  const view = {
+    clientId: getOrCreateClientId(),
+    sessionCode: getStoredSessionCode(),
+    playerName: getPlayerName(),
+    role: role.id,
+    selectedTargetId: viewState.selectedTargetId || null,
+    selectedCardId: viewState.selectedCardId || "",
+    camera: viewState.camera || null,
+    pendingAction: createMirrorPendingAction(viewState.pendingAction),
+    updatedAt: now,
+  };
+
+  await firebasePatch("", {
+    [`playerViews/${role.id}`]: view,
+  });
+
+  return view;
 }

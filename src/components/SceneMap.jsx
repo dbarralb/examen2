@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { NBadge, NButton, NProgress } from "./newton";
-import mapBackgroundImage from "../../assets/Pantalla de juego/Mapa_Background_temporal.png";
+import { NBadge } from "./newton";
+import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
+import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
+import { StructureLayer } from "./map/StructureLayer.jsx";
+import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
+import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
 import { getTargetImage, getTargetStateLabel, targets } from "../data/gameData.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
@@ -9,9 +13,10 @@ const MAP_HEIGHT = 1080;
 const MAP_ASPECT = MAP_WIDTH / MAP_HEIGHT;
 const MIN_SCALE = 1;
 const MAX_SCALE = 3;
+const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
 const TARGET_FOCUS_SCALE = 1.45;
-const TARGET_CARD_WIDTH = 280;
-const TARGET_CARD_HEIGHT = 340;
+const TARGET_CARD_WIDTH = 330;
+const TARGET_CARD_HEIGHT = 470;
 const FOCUS_TRANSITION_MS = 420;
 
 function clamp(value, min, max) {
@@ -72,11 +77,17 @@ export function SceneMap({
   pendingAction,
   queuedForPlayer,
   overlayActive,
-  pendingProgress,
   onSelectTarget,
   onCloseTarget,
   onDrop,
   onCancelPendingAction,
+  onMinigameChange,
+  onMinigameRetry,
+  onMinigameSuccess,
+  isMonitorView = false,
+  externalCamera = null,
+  onCameraChange,
+  showCoordinates = false,
 }) {
   const viewportRef = useRef(null);
   const panRef = useRef(null);
@@ -115,6 +126,22 @@ export function SceneMap({
 
   useEffect(() => () => window.clearTimeout(focusTransitionTimeoutRef.current), []);
 
+  useEffect(() => {
+    onCameraChange?.(camera);
+  }, [camera, onCameraChange]);
+
+  useEffect(() => {
+    if (!isMonitorView || !externalCamera || !layout.mapWidth || !layout.mapHeight) {
+      return;
+    }
+
+    setCamera(clampCamera({
+      x: Number(externalCamera.x) || 0,
+      y: Number(externalCamera.y) || 0,
+      scale: Math.max(MIN_SCALE, (Number(externalCamera.scale) || MIN_SCALE) * MONITOR_CAMERA_SCALE_FACTOR),
+    }, layout));
+  }, [externalCamera, isMonitorView, layout]);
+
   function focusTarget(target) {
     if (!layout.mapWidth || !layout.mapHeight) {
       return;
@@ -150,12 +177,20 @@ export function SceneMap({
   }
 
   function handleHotspotClick(event, target) {
+    if (isMonitorView) {
+      return;
+    }
+
     event.stopPropagation();
     onSelectTarget?.(target.id);
     focusTarget(target);
   }
 
   function handleViewportPointerDown(event) {
+    if (isMonitorView) {
+      return;
+    }
+
     if (event.button !== 0) {
       return;
     }
@@ -165,7 +200,9 @@ export function SceneMap({
     }
 
     event.preventDefault();
-    onCloseTarget?.();
+    if (!pendingAction) {
+      onCloseTarget?.();
+    }
     event.currentTarget.setPointerCapture?.(event.pointerId);
     panRef.current = {
       pointerId: event.pointerId,
@@ -202,6 +239,10 @@ export function SceneMap({
   }
 
   function handleWheel(event) {
+    if (isMonitorView) {
+      return;
+    }
+
     event.preventDefault();
 
     if (!layout.mapWidth || !layout.mapHeight) {
@@ -237,65 +278,71 @@ export function SceneMap({
     >
       <div className="scene-focus-fade" aria-hidden="true" />
       <div
-        className={`scene-map-world ${isFocusTransitioning ? "is-focus-transitioning" : ""}`}
+        className={`scene-map-world ${isFocusTransitioning ? "is-focus-transitioning" : ""} ${isMonitorView ? "is-monitor-view" : ""}`}
         style={{
           width: `${layout.mapWidth}px`,
           height: `${layout.mapHeight}px`,
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
         }}
       >
-        <img className="scene-map-background" src={mapBackgroundImage} alt="Mapa del gimnasio" draggable="false" />
+        <BackgroundLayer />
+        <StructureLayer gameState={gameState} />
+        <InteractiveLayer
+          gameState={gameState}
+          selectedTargetId={selectedTargetId}
+          isMonitorView={isMonitorView}
+          onHotspotClick={handleHotspotClick}
+        >
+          {targets.map((target) => {
+            const isOpen = selectedTargetId === target.id;
+            const targetImage = getTargetImage(target, gameState);
 
-        {targets.map((target) => (
-          <button
-            key={target.id}
-            className={`scene-map-hotspot ${selectedTargetId === target.id ? "selected" : ""}`}
-            style={{ left: `${target.x}%`, top: `${target.y}%`, width: `${target.w}%`, height: `${target.h}%` }}
-            type="button"
-            title={target.label}
-            onClick={(event) => handleHotspotClick(event, target)}
-          >
-            <span>{target.label}</span>
-          </button>
-        ))}
-
-        {targets.map((target) => {
-          const isOpen = selectedTargetId === target.id;
-          const targetImage = getTargetImage(target, gameState);
-
-          return (
-            <article
-              key={`${target.id}-card`}
-              className={`scene-object-card ${isOpen ? "open" : ""}`}
-              style={getTargetCardStyle(target)}
-              aria-hidden={!isOpen}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <h3>{target.label}</h3>
-              {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
-              <NBadge status="info">Estado: {getTargetStateLabel(target, gameState)}</NBadge>
-              <p>{targetFeedback[target.id]}</p>
-              <section
-                className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""}`}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => onDrop?.(event, target.id)}
+            return (
+              <article
+                key={`${target.id}-card`}
+                className={`scene-object-card ${isOpen ? "open" : ""}`}
+                style={getTargetCardStyle(target)}
+                aria-hidden={!isOpen}
+                onClick={(event) => event.stopPropagation()}
               >
-                {pendingAction?.target === target.id ? (
-                  <>
-                    <strong>{formatCardLabel(pendingAction)} cargando</strong>
-                    <NProgress value={pendingProgress} label="Carga local" />
-                    <NButton variant="danger" size="sm" onClick={onCancelPendingAction}>Cancelar</NButton>
-                  </>
-                ) : queuedForPlayer?.target === target.id ? (
-                  <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
-                ) : (
-                  <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta aqui"}</span>
-                )}
-              </section>
-            </article>
-          );
-        })}
+                <h3>{target.label}</h3>
+                {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
+                <NBadge status="info">Estado: {getTargetStateLabel(target, gameState)}</NBadge>
+                <p>{targetFeedback[target.id]}</p>
+                <section
+                  className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""}`}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    if (!isMonitorView) {
+                      onDrop?.(event, target.id);
+                    }
+                  }}
+                >
+                  {pendingAction?.target === target.id && isMonitorView ? (
+                    <>
+                      <strong>{formatCardLabel(pendingAction)} cargando</strong>
+                      <span>Vista espejo del jugador.</span>
+                    </>
+                  ) : pendingAction?.target === target.id ? (
+                    <SoftwareLoadMinigame
+                      action={pendingAction}
+                      onChange={onMinigameChange}
+                      onSuccess={onMinigameSuccess}
+                      onRetry={onMinigameRetry}
+                      onCancel={onCancelPendingAction}
+                    />
+                  ) : queuedForPlayer?.target === target.id ? (
+                    <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
+                  ) : (
+                    <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta aqui"}</span>
+                  )}
+                </section>
+              </article>
+            );
+          })}
+        </InteractiveLayer>
       </div>
+      {showCoordinates && <CoordinateOverlay camera={camera} layout={layout} />}
     </div>
   );
 }

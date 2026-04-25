@@ -472,6 +472,40 @@
   - validar manualmente con 4 pestanas reales en Firefox,
   - revisar si el boton GM debe llamarse definitivamente `Abrir lobby` en todo el texto de producto.
 
+#### Fase D3 - Sistema de capas del mapa
+
+- Estado: en desarrollo.
+- Objetivo: refactorizar el escenario de jugador en 3 capas apiladas dentro de `.scene-map-world`, compartiendo pan/zoom.
+- Capa 1 — Fondo (Background):
+  - Grid 3x2 de tiles PNG (609x540px cada uno) que componen el mapa 1826x1080.
+  - Fallback a `Mapa_Background_temporal.png` mientras no haya tiles reales.
+  - Ruta de assets: `assets/map/tiles/tile_{col}_{row}.png`.
+- Capa 2 — Estructura (Mapa delineado):
+  - SVG inline con `viewBox="0 0 100 100"` sobre el fondo.
+  - Define contornos de salas, paredes, puertas, pasillos y pasadizos secretos.
+  - Cada elemento estructural tiene `stateKey` en `gameState` y apariencias por estado (color, relleno, dash, opacidad).
+  - Los pasadizos secretos usan `visibleWhen(gameState)` — solo aparecen al descubrirse.
+- Capa 3 — Interactiva (Hotspots + Marcas):
+  - Hotspots: los 6 existentes, misma mecanica, pero con icono diseñado en lugar de cuadrado azul.
+  - Marcas/Trazos: indicadores visuales dinamicos que aparecen conforme los jugadores descubren info sobre salas u objetos.
+  - Cada marca tiene `visibleWhen(gameState)`, posicion, tipo (discovery/danger/clue/progress) y animacion opcional (pulse/glow).
+  - Las cards de objeto existentes viven en esta capa.
+- Herramienta debug de coordenadas:
+  - Overlay en el mapa del GM que muestra coordenadas porcentuales (0-100) y en pixeles al mover el raton.
+  - Se activa con toggle en el panel debug del GM.
+  - Permite al disenador saber donde colocar elementos en cada capa.
+- Archivos nuevos:
+  - `src/data/mapData.js` — datos de tiles, salas, estructuras, marcas.
+  - `src/components/map/BackgroundLayer.jsx` — capa 1.
+  - `src/components/map/StructureLayer.jsx` — capa 2.
+  - `src/components/map/InteractiveLayer.jsx` — capa 3.
+  - `src/components/map/CoordinateOverlay.jsx` — overlay debug de coordenadas.
+- Archivos modificados:
+  - `src/components/SceneMap.jsx` — usar los 3 componentes de capa + prop `showCoordinates`.
+  - `src/styles/react-app.css` — clases de capas + badge de coordenadas.
+  - `src/services/remoteState.js` — extender gameState inicial con estados de salas/pasadizos.
+  - `src/screens/GMScreen.jsx` — toggle de modo coordenadas.
+
 #### Fase F - Integracion de minijuegos
 
 - Decidir si cada minijuego aparece como:
