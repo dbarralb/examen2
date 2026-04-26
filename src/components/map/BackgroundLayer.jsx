@@ -1,4 +1,4 @@
-import mapBackgroundFallback from "../../../assets/Pantalla de juego/Mapa_Background_temporal.png";
+import mapBackgroundFallback from "../../../assets/Pantalla de juego/Background_Green.png";
 import { backgroundTiles } from "../../data/mapData.js";
 
 export function BackgroundLayer() {

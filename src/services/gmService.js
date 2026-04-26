@@ -1,5 +1,5 @@
 import { firebaseGet, firebaseGetWithEtag, firebasePatch, firebasePut, firebasePutIfMatch } from "./firebaseClient.js";
-import { generateSessionAccessCode, getOrCreateClientId } from "./clientIdentity.js";
+import { generateSessionAccessCode, getOrCreateClientId, createId } from "./clientIdentity.js";
 import { buildInitialRemoteState } from "./remoteState.js";
 import { storeSessionCode } from "./sessionAccess.js";
 
@@ -97,6 +97,35 @@ export async function forceStartDebugGame() {
   ]);
 
   return getRemoteState();
+}
+
+export async function enqueueDebugRandomActions(queuedActions, allCards, allTargets, allRoles) {
+  const rolesWithActions = new Set(queuedActions.map((a) => a.role));
+  const rolesWithout = allRoles.filter((r) => !rolesWithActions.has(r.id));
+
+  if (rolesWithout.length === 0) {
+    return 0;
+  }
+
+  const now = Date.now();
+  const patches = {};
+
+  for (const role of rolesWithout) {
+    const roleCards = allCards.filter((c) => c.roles.includes(role.id));
+
+    if (!roleCards.length) {
+      continue;
+    }
+
+    const card = roleCards[Math.floor(Math.random() * roleCards.length)];
+    const target = allTargets[Math.floor(Math.random() * allTargets.length)];
+    const id = createId();
+    patches[`queuedActions/${id}`] = { id, card: card.id, role: role.id, target: target.id, status: "queued", loadedAt: now };
+    patches[`lastRoleActions/${role.id}`] = { card: card.id, role: role.id, target: target.id, text: "esperando pulso", createdAt: now };
+  }
+
+  await firebasePatch("", patches);
+  return rolesWithout.length;
 }
 
 function normalizeActionLog(value) {

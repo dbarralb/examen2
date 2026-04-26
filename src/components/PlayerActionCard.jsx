@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildActionInfoModel } from "../presentation/actionQueuePresentation.js";
 
-const INFO_DELAY_MS = 2000;
+const INFO_DELAY_MS = 500;
 
 export function PlayerActionCard({
   card,

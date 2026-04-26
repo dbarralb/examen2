@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'League Spartan';
-  src: url('/Instituto Newton Design System/fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  src: url('/fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -12,61 +12,61 @@
 
 :root {
   /* ── Dark Backgrounds ───────────────────────────────────── */
-  --color-teal-deep:     #182625;
-  --color-teal-darker:   #0F1918;
-  --color-teal-mid:      #1E3230;
-  --color-teal-border:   #2A3F3C;
+  --color-teal-deep:     #223332;
+  --color-teal-darker:   #172321;
+  --color-teal-mid:      #2A3E3B;
+  --color-teal-border:   #3A514E;
 
-  --color-slate:         #384173;
-  --color-slate-light:   #4A5B8C;
-  --color-slate-dim:     #2B3159;
+  --color-slate:         #465185;
+  --color-slate-light:   #5C6EA3;
+  --color-slate-dim:     #3A4470;
 
-  --color-olive:         #495925;
-  --color-olive-dim:     #333F19;
-  --color-brown:         #403C27;
-  --color-maroon:        #402C2A;
+  --color-olive:         #5B6D32;
+  --color-olive-dim:     #44521F;
+  --color-brown:         #554F36;
+  --color-maroon:        #563A36;
 
   /* ── Accent / Interactive ───────────────────────────────── */
-  --color-lime:          #C2F779;
-  --color-lime-hover:    #D4FF8A;
-  --color-lime-press:    #A8E055;
-  --color-lime-dim:      rgba(194, 247, 121, 0.12);
+  --color-lime:          #CFFF8A;
+  --color-lime-hover:    #DDFFA3;
+  --color-lime-press:    #B8EA64;
+  --color-lime-dim:      rgba(207, 255, 138, 0.12);
 
-  --color-amber:         #D97D0D;
-  --color-amber-hover:   #F08D1A;
-  --color-amber-dim:     rgba(217, 125, 13, 0.12);
+  --color-amber:         #E58E24;
+  --color-amber-hover:   #F6A13A;
+  --color-amber-dim:     rgba(229, 142, 36, 0.12);
 
-  --color-crimson:       #A61212;
-  --color-crimson-hover: #C01515;
-  --color-crimson-dim:   rgba(166, 18, 18, 0.12);
+  --color-crimson:       #BD2525;
+  --color-crimson-hover: #D23232;
+  --color-crimson-dim:   rgba(189, 37, 37, 0.12);
 
   /* ── Neutrals / Text ────────────────────────────────────── */
-  --color-cream:         #E2D6AF;
-  --color-cream-light:   #F0EDD8;
-  --color-cream-dim:     #C8BC95;
+  --color-cream:         #EEE4C2;
+  --color-cream-light:   #F6F1DF;
+  --color-cream-dim:     #D6CAA4;
   --color-white:         #FFFFFF;
-  --color-gray-100:      #D4CEB8;
-  --color-gray-200:      #A89F88;
-  --color-gray-300:      #7A7363;
-  --color-gray-400:      #524D40;
-  --color-gray-500:      #332E24;
-  --color-near-black:    #0A100F;
+  --color-gray-100:      #E2DCC6;
+  --color-gray-200:      #B9B097;
+  --color-gray-300:      #8B8472;
+  --color-gray-400:      #625C4D;
+  --color-gray-500:      #3E3929;
+  --color-near-black:    #101918;
 
   /* ── Semantic ────────────────────────────────────────────── */
-  --color-success:       #C2F779;
-  --color-success-bg:    rgba(194, 247, 121, 0.10);
-  --color-warning:       #D97D0D;
-  --color-warning-bg:    rgba(217, 125, 13, 0.12);
-  --color-danger:        #A61212;
-  --color-danger-bg:     rgba(166, 18, 18, 0.12);
-  --color-info:          #4A5B8C;
-  --color-info-bg:       rgba(74, 91, 140, 0.15);
+  --color-success:       #CFFF8A;
+  --color-success-bg:    rgba(207, 255, 138, 0.10);
+  --color-warning:       #E58E24;
+  --color-warning-bg:    rgba(229, 142, 36, 0.12);
+  --color-danger:        #BD2525;
+  --color-danger-bg:     rgba(189, 37, 37, 0.12);
+  --color-info:          #5C6EA3;
+  --color-info-bg:       rgba(92, 110, 163, 0.15);
 
   /* ── Semantic UI Assignments ────────────────────────────── */
   --bg-base:             var(--color-teal-deep);
   --bg-surface:          var(--color-teal-mid);
   --bg-deep:             var(--color-teal-darker);
-  --bg-overlay:          rgba(15, 25, 24, 0.88);
+  --bg-overlay:          rgba(23, 35, 33, 0.88);
 
   --fg-primary:          var(--color-cream);
   --fg-secondary:        var(--color-cream-dim);
@@ -85,12 +85,12 @@
   --interactive-on-primary:    var(--color-teal-deep);
 
   /* ── Shadows & Glows ─────────────────────────────────────── */
-  --shadow-card:    0 2px 8px rgba(10, 16, 15, 0.5);
-  --shadow-raised:  0 4px 16px rgba(10, 16, 15, 0.6);
-  --shadow-deep:    0 8px 32px rgba(10, 16, 15, 0.8);
-  --glow-lime:      0 0 20px rgba(194, 247, 121, 0.25);
-  --glow-amber:     0 0 20px rgba(217, 125, 13, 0.3);
-  --glow-crimson:   0 0 20px rgba(166, 18, 18, 0.3);
+  --shadow-card:    0 2px 8px rgba(16, 25, 24, 0.42);
+  --shadow-raised:  0 4px 16px rgba(16, 25, 24, 0.5);
+  --shadow-deep:    0 8px 32px rgba(16, 25, 24, 0.68);
+  --glow-lime:      0 0 20px rgba(207, 255, 138, 0.25);
+  --glow-amber:     0 0 20px rgba(229, 142, 36, 0.28);
+  --glow-crimson:   0 0 20px rgba(189, 37, 37, 0.28);
 
   /* ── Typography ─────────────────────────────────────────── */
   --font-display:   'League Spartan', 'Arial Narrow', sans-serif;

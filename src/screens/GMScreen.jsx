@@ -3,10 +3,10 @@ import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
-import { targets } from "../data/gameData.js";
+import { cards, targets } from "../data/gameData.js";
 import { playerRoles } from "../data/roles.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
-import { forceStartDebugGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
+import { enqueueDebugRandomActions, forceStartDebugGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { startManualPulse } from "../services/pulseService.js";
 import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 
@@ -135,6 +135,22 @@ export function GMScreen() {
     }
   }
 
+  async function handleDebugRandomActions() {
+    setIsBusy(true);
+    setStatusMessage("Encolando acciones debug...");
+
+    try {
+      const count = await enqueueDebugRandomActions(queuedActions, cards, targets, playerRoles);
+      const nextState = await getRemoteState();
+      setRemoteState(nextState);
+      setStatusMessage(count > 0 ? `${count} accion(es) debug encoladas.` : "Todos los jugadores ya tienen accion.");
+    } catch (error) {
+      setStatusMessage("No se pudo encolar acciones debug.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function handleStartPulse() {
     setIsPulseBusy(true);
     setStatusMessage("Preparando pulso...");
@@ -238,6 +254,14 @@ export function GMScreen() {
               onClick={() => setShowCoordinates((v) => !v)}
             >
               {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
+            </NButton>
+            <NButton
+              variant="ghost"
+              size="sm"
+              onClick={handleDebugRandomActions}
+              disabled={isBusy || session.status !== "in_game"}
+            >
+              Acciones random
             </NButton>
           </div>
         </NCard>

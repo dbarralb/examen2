@@ -374,7 +374,7 @@ export function PlayerScreen({ navigation, params }) {
             );
           })}
         </div>}
-        {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} />}
+        {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} pulseState={pulseState} />}
         {isGmMonitorView && (
           <aside className="player-monitor-action-strip">
             <strong>{role.label}</strong>
