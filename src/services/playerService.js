@@ -133,6 +133,12 @@ export async function setPendingItemUsage(roleId, itemId, targetId) {
   });
 }
 
+export async function incrementCardUsage(roleId, cardId, currentCount) {
+  await firebasePatch("", {
+    [`cardUsage/${roleId}/${cardId}`]: currentCount + 1,
+  });
+}
+
 export async function clearPendingItemUsage(roleId) {
   await firebasePatch("", {
     [`pendingItemUsage/${roleId}`]: null,

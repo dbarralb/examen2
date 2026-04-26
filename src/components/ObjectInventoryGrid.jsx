@@ -32,12 +32,12 @@ export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, o
               key={`searching-${i}`}
               className="obj-inv-slot searching"
               aria-label="Buscando..."
+              style={{ '--lupa-delay': `${i * 0.8}s` }}
             >
-              <span
-                className="slot-lupa"
-                style={{ '--lupa-delay': `${i * 0.8}s` }}
-                aria-hidden="true"
-              >🔍</span>
+              <svg className="slot-progress" viewBox="0 0 36 36" width="26" height="26" aria-hidden="true">
+                <circle className="slot-progress-track" cx="18" cy="18" r="15" />
+                <circle className="slot-progress-bar" cx="18" cy="18" r="15" />
+              </svg>
             </div>
           );
         }

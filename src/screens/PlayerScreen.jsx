@@ -5,6 +5,9 @@ import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
+import { getEcosForRoom, getRoom, getZone } from "../data/roomData.js";
+import { saveEcoToCodex } from "../services/codexService.js";
+import { saveHorusDecision } from "../services/sessionService.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -13,7 +16,7 @@ import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
+import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { targetItems } from "../data/gameData.js";
 
@@ -62,7 +65,9 @@ export function PlayerScreen({ navigation, params }) {
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const [isDraggingItem, setIsDraggingItem] = useState(false);
   const [revealedSlots, setRevealedSlots] = useState({}); // { [targetId]: number[] }
+  const [ecoToast, setEcoToast] = useState(null);
   const revealedSlotsRef = useRef({});
+  const prevEcoStateRef = useRef({});
   const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
@@ -83,10 +88,25 @@ export function PlayerScreen({ navigation, params }) {
   const effectivePendingAction = isGmMonitorView ? (isMirrorFresh ? mirroredView.pendingAction : null) : pendingAction;
   const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
   const itemSeenState = remoteState?.itemSeenState || {};
+  const cardUsage = remoteState?.cardUsage?.[role.id] || {};
+  const sessionState = remoteState?.sessionState || {};
+  const currentSalaId = sessionState.salaId || "sala1_el_cierre";
+  const currentZoneId = sessionState.zoneId || "inicio";
+  const currentRoom = getRoom(currentSalaId);
+  const activeZone = getZone(currentSalaId, currentZoneId);
+  const ecoState = remoteState?.ecoState || {};
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
+
+  // Hórus decision: show 3 options in Z4 once the decision puzzle is solved
+  const isHorusRoom = currentSalaId?.startsWith("horus_run_");
+  const horusDecisionMade = sessionState.horusDecision != null;
+  const puzzleState = remoteState?.puzzleState || {};
+  const horusDecisionPuzzleSolved = isHorusRoom && currentZoneId === "z4" &&
+    Object.entries(puzzleState).some(([id, p]) => id.startsWith("ph_") && id.endsWith("_decision") && p?.solved);
+  const showHorusDecision = isHorusRoom && currentZoneId === "z4" && !horusDecisionMade && !isGmMonitorView;
 
   // null = not a container; true = open; false = closed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,6 +185,22 @@ export function PlayerScreen({ navigation, params }) {
   }, [remoteInventorySlots]);
 
   useEffect(() => {
+    if (isGmMonitorView) return;
+    const ecoDefs = getEcosForRoom(currentSalaId);
+    const prev = prevEcoStateRef.current;
+    for (const eco of ecoDefs) {
+      if (ecoState[eco.id]?.discovered && !prev[eco.id]?.discovered) {
+        setEcoToast(eco);
+        saveEcoToCodex(eco.id, eco.text, eco.codexLevel || 1, currentSalaId);
+        const timer = window.setTimeout(() => setEcoToast(null), 4000);
+        prevEcoStateRef.current = { ...ecoState };
+        return () => window.clearTimeout(timer);
+      }
+    }
+    prevEcoStateRef.current = { ...ecoState };
+  }, [ecoState, currentSalaId, isGmMonitorView]);
+
+  useEffect(() => {
     searchTimersRef.current.forEach(clearTimeout);
     searchTimersRef.current = [];
 
@@ -236,7 +272,7 @@ export function PlayerScreen({ navigation, params }) {
   function startLoad(cardId, targetId) {
     const card = getCard(cardId);
 
-    if (session.status !== "in_game" || overlayActive || !card || !card.roles.includes(role.id) || pendingAction || queuedForPlayer) {
+    if (session.status !== "in_game" || overlayActive || !card || !card.roles.includes(role.id) || pendingAction || queuedForPlayer || (cardUsage[cardId] || 0) >= 3) {
       return;
     }
 
@@ -283,6 +319,14 @@ export function PlayerScreen({ navigation, params }) {
         setPendingItemUsage(role.id, itemId, targetId).catch(() => {});
       }
       startLoad(cardId, targetId);
+    }
+  }
+
+  async function handleHorusDecision(decision) {
+    try {
+      await saveHorusDecision(decision);
+    } catch {
+      // Error de red silencioso; el siguiente ciclo reintentará.
     }
   }
 
@@ -353,6 +397,7 @@ export function PlayerScreen({ navigation, params }) {
 
     try {
       await enqueueLoadedAction(actionToQueue);
+      incrementCardUsage(role.id, actionToQueue.card, cardUsage[actionToQueue.card] || 0).catch(() => {});
       const state = await getRemoteState();
       setRemoteState(state);
       window.clearTimeout(successCloseTimerRef.current);
@@ -414,6 +459,7 @@ export function PlayerScreen({ navigation, params }) {
         <div className="player-topbar">
           <NewtonLogo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
+          {activeZone && <NBadge status="info">{activeZone.label}</NBadge>}
           <NTimer seconds={elapsedSeconds} />
         </div>
         <SceneMap
@@ -443,6 +489,7 @@ export function PlayerScreen({ navigation, params }) {
           onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
           onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
+          activeZone={activeZone}
         />
         {overlayActive && (
           <aside className="react-result-overlay">
@@ -450,18 +497,49 @@ export function PlayerScreen({ navigation, params }) {
             <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
           </aside>
         )}
+        {ecoToast && !isGmMonitorView && (
+          <aside className="eco-toast" role="status" aria-live="polite">
+            <span className="eco-toast-label">ECO</span>
+            <span className="eco-toast-text">"{ecoToast.text}"</span>
+          </aside>
+        )}
+        {showHorusDecision && (
+          <aside className="horus-decision-panel">
+            <h2>Hórus espera vuestra decisión</h2>
+            <p>Elegid el camino. No hay vuelta atrás.</p>
+            <div className="horus-decision-options">
+              <button className="horus-decision-btn horus-integration" onClick={() => handleHorusDecision("integration")}>
+                <strong>Integración</strong>
+                <span>Unirse al sistema</span>
+              </button>
+              <button className="horus-decision-btn horus-rejection" onClick={() => handleHorusDecision("rejection")}>
+                <strong>Rechazo</strong>
+                <span>Rechazar el sistema</span>
+              </button>
+              <button className="horus-decision-btn horus-deception" onClick={() => handleHorusDecision("deception")}>
+                <strong>Simulación</strong>
+                <span>Engañar al sistema</span>
+              </button>
+            </div>
+            {horusDecisionMade && <NBadge status="success">Decisión registrada: {sessionState.horusDecision}</NBadge>}
+          </aside>
+        )}
         {!isGmMonitorView && <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
           {visibleCards.map((card) => {
             const isCharging = pendingAction?.card === card.id;
+            const uses = cardUsage[card.id] || 0;
+            const isExhausted = uses >= 3;
             return (
               <PlayerActionCard
                 key={card.id}
                 card={card}
+                usageCount={uses}
                 isSelected={selectedCardId === card.id}
                 isCharging={isCharging}
-                onSelect={setSelectedCardId}
+                isExhausted={isExhausted}
+                onSelect={isExhausted ? undefined : setSelectedCardId}
                 onDragStart={(event, draggedCard, charging) => {
-                  if (isCharging) {
+                  if (isCharging || isExhausted) {
                     event.preventDefault();
                     return;
                   }

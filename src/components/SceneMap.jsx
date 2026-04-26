@@ -5,7 +5,7 @@ import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
-import { getContainerOpenState, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { getContainerOpenState, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
@@ -96,7 +96,12 @@ export function SceneMap({
   onDropZoneDrop,
   onLoadConfirm,
   revealedSlots = {},
+  activeZone = null,
 }) {
+  // Filter targets to those in the active zone. If no zone is set, show all targets (backward compat).
+  const visibleTargets = activeZone
+    ? activeZone.targetIds.map((id) => getTarget(id)).filter(Boolean)
+    : targets;
   const viewportRef = useRef(null);
   const panRef = useRef(null);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0));
@@ -300,8 +305,9 @@ export function SceneMap({
           selectedTargetId={selectedTargetId}
           isMonitorView={isMonitorView}
           onHotspotClick={handleHotspotClick}
+          visibleTargets={visibleTargets}
         >
-          {targets.map((target) => {
+          {visibleTargets.map((target) => {
             const isOpen = selectedTargetId === target.id;
             const targetImage = getTargetImage(target, gameState);
 

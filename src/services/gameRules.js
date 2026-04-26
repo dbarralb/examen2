@@ -1,4 +1,6 @@
-﻿const targetLabels = {
+﻿import { getEcosForRoom, getPuzzlesForRoom } from "../data/roomData.js";
+
+const targetLabels = {
   door: "puerta",
   panel: "panel",
   sensor: "sensor",
@@ -14,6 +16,20 @@ const roleLabels = {
   bruto: "El guaperas",
   mistica: "La Mística",
   gm: "Game Master",
+};
+
+// Maps each action card to the team metric it increments when used.
+const CARD_METRIC_MAP = {
+  a_lo_bestia: "forceCount",
+  empujar: "forceCount",
+  mirar_bien: "analysisCount",
+  consultar_apuntes: "analysisCount",
+  apanar: "repairCount",
+  puenteo_rapido: "repairCount",
+  desmontar: "repairCount",
+  y_si: "analysisCount",
+  esto_vibra_raro: "analysisCount",
+  ritual_improvisado: "analysisCount",
 };
 
 function getTargetLabel(targetId) {
@@ -281,11 +297,95 @@ function resolveExitOutcome(context) {
   }
 }
 
+/**
+ * Evaluates all puzzle `solvedWhen` predicates for the active sala.
+ * When a puzzle transitions from unsolved → solved:
+ *   - marks it solved in `context.puzzleState`
+ *   - appends its outputs to `context.availableOutputs`
+ *   - emits a log message
+ *
+ * Returns an array of newly solved puzzle IDs (empty if none).
+ */
+export function checkPuzzleCompletion(context) {
+  const { gameState, puzzleState, salaId } = context;
+  if (!puzzleState || !salaId) return [];
+
+  const puzzles = getPuzzlesForRoom(salaId);
+  const availableOutputs = context.availableOutputs || [];
+  const newlySolved = [];
+
+  for (const puzzle of puzzles) {
+    if (puzzleState[puzzle.id]?.solved) continue;
+
+    // Check required inputs are satisfied
+    const inputsSatisfied = puzzle.requiredInputs.every((input) => availableOutputs.includes(input));
+    if (!inputsSatisfied) continue;
+
+    // Check solved condition
+    if (puzzle.solvedWhen(gameState)) {
+      puzzleState[puzzle.id] = { solved: true, solvedAt: Date.now() };
+      for (const output of puzzle.outputs) {
+        if (!availableOutputs.includes(output)) {
+          availableOutputs.push(output);
+        }
+      }
+      newlySolved.push(puzzle.id);
+      emit(context, `Puzzle resuelto: ${puzzle.label}`);
+    }
+  }
+
+  context.availableOutputs = availableOutputs;
+  return newlySolved;
+}
+
+/**
+ * Evaluates eco discovery conditions for the active sala.
+ * When an eco condition becomes true and it wasn't already discovered,
+ * marks it in `context.ecoState` and emits a log message.
+ *
+ * Returns an array of newly discovered eco IDs (empty if none).
+ */
+export function checkEcoDiscovery(context) {
+  const { gameState, puzzleState, ecoState, salaId } = context;
+  if (!ecoState || !salaId) return [];
+
+  const ecos = getEcosForRoom(salaId);
+  const newlyDiscovered = [];
+
+  for (const eco of ecos) {
+    if (ecoState[eco.id]?.discovered) continue;
+
+    if (eco.discoveredWhen(gameState, puzzleState || {})) {
+      ecoState[eco.id] = { discovered: true, discoveredAt: Date.now() };
+      newlyDiscovered.push(eco.id);
+      emit(context, `[ECO] "${eco.text}"`);
+    }
+  }
+
+  return newlyDiscovered;
+}
+
 export function resolveActionWithResult(context, action, pulseFlags) {
+  if (!context.metricsDelta) context.metricsDelta = {};
+
   const previousFirstMessage = context.actionLog[0];
   const comboResult = resolveItemCombo(context, action, pulseFlags);
   if (comboResult) return comboResult;
+
+  // Increment metric for this card
+  const metricKey = CARD_METRIC_MAP[action.card];
+  if (metricKey) {
+    context.metricsDelta[metricKey] = (context.metricsDelta[metricKey] || 0) + 1;
+  }
+
   resolveAction(context, action, pulseFlags);
+  checkPuzzleCompletion(context);
+
+  const discoveredEcos = checkEcoDiscovery(context);
+  if (discoveredEcos.length > 0) {
+    context.metricsDelta.ecoCount = (context.metricsDelta.ecoCount || 0) + discoveredEcos.length;
+  }
+
   resolveNarrativeConsequences(context);
   resolveExitOutcome(context);
   return context.actionLog[0] && context.actionLog[0] !== previousFirstMessage ? context.actionLog[0] : "Acción resuelta.";
