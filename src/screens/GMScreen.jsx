@@ -45,6 +45,8 @@ export function GMScreen() {
   const [isPulseBusy, setIsPulseBusy] = useState(false);
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
+  const [testScriptExpanded, setTestScriptExpanded] = useState(false);
+  const [pipelineExpanded, setPipelineExpanded] = useState(false);
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
@@ -444,6 +446,178 @@ export function GMScreen() {
           <p className="react-status">Los monitores y resolucion de pulsos se portaran en la siguiente fase.</p>
         </NCard>
       </section>
+
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${testScriptExpanded ? "expanded" : ""}`}
+          onClick={() => setTestScriptExpanded((v) => !v)}
+          aria-expanded={testScriptExpanded}
+        >
+          <span>Guion de testeo</span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{testScriptExpanded ? "▲" : "▼"}</span>
+        </button>
+        {testScriptExpanded && (
+          <section className="gm-test-script">
+            <TestScript
+              sessionState={sessionState}
+              teamMetrics={teamMetrics}
+            />
+          </section>
+        )}
+      </div>
+
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${pipelineExpanded ? "expanded" : ""}`}
+          onClick={() => setPipelineExpanded((v) => !v)}
+          aria-expanded={pipelineExpanded}
+        >
+          <span>Pipeline de prompts de escenarios</span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{pipelineExpanded ? "▲" : "▼"}</span>
+        </button>
+        {pipelineExpanded && (
+          <iframe
+            title="Pipeline de prompts"
+            src={`${window.location.pathname}?screen=pipeline`}
+            className="gm-pipeline-iframe"
+          />
+        )}
+      </div>
     </main>
+  );
+}
+
+function TestScript({ sessionState, teamMetrics }) {
+  async function applyFirebasePreset(preset) {
+    try {
+      await firebasePatch("", preset);
+    } catch {
+      // silencioso
+    }
+  }
+
+  const presetHorus = {
+    "sessionState/salaId": "horus_run_force",
+    "sessionState/zoneId": "inicio",
+    "sessionState/completedSalas": ["sala1_el_cierre", "sala2_placeholder", "sala3_placeholder"],
+    puzzleState: {},
+    ecoState: {},
+  };
+
+  const presetExamen = {
+    "sessionState/salaId": "sala5_el_examen",
+    "sessionState/zoneId": "inicio",
+    "sessionState/completedSalas": ["sala1_el_cierre", "sala2", "sala3", "horus_run_force"],
+    "sessionState/horusDecision": "integration",
+    "sessionState/contradictionsFound": true,
+    teamMetrics: { ecoCount: 5, forceCount: 1, analysisCount: 3, repairCount: 2, obedienceCount: 0, defyCount: 0 },
+  };
+
+  return (
+    <div className="gm-test-script-content">
+      <h3>Atajos de testeo</h3>
+      <p className="gm-test-hint">Estos botones parchean Firebase directamente para saltar a puntos concretos del juego.</p>
+      <div className="button-row">
+        <NButton variant="ghost" size="sm" onClick={() => applyFirebasePreset(presetHorus)}>
+          Saltar a Hórus (force)
+        </NButton>
+        <NButton variant="ghost" size="sm" onClick={() => applyFirebasePreset(presetExamen)}>
+          Saltar a El Examen
+        </NButton>
+      </div>
+
+      <h3>Bloque 1 — Navegacion por zonas</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>1.1</td><td>GM: mira seccion <b>Zona activa</b></td><td>Botones de zona visibles (Inicio, Z1–Z4, Final)</td></tr>
+          <tr><td>1.2</td><td>GM: pulsa <b>Z1 (Vestibulo)</b></td><td>Badge de zona en jugador cambia a "Vestibulo"</td></tr>
+          <tr><td>1.3</td><td>Jugador: mira el mapa</td><td>Solo aparece hotspot <b>panel</b></td></tr>
+          <tr><td>1.4</td><td>GM: pulsa <b>Z4</b></td><td>Jugadores ven electrical_box + locker</td></tr>
+          <tr><td>1.5</td><td>GM: vuelve a <b>Inicio</b></td><td>Sin hotspots (Inicio no tiene targets)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 2 — Puzzles y dependencias</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>2.1</td><td>GM: selecciona Z1, mira panel puzzles</td><td>"Orden del protocolo" pendiente, sin inputs</td></tr>
+          <tr><td>2.2</td><td>Jugador: arrastra mirar_bien sobre panel + minijuego</td><td>Accion encolada</td></tr>
+          <tr><td>2.3</td><td>GM: ejecuta Pulse</td><td>panelState cambia</td></tr>
+          <tr><td>2.4</td><td>GM: mira puzzles</td><td>"Orden del protocolo" resuelto. protocol_order disponible</td></tr>
+          <tr><td>2.5</td><td>GM: selecciona Z2</td><td>"Neutralizar sensor" con input protocol_order satisfecho</td></tr>
+          <tr><td>2.6</td><td>GM: selecciona Z3</td><td>"Abrir salida" bloqueado (faltan energy_active, system_active)</td></tr>
+          <tr><td>2.7</td><td>Resuelve Z4 y Z2 con acciones + pulses</td><td>Cada puzzle cambia a resuelto</td></tr>
+          <tr><td>2.8</td><td>Resuelve "Abrir la salida" (Z3)</td><td>Puzzle sintesis resuelto, exit_open en outputs</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 3 — Ecos y toast</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>3.1</td><td>Tras resolver "Abrir la salida"</td><td>Toast en jugadores: [ECO] "Esto ya ha pasado..." 4s</td></tr>
+          <tr><td>3.2</td><td>GM: mira panel ecos</td><td>eco_sala1_01 → Capturado</td></tr>
+          <tr><td>3.3</td><td>Abre ?screen=codex</td><td>Tab Ecos: "Esto ya ha pasado..." listado</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 4 — Metricas de equipo</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>4.1</td><td>GM: mira panel Metricas</td><td>Contadores visibles: Fuerza, Analisis, Reparacion, Ecos</td></tr>
+          <tr><td>4.2</td><td>Usa a_lo_bestia 3 veces + pulses</td><td>Fuerza: 3</td></tr>
+          <tr><td>4.3</td><td>Usa mirar_bien 2 veces + pulses</td><td>Analisis: 2</td></tr>
+          <tr><td>4.4</td><td>Verifica badge de perfil</td><td>"Los que fuerzan" si fuerza &gt; 45%</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 5 — Completar Sala 1</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>5.1</td><td>Todos los puzzles resueltos</td><td>Boton "Completar sala" visible</td></tr>
+          <tr><td>5.2</td><td>GM: pulsa "Completar sala"</td><td>salaId cambia. completedSalas incluye sala1</td></tr>
+          <tr><td>5.3</td><td>Jugadores: badge zona cambia</td><td>Hotspots del mapa son los de la nueva sala</td></tr>
+          <tr><td>5.4</td><td>GM: puzzles nuevos (todos pendientes)</td><td>Metricas preservadas de Sala 1</td></tr>
+          <tr><td>5.5</td><td>Verifica inventario</td><td>Inventario vacio, usos de cartas mantienen conteo</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 6 — Ruta Horus</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>6.1</td><td>Usa boton "Saltar a Horus" arriba</td><td>GM muestra zonas de Horus</td></tr>
+          <tr><td>6.2</td><td>GM: navega a Z4 (Nucleo de decision)</td><td>Hotspots: h_decision_panel + h_core_access</td></tr>
+          <tr><td>6.3</td><td>Jugador: panel de decision aparece</td><td>3 botones: Integracion, Rechazo, Simulacion</td></tr>
+          <tr><td>6.4</td><td>Jugador: pulsa "Integracion"</td><td>Panel desaparece. horusDecision: "integration"</td></tr>
+          <tr><td>6.5</td><td>GM: completa sala</td><td>salaId cambia a sala5_integracion</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 7 — El Examen (ruta secreta)</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>7.1</td><td>Usa boton "Saltar a El Examen" arriba</td><td>Valores fijados en Firebase</td></tr>
+          <tr><td>7.2</td><td>Verifica salaId</td><td>sala5_el_examen (prioridad sobre decision)</td></tr>
+          <tr><td>7.3</td><td>Verifica zonas</td><td>"Aula vacia", "Pupitres desordenados", etc.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Bloque 8 — Codex cross-session</h3>
+      <table className="gm-test-table">
+        <thead><tr><th>Paso</th><th>Accion</th><th>Verificar</th></tr></thead>
+        <tbody>
+          <tr><td>8.1</td><td>Abre ?screen=codex</td><td>Tab Ecos muestra ecos descubiertos</td></tr>
+          <tr><td>8.2</td><td>Tab Conexiones</td><td>Relaciones entre ecos (si hay 2+ del mismo nivel)</td></tr>
+          <tr><td>8.3</td><td>Cierra y reabre navegador → ?screen=codex</td><td>Ecos persisten (localStorage)</td></tr>
+          <tr><td>8.4</td><td>Tab Partidas</td><td>Session completada con fecha, salas, ecos</td></tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
