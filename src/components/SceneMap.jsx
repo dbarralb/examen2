@@ -5,7 +5,7 @@ import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
-import { getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { getContainerOpenState, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
@@ -95,6 +95,7 @@ export function SceneMap({
   onItemDragStart,
   onDropZoneDrop,
   onLoadConfirm,
+  revealedSlots = {},
 }) {
   const viewportRef = useRef(null);
   const panRef = useRef(null);
@@ -313,6 +314,7 @@ export function SceneMap({
                 onClick={(event) => event.stopPropagation()}
               >
                 <h3>{target.label}</h3>
+                {target.hotspotClass && <span className="scene-object-card-class">{target.hotspotClass}</span>}
                 {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
                 <NBadge status="info">Estado: {getTargetStateLabel(target, gameState)}</NBadge>
                 <p>{targetFeedback[target.id]}</p>
@@ -321,6 +323,8 @@ export function SceneMap({
                   seenState={itemSeenState}
                   onItemClick={isMonitorView ? undefined : onItemClick}
                   onItemDragStart={isMonitorView ? undefined : onItemDragStart}
+                  revealedSlots={revealedSlots[target.id] || []}
+                  containerOpen={getContainerOpenState(target.id, gameState)}
                 />
                 <section
                   className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""} ${

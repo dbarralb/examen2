@@ -11,13 +11,14 @@ export const cards = [
   { id: "ritual_improvisado", label: "ritual_improvisado", roles: ["mistica"], image: "/assets/Pantalla de juego/Actions/ritual_improvisado.png" },
 ];
 
+// Hotspot classes: "contenedor" | "puerta" | "sensor" | "información" | "genérico"
 export const targets = [
-  { id: "door", label: "puerta", stateKey: "doorState", x: 82, y: 42, w: 5, h: 8 },
-  { id: "panel", label: "panel", stateKey: "panelState", x: 66, y: 36, w: 5, h: 8 },
-  { id: "sensor", label: "sensor", stateKey: "sensorState", x: 50, y: 18, w: 5, h: 8 },
-  { id: "locker", label: "taquilla", stateKey: "lockerState", x: 18, y: 42, w: 5, h: 8 },
-  { id: "electrical_box", label: "cuadro electrico", stateKey: "electricalBoxState", x: 35, y: 32, w: 5, h: 8 },
-  { id: "sports_gear", label: "material deportivo", stateKey: "sportsGearState", x: 48, y: 68, w: 5, h: 8 },
+  { id: "door", label: "puerta", stateKey: "doorState", hotspotClass: "puerta", x: 82, y: 42, w: 5, h: 8 },
+  { id: "panel", label: "panel", stateKey: "panelState", hotspotClass: "información", x: 66, y: 36, w: 5, h: 8 },
+  { id: "sensor", label: "sensor", stateKey: "sensorState", hotspotClass: "sensor", x: 50, y: 18, w: 5, h: 8 },
+  { id: "locker", label: "taquilla", stateKey: "lockerState", hotspotClass: "contenedor", x: 18, y: 42, w: 5, h: 8 },
+  { id: "electrical_box", label: "cuadro electrico", stateKey: "electricalBoxState", hotspotClass: "contenedor", x: 35, y: 32, w: 5, h: 8 },
+  { id: "sports_gear", label: "material deportivo", stateKey: "sportsGearState", hotspotClass: "genérico", x: 48, y: 68, w: 5, h: 8 },
 ];
 
 export const objectImages = {
@@ -107,6 +108,23 @@ export function getTargetImage(target, gameState) {
   }
 
   return objectImages[target.id] ? objectImages[target.id][state] : "";
+}
+
+/**
+ * Returns null if the target is not a container.
+ * Returns true if it's an open container, false if closed.
+ */
+export function getContainerOpenState(targetId, gameState) {
+  const target = targets.find((t) => t.id === targetId);
+  if (target?.hotspotClass !== "contenedor") return null;
+
+  if (targetId === "locker") {
+    const s = gameState.lockerState || "unknown";
+    return s === "clean_open" || s === "broken_open";
+  }
+
+  // electrical_box and any future containers without a locked state are always open
+  return true;
 }
 
 export function getTargetStateLabel(target, gameState) {

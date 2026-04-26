@@ -1780,6 +1780,9 @@ a {
   pointer-events: none;
   transform: translateY(8px);
   transition: opacity 160ms ease, transform 160ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .scene-object-card.open {
@@ -1798,12 +1801,25 @@ a {
 }
 
 .scene-object-card h3 {
-  margin: 0 0 12px;
+  margin: 0 0 4px;
   color: #fff;
   font-size: 24px;
   letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
+  align-self: stretch;
+}
+
+.scene-object-card-class {
+  display: inline-block;
+  margin-bottom: 10px;
+  align-self: flex-start;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+  opacity: 0.7;
 }
 
 .scene-object-card-image {
@@ -1820,6 +1836,7 @@ a {
   color: var(--fg-secondary);
   font-size: 14px;
   line-height: 1.45;
+  align-self: stretch;
 }
 
 .react-drop-slot {
@@ -1838,6 +1855,7 @@ a {
 
 .scene-object-card .n-badge {
   margin-top: 6px;
+  align-self: stretch;
 }
 
 .react-drop-slot.loading {
@@ -3102,26 +3120,30 @@ code {
 
 /* ── Object Inventory Grid (inside scene-object-card) ────────────────── */
 .obj-inv-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 44px);
-  gap: 4px;
+  display: inline-grid;
+  grid-template-columns: repeat(6, 48px);
+  gap: 2px;
   margin-top: 10px;
   margin-bottom: 4px;
+  width: fit-content;
+  align-self: center;
 }
 
 .obj-inv-slot {
-  width: 44px;
-  height: 44px;
-  background: #172321;
-  border: 1px solid var(--border-subtle);
-  border-radius: 3px;
+  width: 48px;
+  height: 48px;
+  background-image: url('/assets/Pantalla de juego/Inventory/Inventory_Slot_square.png');
+  background-size: 100% 100%;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1px;
   cursor: pointer;
-  transition: border-color 150ms;
+  transition: transform 120ms ease, filter 150ms;
   position: relative;
   padding: 2px;
   font-size: inherit;
@@ -3129,24 +3151,79 @@ code {
   color: inherit;
 }
 
-.obj-inv-slot:hover:not(.empty) {
-  border-color: var(--color-lime);
+.obj-inv-slot:hover:not(.empty):not(.depleted) {
+  transform: scale(1.12);
+  z-index: 1;
 }
 
 .obj-inv-slot.empty {
-  opacity: 0.2;
+  opacity: 0.35;
   cursor: default;
   pointer-events: none;
+  justify-content: center;
+}
+
+.obj-inv-slot.mystery {
+  cursor: default;
+  justify-content: center;
+  align-items: center;
+}
+
+.obj-inv-mystery {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--fg-secondary);
+  opacity: 0.6;
+  line-height: 1;
+  user-select: none;
 }
 
 .obj-inv-slot.unseen {
-  border-color: var(--color-amber);
+  filter: drop-shadow(0 0 3px var(--color-amber));
 }
 
 .obj-inv-slot.depleted {
-  opacity: 0.45;
+  opacity: 0.35;
   cursor: default;
-  border-style: dashed;
+  filter: grayscale(1);
+}
+
+.obj-inv-slot.searching {
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes lupa-orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg) translateX(10px) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg) translateX(10px) rotate(-360deg); }
+}
+
+@keyframes lupa-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.slot-lupa {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  animation:
+    lupa-fade-in 0.3s ease forwards,
+    lupa-orbit 1.8s linear infinite;
+  animation-delay: var(--lupa-delay, 0s), var(--lupa-delay, 0s);
+}
+
+@keyframes slot-reveal {
+  from { opacity: 0; transform: scale(0.75); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.obj-inv-slot.reveal-in {
+  animation: slot-reveal 320ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .obj-inv-icon {
@@ -3189,54 +3266,44 @@ code {
 }
 
 .player-inv-slot {
-  width: 56px;
-  height: 56px;
-  background: rgba(23, 35, 33, 0.92);
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  display: flex;
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 150ms, background 150ms;
-}
-
-.player-inv-slot.empty {
-  opacity: 0.5;
+  transition: filter 150ms;
 }
 
 .player-inv-slot.drag-over {
-  border-color: var(--color-amber);
-  background: rgba(217, 119, 6, 0.12);
+  filter: brightness(1.3);
 }
 
-.player-inv-item {
+.slot-bg {
+  display: block;
+  height: 104px;
+  width: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.slot-item-btn {
+  position: absolute;
+  inset: 10px;
   background: none;
   border: none;
-  cursor: pointer;
   padding: 0;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+}
+
+.slot-item-img {
   width: 100%;
   height: 100%;
-  justify-content: center;
-  font-family: inherit;
-  color: inherit;
-}
-
-.player-inv-icon {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.player-inv-label {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-secondary);
-  text-align: center;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
 }
 
 /* TODO [DEUDA TÉCNICA]: Botón debug solo para testeo. Eliminar antes de producción. */
@@ -3261,25 +3328,6 @@ code {
   padding: 0;
 }
 
-.player-inv-hint {
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fg-secondary);
-  opacity: 0.4;
-}
-
-.player-inv-item.unseen .player-inv-icon::after {
-  content: '';
-  display: inline-block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-amber);
-  vertical-align: top;
-  margin-left: 2px;
-}
 
 /* ── Drop zone staged state ──────────────────────────────────────────── */
 .react-drop-slot.staged {

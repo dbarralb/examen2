@@ -4,7 +4,7 @@ import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
-import { cards, getCard, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
+import { cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -20,6 +20,8 @@ import { targetItems } from "../data/gameData.js";
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
 const SUCCESS_CLOSE_DELAY_MS = 2000;
 const PLAYER_VIEW_STALE_MS = 15000;
+const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
+const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
 
 function isResultOverlayActive(pulseState) {
   const overlay = pulseState?.resultOverlay;
@@ -58,6 +60,10 @@ export function PlayerScreen({ navigation, params }) {
   const [dropZoneState, setDropZoneState] = useState({ cardId: null, itemId: null, targetId: null });
   const [openedItem, setOpenedItem] = useState(null);
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
+  const [isDraggingItem, setIsDraggingItem] = useState(false);
+  const [revealedSlots, setRevealedSlots] = useState({}); // { [targetId]: number[] }
+  const revealedSlotsRef = useRef({});
+  const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
   const latestCameraRef = useRef(null);
@@ -81,6 +87,16 @@ export function PlayerScreen({ navigation, params }) {
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
+
+  // null = not a container; true = open; false = closed
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const selectedContainerOpen = useMemo(
+    () => (selectedTargetId ? getContainerOpenState(selectedTargetId, gameState) : null),
+    // gameState ref changes every poll but getContainerOpenState only reads specific keys —
+    // the returned boolean is stable unless the actual container state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedTargetId, gameState.lockerState],
+  );
 
   usePollingRefresh({
     intervalMs: 1000,
@@ -128,9 +144,14 @@ export function PlayerScreen({ navigation, params }) {
     },
   });
 
-  useEffect(() => () => {
-    window.clearTimeout(successCloseTimerRef.current);
-    window.clearTimeout(viewPublishTimerRef.current);
+  useEffect(() => {
+    function handleDragEnd() { setIsDraggingItem(false); }
+    window.addEventListener("dragend", handleDragEnd);
+    return () => {
+      window.clearTimeout(successCloseTimerRef.current);
+      window.clearTimeout(viewPublishTimerRef.current);
+      window.removeEventListener("dragend", handleDragEnd);
+    };
   }, []);
 
   useEffect(() => {
@@ -142,6 +163,34 @@ export function PlayerScreen({ navigation, params }) {
       ]);
     }
   }, [remoteInventorySlots]);
+
+  useEffect(() => {
+    searchTimersRef.current.forEach(clearTimeout);
+    searchTimersRef.current = [];
+
+    // Don't search if no card is open, or if the target is a closed container
+    if (!selectedTargetId || selectedContainerOpen === false) return;
+
+    const targetId = selectedTargetId;
+    const alreadyRevealed = revealedSlotsRef.current[targetId] || [];
+
+    for (let i = 0; i < 6; i++) {
+      if (alreadyRevealed.includes(i)) continue;
+      const delay = i * SLOT_STAGGER_MS + SEARCHING_SLOT_TIME * 1000;
+      const timer = setTimeout(() => {
+        revealedSlotsRef.current = {
+          ...revealedSlotsRef.current,
+          [targetId]: [...new Set([...(revealedSlotsRef.current[targetId] || []), i])],
+        };
+        setRevealedSlots({ ...revealedSlotsRef.current });
+      }, delay);
+      searchTimersRef.current.push(timer);
+    }
+
+    return () => {
+      searchTimersRef.current.forEach(clearTimeout);
+    };
+  }, [selectedTargetId, selectedContainerOpen]);
 
   useEffect(() => {
     const chatList = chatListRef.current;
@@ -390,9 +439,10 @@ export function PlayerScreen({ navigation, params }) {
           itemSeenState={itemSeenState}
           dropZoneState={isGmMonitorView ? {} : dropZoneState}
           onItemClick={isGmMonitorView ? undefined : handleItemClick}
-          onItemDragStart={isGmMonitorView ? undefined : () => {}}
+          onItemDragStart={isGmMonitorView ? undefined : () => setIsDraggingItem(true)}
           onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
           onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
+          revealedSlots={isGmMonitorView ? {} : revealedSlots}
         />
         {overlayActive && (
           <aside className="react-result-overlay">
@@ -430,9 +480,10 @@ export function PlayerScreen({ navigation, params }) {
             slots={playerInventory}
             seenState={itemSeenState}
             onItemClick={handleItemClick}
-            onSlotDragStart={() => {}}
+            onSlotDragStart={() => setIsDraggingItem(true)}
             onSlotDrop={handleInventorySlotDrop}
             onDebugClear={handleDebugClearInventory}
+            isDraggingItem={isDraggingItem}
           />
         )}
         <ItemModal item={openedItem} onClose={() => setOpenedItem(null)} />

@@ -230,7 +230,19 @@ export function GMScreen() {
       <section className="react-gm-grid">
         <NCard title="Partida" gold>
           <NBadge status={getSessionBadgeStatus(session.status)}>{session.status === "in_game" ? "Partida en curso" : "Sin comenzar"}</NBadge>
-          <p className="session-code">Codigo: {session.accessCode || "sin generar"}</p>
+          <p className="session-code">
+            Codigo: {session.accessCode || "sin generar"}
+            {session.accessCode && (
+              <button
+                className="session-code-copy"
+                type="button"
+                onClick={() => navigator.clipboard.writeText(session.accessCode)}
+                title="Copiar codigo"
+              >
+                Copiar
+              </button>
+            )}
+          </p>
           <NTimer seconds={elapsedSeconds} />
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">

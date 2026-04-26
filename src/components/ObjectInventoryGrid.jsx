@@ -1,13 +1,53 @@
 const TOTAL_SLOTS = 6;
 
-export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, onItemDragStart }) {
+export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, onItemDragStart, revealedSlots = [], containerOpen = null }) {
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => items[i] || null);
+
+  // Closed container: show mystery "?" for occupied slots, empty for the rest
+  if (containerOpen === false) {
+    return (
+      <div className="obj-inv-grid">
+        {slots.map((item, i) => {
+          if (item) {
+            return (
+              <div key={`mystery-${i}`} className="obj-inv-slot mystery" aria-label="Contenido desconocido">
+                <span className="obj-inv-mystery" aria-hidden="true">?</span>
+              </div>
+            );
+          }
+          return <div key={`empty-${i}`} className="obj-inv-slot empty" aria-hidden="true" />;
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="obj-inv-grid">
       {slots.map((item, i) => {
+        const isRevealed = revealedSlots.includes(i);
+
+        if (!isRevealed) {
+          return (
+            <div
+              key={`searching-${i}`}
+              className="obj-inv-slot searching"
+              aria-label="Buscando..."
+            >
+              <span
+                className="slot-lupa"
+                style={{ '--lupa-delay': `${i * 0.8}s` }}
+                aria-hidden="true"
+              >🔍</span>
+            </div>
+          );
+        }
+
         if (!item) {
-          return <div key={`empty-${i}`} className="obj-inv-slot empty" aria-hidden="true" />;
+          return (
+            <div key={`empty-${i}`} className="obj-inv-slot empty reveal-in" aria-hidden="true">
+              <span className="obj-inv-label">Vacío</span>
+            </div>
+          );
         }
 
         const isPickedUp = item.type === "usable" && seenState[item.id]?.pickedUp;
@@ -15,7 +55,7 @@ export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, o
 
         if (isPickedUp) {
           return (
-            <div key={item.id} className="obj-inv-slot depleted" title={item.label}>
+            <div key={item.id} className="obj-inv-slot depleted reveal-in" title={item.label}>
               <span className="obj-inv-icon">·</span>
               <span className="obj-inv-label">Vacío</span>
             </div>
@@ -26,7 +66,7 @@ export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, o
           <button
             key={item.id}
             type="button"
-            className={`obj-inv-slot ${isUnseen ? "unseen" : ""}`}
+            className={`obj-inv-slot reveal-in ${isUnseen ? "unseen" : ""}`}
             onClick={() => onItemClick?.(item)}
             draggable={item.type === "usable"}
             onDragStart={(event) => {
