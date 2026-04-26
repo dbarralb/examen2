@@ -48,6 +48,37 @@ export const objectImages = {
   },
 };
 
+// Items contained inside each hotspot object (up to 6 per target).
+// type "readable" → clicking opens a content modal and marks the item as seen.
+// type "usable"   → shows hand icon; can be dragged to player inventory slots.
+export const targetItems = {
+  door: [],
+  panel: [
+    { id: "panel_manual", label: "Manual técnico", type: "readable", hotspot: "panel", content: "Protocolo 7-B: secuencia de bypass en caso de emergencia. Consultar con el técnico autorizado." },
+  ],
+  sensor: [],
+  locker: [
+    { id: "locker_note", label: "Nota", type: "readable", hotspot: "locker", content: "Contenido por definir." },
+    { id: "locker_lockpick", label: "Ganzúa", type: "usable", hotspot: "locker" },
+  ],
+  electrical_box: [
+    { id: "wiring_diagram", label: "Esquema eléctrico", type: "readable", hotspot: "electrical_box", content: "Diagrama de cableado. Circuito principal: rojo+negro. Bypass: puente entre A3 y B7." },
+  ],
+  sports_gear: [],
+};
+
+export function getTargetItems(targetId) {
+  return targetItems[targetId] || [];
+}
+
+export function getItem(itemId) {
+  for (const items of Object.values(targetItems)) {
+    const found = items.find((item) => item.id === itemId);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function getCard(cardId) {
   return cards.find((card) => card.id === cardId);
 }

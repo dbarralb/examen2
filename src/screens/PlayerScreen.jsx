@@ -5,14 +5,17 @@ import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
+import { ItemModal } from "../components/ItemModal.jsx";
+import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, getPlayerName, sendPlayerChatMessage, updatePlayerView } from "../services/playerService.js";
-import { updatePlayerName } from "../services/lobbyService.js";
+import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
+import { firebasePatch } from "../services/firebaseClient.js";
+import { targetItems } from "../data/gameData.js";
 
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
 const SUCCESS_CLOSE_DELAY_MS = 2000;
@@ -51,9 +54,10 @@ export function PlayerScreen({ navigation, params }) {
   const [selectedTargetId, setSelectedTargetId] = useState(null);
   const [selectedCardId, setSelectedCardId] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
-  const [status, setStatus] = useState("Conectando con Firebase...");
-  const [nameDraft, setNameDraft] = useState(() => getPlayerName());
   const [chatDraft, setChatDraft] = useState("");
+  const [dropZoneState, setDropZoneState] = useState({ cardId: null, itemId: null, targetId: null });
+  const [openedItem, setOpenedItem] = useState(null);
+  const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
   const latestCameraRef = useRef(null);
@@ -72,6 +76,8 @@ export function PlayerScreen({ navigation, params }) {
   const effectiveSelectedTargetId = isGmMonitorView ? (isMirrorFresh ? mirroredView.selectedTargetId : null) : selectedTargetId;
   const effectivePendingAction = isGmMonitorView ? (isMirrorFresh ? mirroredView.pendingAction : null) : pendingAction;
   const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
+  const itemSeenState = remoteState?.itemSeenState || {};
+  const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
@@ -111,19 +117,13 @@ export function PlayerScreen({ navigation, params }) {
               cancelledRemoteLoad = true;
               setPendingAction(null);
               setSelectedTargetId(pendingAction.target);
-              setStatus("Carga cancelada: el objeto cambio de estado remoto.");
             }
           }
 
           setRemoteState(state);
-          if (!pendingAction && !cancelledRemoteLoad) {
-            setStatus("Sincronizado.");
-          }
         }
       } catch (error) {
-        if (!isCancelled()) {
-          setStatus("No se pudo refrescar Firebase.");
-        }
+        // Error de red silencioso; el siguiente ciclo reintentara.
       }
     },
   });
@@ -132,6 +132,16 @@ export function PlayerScreen({ navigation, params }) {
     window.clearTimeout(successCloseTimerRef.current);
     window.clearTimeout(viewPublishTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (remoteInventorySlots) {
+      setPlayerInventory([
+        remoteInventorySlots[0] || null,
+        remoteInventorySlots[1] || null,
+        remoteInventorySlots[2] || null,
+      ]);
+    }
+  }, [remoteInventorySlots]);
 
   useEffect(() => {
     const chatList = chatListRef.current;
@@ -177,28 +187,7 @@ export function PlayerScreen({ navigation, params }) {
   function startLoad(cardId, targetId) {
     const card = getCard(cardId);
 
-    if (session.status !== "in_game") {
-      setStatus("La partida no esta en curso.");
-      return;
-    }
-
-    if (overlayActive) {
-      setStatus("Espera a que termine la notificacion del pulso.");
-      return;
-    }
-
-    if (!card || !card.roles.includes(role.id)) {
-      setStatus("Esa carta no pertenece a tu rol.");
-      return;
-    }
-
-    if (pendingAction) {
-      setStatus("Ya hay una accion cargandose.");
-      return;
-    }
-
-    if (queuedForPlayer) {
-      setStatus("Ya tienes una accion esperando este pulso.");
+    if (session.status !== "in_game" || overlayActive || !card || !card.roles.includes(role.id) || pendingAction || queuedForPlayer) {
       return;
     }
 
@@ -208,18 +197,83 @@ export function PlayerScreen({ navigation, params }) {
       targetStateSignature: getTargetStateSignature(targetId, gameState),
     });
     setSelectedTargetId(targetId);
-    setStatus(`${formatCardLabel(card)} cargando software sobre ${targets.find((target) => target.id === targetId)?.label || targetId}.`);
   }
 
-  function handleDrop(event, targetId) {
+  function handleDropZoneDrop(event, targetId) {
     event.preventDefault();
+    if (overlayActive || pendingAction || queuedForPlayer) return;
+
+    const itemId = event.dataTransfer.getData("application/x-inv-item-id");
     const cardId = event.dataTransfer.getData("application/x-card-id") || selectedCardId;
-    startLoad(cardId, targetId);
+
+    setDropZoneState((current) => ({
+      targetId,
+      cardId: cardId || current.cardId || null,
+      itemId: itemId || current.itemId || null,
+    }));
+    setSelectedTargetId(targetId);
+  }
+
+  function handleLoadConfirm(targetId, cancel = false) {
+    if (cancel) {
+      setDropZoneState({ cardId: null, itemId: null, targetId: null });
+      return;
+    }
+
+    const { cardId, itemId } = dropZoneState;
+    setDropZoneState({ cardId: null, itemId: null, targetId: null });
+
+    if (itemId && !cardId) {
+      // Item-only load — record pending item usage and skip action card
+      setPendingItemUsage(role.id, itemId, targetId).catch(() => {});
+      return;
+    }
+
+    if (cardId) {
+      if (itemId) {
+        setPendingItemUsage(role.id, itemId, targetId).catch(() => {});
+      }
+      startLoad(cardId, targetId);
+    }
+  }
+
+  function handleItemClick(item) {
+    setOpenedItem(item);
+    if (!itemSeenState[item.id]?.seen) {
+      markItemSeen(item.id).catch(() => {});
+    }
+  }
+
+  // TODO [DEUDA TÉCNICA]: Función debug solo para testeo. Eliminar antes de producción.
+  async function handleDebugClearInventory() {
+    setPlayerInventory([null, null, null]);
+    const pickedUpResets = {};
+    Object.values(targetItems).flat().forEach((item) => {
+      if (item.type === "usable") pickedUpResets[`itemSeenState/${item.id}/pickedUp`] = null;
+    });
+    await firebasePatch("", {
+      [`playerInventories/${role.id}/slots`]: [null, null, null],
+      ...pickedUpResets,
+    }).catch(() => {});
+  }
+
+  async function handleInventorySlotDrop(itemId, slotIndex) {
+    const taken = playerInventory[slotIndex] !== null;
+    if (taken) return;
+
+    const optimistic = [...playerInventory];
+    optimistic[slotIndex] = { itemId };
+    setPlayerInventory(optimistic);
+
+    try {
+      await pickUpItem(role.id, itemId, slotIndex);
+    } catch {
+      setPlayerInventory(playerInventory);
+    }
   }
 
   function cancelPendingAction() {
     if (pendingAction) {
-      setStatus(`${formatCardLabel(pendingAction)} cancelada antes de entrar en cola.`);
       setPendingAction(null);
     }
   }
@@ -239,7 +293,6 @@ export function PlayerScreen({ navigation, params }) {
         minigame: createSoftwareLoadMinigame(current.minigame.sequence),
       };
     });
-    setStatus("Reintentando carga de software.");
   }
 
   async function completePendingMinigame() {
@@ -250,8 +303,7 @@ export function PlayerScreen({ navigation, params }) {
     }
 
     try {
-      const action = await enqueueLoadedAction(actionToQueue);
-      setStatus(`${formatCardLabel(action)} queda lista para el siguiente pulso.`);
+      await enqueueLoadedAction(actionToQueue);
       const state = await getRemoteState();
       setRemoteState(state);
       window.clearTimeout(successCloseTimerRef.current);
@@ -260,7 +312,6 @@ export function PlayerScreen({ navigation, params }) {
         setSelectedTargetId(null);
       }, SUCCESS_CLOSE_DELAY_MS);
     } catch (error) {
-      setStatus("No se pudo encolar la accion. Reintenta cuando vuelva Firebase.");
       setPendingAction((current) => {
         if (!current?.minigame) {
           return current;
@@ -275,15 +326,6 @@ export function PlayerScreen({ navigation, params }) {
           },
         };
       });
-    }
-  }
-
-  async function handleNameCommit() {
-    try {
-      await updatePlayerName(nameDraft);
-      setStatus("Nombre actualizado.");
-    } catch (error) {
-      setStatus("No se pudo guardar el nombre.");
     }
   }
 
@@ -311,9 +353,8 @@ export function PlayerScreen({ navigation, params }) {
           },
         };
       });
-      setStatus("Mensaje enviado.");
     } catch (error) {
-      setStatus("No se pudo enviar el mensaje.");
+      // Error de red silencioso.
     }
   }
 
@@ -334,8 +375,11 @@ export function PlayerScreen({ navigation, params }) {
           queuedForPlayer={queuedForPlayer}
           overlayActive={overlayActive}
           onSelectTarget={setSelectedTargetId}
-          onCloseTarget={() => setSelectedTargetId(null)}
-          onDrop={handleDrop}
+          onCloseTarget={() => {
+            setSelectedTargetId(null);
+            setDropZoneState({ cardId: null, itemId: null, targetId: null });
+          }}
+          onDrop={handleDropZoneDrop}
           onCancelPendingAction={cancelPendingAction}
           onMinigameChange={updatePendingMinigame}
           onMinigameRetry={retryPendingMinigame}
@@ -343,6 +387,12 @@ export function PlayerScreen({ navigation, params }) {
           isMonitorView={isGmMonitorView}
           externalCamera={effectiveCamera}
           onCameraChange={isGmMonitorView ? undefined : handleCameraChange}
+          itemSeenState={itemSeenState}
+          dropZoneState={isGmMonitorView ? {} : dropZoneState}
+          onItemClick={isGmMonitorView ? undefined : handleItemClick}
+          onItemDragStart={isGmMonitorView ? undefined : () => {}}
+          onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
+          onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
         />
         {overlayActive && (
           <aside className="react-result-overlay">
@@ -375,6 +425,17 @@ export function PlayerScreen({ navigation, params }) {
           })}
         </div>}
         {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} pulseState={pulseState} />}
+        {!isGmMonitorView && (
+          <PlayerInventoryBar
+            slots={playerInventory}
+            seenState={itemSeenState}
+            onItemClick={handleItemClick}
+            onSlotDragStart={() => {}}
+            onSlotDrop={handleInventorySlotDrop}
+            onDebugClear={handleDebugClearInventory}
+          />
+        )}
+        <ItemModal item={openedItem} onClose={() => setOpenedItem(null)} />
         {isGmMonitorView && (
           <aside className="player-monitor-action-strip">
             <strong>{role.label}</strong>
@@ -389,25 +450,6 @@ export function PlayerScreen({ navigation, params }) {
         )}
       </section>
       {!isGmMonitorView && <aside className="player-hud-panel">
-        <NCard title={`Dispositivo: ${role.label}`} glow>
-          <label className="player-name-editor" htmlFor="player-name-in-game">
-            <span>Jugador</span>
-            <input
-              id="player-name-in-game"
-              value={nameDraft}
-              maxLength={24}
-              onChange={(event) => setNameDraft(event.target.value)}
-              onBlur={handleNameCommit}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
-              }}
-            />
-          </label>
-          <p>{role.text}</p>
-          <p className="react-status" role="status" aria-live="polite">{status}</p>
-        </NCard>
         <NCard title="Historial" className="player-side-card">
           <div className="react-list">
             {actionLog.map((message, index) => (

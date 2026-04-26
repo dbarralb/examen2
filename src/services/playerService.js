@@ -107,6 +107,38 @@ function createMirrorPendingAction(pendingAction) {
   };
 }
 
+export async function markItemSeen(itemId) {
+  await firebasePatch("", {
+    [`itemSeenState/${itemId}/seen`]: true,
+  });
+}
+
+export async function pickUpItem(roleId, itemId, slotIndex) {
+  await firebasePatch("", {
+    [`playerInventories/${roleId}/slots/${slotIndex}`]: { itemId },
+    [`itemSeenState/${itemId}/seen`]: true,
+    [`itemSeenState/${itemId}/pickedUp`]: true,
+  });
+}
+
+export async function dropItemFromInventory(roleId, slotIndex) {
+  await firebasePatch("", {
+    [`playerInventories/${roleId}/slots/${slotIndex}`]: null,
+  });
+}
+
+export async function setPendingItemUsage(roleId, itemId, targetId) {
+  await firebasePatch("", {
+    [`pendingItemUsage/${roleId}`]: { itemId, targetId, createdAt: Date.now() },
+  });
+}
+
+export async function clearPendingItemUsage(roleId) {
+  await firebasePatch("", {
+    [`pendingItemUsage/${roleId}`]: null,
+  });
+}
+
 export async function updatePlayerView(role, viewState) {
   const now = Date.now();
   const view = {

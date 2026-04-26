@@ -91,6 +91,14 @@ export function buildPulseFlags(actions, state) {
   return flags;
 }
 
+// Resolves item+action or item-only combos. Returns a result message or null if no combo matched.
+export function resolveItemCombo(context, action, pulseFlags) {
+  if (!action.itemId) return null;
+  // Future combos: e.g. { itemId: "locker_lockpick", card: "empujar", target: "door" }
+  // Add entries here as new items and interactions are defined.
+  return null;
+}
+
 function resolveAction(context, action, pulseFlags) {
   const { gameState } = context;
   const previousPanelState = gameState.panelState;
@@ -275,6 +283,8 @@ function resolveExitOutcome(context) {
 
 export function resolveActionWithResult(context, action, pulseFlags) {
   const previousFirstMessage = context.actionLog[0];
+  const comboResult = resolveItemCombo(context, action, pulseFlags);
+  if (comboResult) return comboResult;
   resolveAction(context, action, pulseFlags);
   resolveNarrativeConsequences(context);
   resolveExitOutcome(context);

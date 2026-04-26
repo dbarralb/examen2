@@ -75,6 +75,7 @@ export async function startManualPulse({ onStatus } = {}) {
     await waitMs(chargeMs);
 
     const pulseStartAt = Date.now();
+    const pendingItemUsage = (await firebaseGet("pendingItemUsage")) || {};
     const queuedActions = normalizeRemoteList(await firebaseGet("queuedActions"));
     const pulseActions = queuedActions
       .filter((action) => (action.status || "queued") === "queued" && (action.loadedAt || action.createdAt || 0) <= pulseStartAt)
@@ -109,6 +110,10 @@ export async function startManualPulse({ onStatus } = {}) {
 
     for (let index = 0; index < pulseActions.length; index += 1) {
       const liveAction = { ...pulseActions[index] };
+      const itemUsage = pendingItemUsage[liveAction.role];
+      if (itemUsage?.itemId && itemUsage?.targetId === liveAction.target) {
+        liveAction.itemId = itemUsage.itemId;
+      }
       const startedAt = Date.now();
       liveAction.status = "executing";
       liveAction.pulseId = pulseId;
@@ -167,6 +172,7 @@ export async function startManualPulse({ onStatus } = {}) {
       targetFeedback: context.targetFeedback,
       actionLog,
       ...resolvedActionDeletes,
+      pendingItemUsage: {},
       pulseState,
       lastRoleActions,
       lastRoleDebug,

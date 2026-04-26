@@ -64,6 +64,14 @@ export function createInitialTargetFeedback() {
   };
 }
 
+export function createInitialInventoryState() {
+  return {
+    itemSeenState: {},
+    playerInventories: {},
+    pendingItemUsage: {},
+  };
+}
+
 export function buildInitialRemoteState(status = "role_select") {
   return {
     session: {
@@ -91,6 +99,7 @@ export function buildInitialRemoteState(status = "role_select") {
       { id: "player2-dummy", author: "Jugador 2", text: "Voy a mirar el panel.", createdAt: 2 },
     ],
     lastRoleDebug: "Sin acciones resueltas todavia.",
+    ...createInitialInventoryState(),
   };
 }
 

@@ -5,7 +5,8 @@ import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
-import { getTargetImage, getTargetStateLabel, targets } from "../data/gameData.js";
+import { getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
 const MAP_WIDTH = 1826;
@@ -88,6 +89,12 @@ export function SceneMap({
   externalCamera = null,
   onCameraChange,
   showCoordinates = false,
+  itemSeenState = {},
+  dropZoneState = {},
+  onItemClick,
+  onItemDragStart,
+  onDropZoneDrop,
+  onLoadConfirm,
 }) {
   const viewportRef = useRef(null);
   const panRef = useRef(null);
@@ -309,12 +316,22 @@ export function SceneMap({
                 {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
                 <NBadge status="info">Estado: {getTargetStateLabel(target, gameState)}</NBadge>
                 <p>{targetFeedback[target.id]}</p>
+                <ObjectInventoryGrid
+                  items={getTargetItems(target.id)}
+                  seenState={itemSeenState}
+                  onItemClick={isMonitorView ? undefined : onItemClick}
+                  onItemDragStart={isMonitorView ? undefined : onItemDragStart}
+                />
                 <section
-                  className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""}`}
-                  onDragOver={(event) => event.preventDefault()}
+                  className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""} ${
+                    dropZoneState.targetId === target.id && !pendingAction ? "staged" : ""
+                  }`}
+                  onDragOver={(event) => {
+                    if (!isMonitorView) event.preventDefault();
+                  }}
                   onDrop={(event) => {
                     if (!isMonitorView) {
-                      onDrop?.(event, target.id);
+                      onDropZoneDrop?.(event, target.id);
                     }
                   }}
                 >
@@ -333,8 +350,27 @@ export function SceneMap({
                     />
                   ) : queuedForPlayer?.target === target.id ? (
                     <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
+                  ) : dropZoneState.targetId === target.id && (dropZoneState.cardId || dropZoneState.itemId) ? (
+                    <div className="drop-zone-staged">
+                      {dropZoneState.cardId && <span className="drop-zone-staged-card">{formatCardLabel({ card: dropZoneState.cardId })}</span>}
+                      {dropZoneState.itemId && <span className="drop-zone-staged-item">✋ {dropZoneState.itemId}</span>}
+                      <button
+                        type="button"
+                        className="drop-zone-confirm-btn"
+                        onClick={() => onLoadConfirm?.(target.id)}
+                      >
+                        Cargar software
+                      </button>
+                      <button
+                        type="button"
+                        className="drop-zone-cancel-btn"
+                        onClick={() => onLoadConfirm?.(target.id, true)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   ) : (
-                    <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta aqui"}</span>
+                    <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta o item aqui"}</span>
                   )}
                 </section>
               </article>
