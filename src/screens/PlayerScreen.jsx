@@ -5,7 +5,7 @@ import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
-import { getEcosForRoom, getRoom, getZone } from "../data/roomData.js";
+import { getEcosForRoom, getRoom, getZone, getZonesForRoom } from "../data/roomData.js";
 import { saveEcoToCodex } from "../services/codexService.js";
 import { saveHorusDecision } from "../services/sessionService.js";
 import { ItemModal } from "../components/ItemModal.jsx";
@@ -16,7 +16,7 @@ import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
+import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView, updatePlayerZone } from "../services/playerService.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { targetItems } from "../data/gameData.js";
 
@@ -91,8 +91,10 @@ export function PlayerScreen({ navigation, params }) {
   const cardUsage = remoteState?.cardUsage?.[role.id] || {};
   const sessionState = remoteState?.sessionState || {};
   const currentSalaId = sessionState.salaId || "sala1_el_cierre";
-  const currentZoneId = sessionState.zoneId || "inicio";
+  const playerZoneId = remoteState?.playerZones?.[role.id];
+  const currentZoneId = playerZoneId || sessionState.zoneId || "inicio";
   const currentRoom = getRoom(currentSalaId);
+  const salaZones = getZonesForRoom(currentSalaId);
   const activeZone = getZone(currentSalaId, currentZoneId);
   const ecoState = remoteState?.ecoState || {};
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
@@ -459,9 +461,22 @@ export function PlayerScreen({ navigation, params }) {
         <div className="player-topbar">
           <NewtonLogo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
-          {activeZone && <NBadge status="info">{activeZone.label}</NBadge>}
           <NTimer seconds={elapsedSeconds} />
         </div>
+        {!isGmMonitorView && salaZones.length > 0 && (
+          <nav className="player-zone-nav" aria-label="Navegación de zona">
+            {salaZones.map((zone) => (
+              <button
+                key={zone.id}
+                type="button"
+                className={`player-zone-btn ${zone.id === currentZoneId ? "active" : ""}`}
+                onClick={() => updatePlayerZone(role.id, zone.id)}
+              >
+                {zone.label}
+              </button>
+            ))}
+          </nav>
+        )}
         <SceneMap
           gameState={gameState}
           targetFeedback={targetFeedback}

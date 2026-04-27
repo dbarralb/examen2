@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LobbyStage } from "../components/LobbyStage.jsx";
 import { getRole, normalizeRoleId } from "../data/roles.js";
-import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, releaseOwnRoleClaim, touchLobbyPlayer, updatePlayerName, updatePreviewRole } from "../services/lobbyService.js";
+import { claimRole, getLobbySnapshot, getOwnLobbyPlayer, getPlayerDisplayName, normalizeLobby, releaseOwnRoleClaim, touchLobbyPlayer, updatePlayerName, updatePreviewRole, getPreviewingPlayer } from "../services/lobbyService.js";
 import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
 
 export function RoleSelectScreen({ navigation }) {
@@ -102,7 +102,7 @@ export function RoleSelectScreen({ navigation }) {
       } catch (error) {
         setStatus("No se pudo sincronizar la previsualizacion.");
       }
-    }, 2000);
+    }, 400);
   }
 
   async function handleSelectRole(roleId) {

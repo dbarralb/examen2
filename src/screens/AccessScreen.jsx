@@ -28,7 +28,10 @@ export function AccessScreen({ navigation }) {
         return;
       }
 
-      if (normalizedCode !== activeCode) {
+      const playerCodes = session?.playerCodes ? Object.values(session.playerCodes) : [];
+      const isValid = normalizedCode === activeCode || playerCodes.includes(normalizedCode);
+
+      if (!isValid) {
         setStatus("Código incorrecto.");
         return;
       }

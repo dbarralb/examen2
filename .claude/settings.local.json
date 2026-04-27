@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(node -e ':*)",
-      "Bash(curl -s \"https://project-butterfly-d0242-default-rtdb.firebaseio.com/.json\")"
+      "Bash(curl -s \"https://project-butterfly-d0242-default-rtdb.firebaseio.com/.json\")",
+      "Bash(powershell -Command \"Rename-Item -Path 'Instituto Newton Design System' -NewName 'Instituto Newton Design System OLD' -Force; Rename-Item -Path 'Instituto Newton Design System V2' -NewName 'Instituto Newton Design System V2 OLD' -Force\")",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

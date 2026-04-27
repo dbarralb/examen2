@@ -18,6 +18,12 @@ export async function getRemoteState() {
 export async function startGame() {
   const now = Date.now();
   const accessCode = generateSessionAccessCode();
+  const playerCodes = {
+    jugador1: generateSessionAccessCode(),
+    jugador2: generateSessionAccessCode(),
+    jugador3: generateSessionAccessCode(),
+    jugador4: generateSessionAccessCode(),
+  };
   const gameTimer = {
     status: "idle",
     startedAt: null,
@@ -25,7 +31,7 @@ export async function startGame() {
   };
   const remoteState = await getRemoteState();
   const nextLog = [
-    `GM abre el lobby. Codigo de sesion: ${accessCode}. ${new Date().toLocaleTimeString()}`,
+    `GM abre el lobby. Codigo GM: ${accessCode}. ${new Date().toLocaleTimeString()}`,
     ...normalizeActionLog(remoteState.actionLog),
   ];
 
@@ -33,6 +39,7 @@ export async function startGame() {
   await firebasePatch("session", {
     status: "role_select",
     accessCode,
+    playerCodes,
     gmClientId: getOrCreateClientId(),
     gameTimer,
     updatedAt: now,

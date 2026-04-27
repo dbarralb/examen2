@@ -39,8 +39,11 @@ timeout /t 4 /nobreak >nul
 echo Abriendo vista Game Master...
 start "" "%BASE_URL%/?screen=gm"
 
-echo Abriendo vista jugador...
-start "" "%BASE_URL%/?screen=roles"
+echo Abriendo pestanas de jugadores (x4)...
+start "" "%BASE_URL%"
+start "" "%BASE_URL%"
+start "" "%BASE_URL%"
+start "" "%BASE_URL%"
 
 echo.
 echo Listo. Puedes cerrar esta ventana.

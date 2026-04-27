@@ -9,7 +9,7 @@ export const PLAYER_NAME_STORAGE_KEY = "elExamen2.playerName";
 
 export function getStoredPlayerName() {
   try {
-    return window.localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
+    return window.sessionStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
   } catch (error) {
     return "";
   }
@@ -17,9 +17,9 @@ export function getStoredPlayerName() {
 
 export function storePlayerName(name) {
   try {
-    window.localStorage.setItem(PLAYER_NAME_STORAGE_KEY, String(name || ""));
+    window.sessionStorage.setItem(PLAYER_NAME_STORAGE_KEY, String(name || ""));
   } catch (error) {
-    // Private browsing can block localStorage; Firebase remains the source of truth.
+    // Private browsing can block storage; Firebase remains the source of truth.
   }
 }
 
@@ -91,6 +91,15 @@ export function getClaimForRole(lobby, roleId) {
 export function isRoleClaimedByOther(lobby, roleId) {
   const claim = getClaimForRole(lobby, roleId);
   return Boolean(claim && claim.clientId !== getOrCreateClientId());
+}
+
+export function getPreviewingPlayer(lobby, roleId) {
+  const normalizedRoleId = normalizeRoleId(roleId);
+  const ownClientId = getOrCreateClientId();
+  const players = lobby?.players || {};
+  return Object.values(players).find(
+    (p) => p && p.clientId !== ownClientId && normalizeRoleId(p.previewRole) === normalizedRoleId && p.status === "selecting"
+  ) || null;
 }
 
 export function getReadyClaims(lobby) {

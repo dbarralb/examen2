@@ -8,7 +8,7 @@ export function normalizeSessionCode(value) {
 
 export function getStoredSessionCode() {
   try {
-    return window.localStorage.getItem(SESSION_CODE_STORAGE_KEY) || "";
+    return window.sessionStorage.getItem(SESSION_CODE_STORAGE_KEY) || "";
   } catch (error) {
     return "";
   }
@@ -16,7 +16,7 @@ export function getStoredSessionCode() {
 
 export function storeSessionCode(code) {
   try {
-    window.localStorage.setItem(SESSION_CODE_STORAGE_KEY, String(code || ""));
+    window.sessionStorage.setItem(SESSION_CODE_STORAGE_KEY, String(code || ""));
   } catch (error) {
     // Private browsing or storage restrictions can block this; callers still show a useful error.
   }
@@ -31,6 +31,13 @@ export function getActiveSessionCode(session) {
 }
 
 export function hasValidStoredSessionCode(session) {
+  const stored = getStoredSessionCode();
+  if (!stored) return false;
   const activeCode = getActiveSessionCode(session);
-  return Boolean(activeCode && getStoredSessionCode() === activeCode);
+  if (activeCode && stored === activeCode) return true;
+  const playerCodes = session?.playerCodes;
+  if (playerCodes) {
+    return Object.values(playerCodes).includes(stored);
+  }
+  return false;
 }

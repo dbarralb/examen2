@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { NewtonLogo } from "./newton";
 import { LobbyRolePanel } from "./LobbyRolePanel.jsx";
 import { getLobbyRoles } from "../data/roles.js";
-import { getClaimForRole, getPlayerDisplayName } from "../services/lobbyService.js";
+import { getClaimForRole, getPlayerDisplayName, getPreviewingPlayer } from "../services/lobbyService.js";
 import changeButtonImage from "../../assets/Lobby/UI/Lobby_Button_Change.png";
 import continueButtonImage from "../../assets/Lobby/UI/Lobby_Button_Continue.png";
 import mouseHoldIcon from "../../assets/Lobby/UI/Icons/Mouse_Hold_icon.png";
@@ -181,15 +181,17 @@ export function LobbyStage({
         {roles.map((role) => {
           const claim = getClaimForRole(lobby, role.id);
           const isOwnPreview = selectedRoleId === role.id;
-          const isSelected = Boolean(claim || isOwnPreview);
+          const previewingPlayer = !claim ? getPreviewingPlayer(lobby, role.id) : null;
+          const isSelected = Boolean(claim || isOwnPreview || previewingPlayer);
           const showSelector = isOwnPreview;
           const playerForClaim = claim?.clientId ? lobby.players[claim.clientId] : null;
           const labelName = claim?.name || getPlayerDisplayName(playerForClaim, lobby.players);
+          const previewName = previewingPlayer ? getPlayerDisplayName(previewingPlayer, lobby.players) : null;
 
           return (
             <button
               key={role.id}
-              className={`lobby-character lobby-character-${role.id} ${isOwnPreview ? "previewed" : ""} ${claim ? "claimed" : ""}`}
+              className={`lobby-character lobby-character-${role.id} ${isOwnPreview ? "previewed" : ""} ${claim ? "claimed" : ""} ${previewingPlayer ? "other-previewing" : ""}`}
               type="button"
               onClick={() => onSelectRole?.(role.id)}
             >
@@ -207,6 +209,12 @@ export function LobbyStage({
                     <strong>{role.label}</strong>
                     <span className="lobby-character-player">{ownDisplayName}</span>
                     <em>Seleccionando...</em>
+                  </>
+                ) : previewingPlayer ? (
+                  <>
+                    <strong>{role.label}</strong>
+                    <span className="lobby-character-player">{previewName}</span>
+                    <em>Eligiendo...</em>
                   </>
                 ) : (
                   <>

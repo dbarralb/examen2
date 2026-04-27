@@ -1,3 +1,5 @@
+import { SESSION_CODE_STORAGE_KEY } from "./sessionAccess.js";
+
 const CLIENT_ID_STORAGE_KEY = "elExamen2.clientId";
 
 export function createId() {
@@ -10,14 +12,20 @@ export function createId() {
 
 export function getOrCreateClientId() {
   try {
-    const stored = window.localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    // Derive identity from the per-tab session code so each tab is a different player
+    const sessionCode = window.sessionStorage.getItem(SESSION_CODE_STORAGE_KEY);
+    if (sessionCode) {
+      return `player-${sessionCode}`;
+    }
 
+    // Fallback for GM or screens that don't require a session code
+    const stored = window.sessionStorage.getItem(CLIENT_ID_STORAGE_KEY);
     if (stored) {
       return stored;
     }
 
     const created = createId();
-    window.localStorage.setItem(CLIENT_ID_STORAGE_KEY, created);
+    window.sessionStorage.setItem(CLIENT_ID_STORAGE_KEY, created);
     return created;
   } catch (error) {
     return createId();
