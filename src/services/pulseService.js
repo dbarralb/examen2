@@ -1,7 +1,7 @@
 import { createId, getOrCreateClientId } from "./clientIdentity.js";
 import { firebaseGet, firebaseGetWithEtag, firebasePatch, firebasePutIfMatch } from "./firebaseClient.js";
 import { buildPulseFlags, createLastRoleAction, resolveActionWithResult } from "./gameRules.js";
-import { createEmptyResultOverlay, createInitialGameState, createInitialPulseState, createInitialSessionState, createInitialTargetFeedback, createInitialTeamMetrics, normalizeRemoteList } from "./remoteState.js";
+import { createEmptyResultOverlay, createInitialGameState, createInitialPulseState, createInitialTargetFeedback, normalizeRemoteList } from "./remoteState.js";
 
 const timing = {
   actionExecutionSeconds: 3,
@@ -93,21 +93,12 @@ export async function startManualPulse({ onStatus } = {}) {
     const targetFeedback = { ...createInitialTargetFeedback(), ...((await firebaseGet("targetFeedback")) || {}) };
     const lastRoleActions = { ...((await firebaseGet("lastRoleActions")) || {}) };
     let lastRoleDebug = (await firebaseGet("lastRoleDebug")) || "Sin acciones resueltas todavia.";
-    const sessionState = { ...createInitialSessionState(), ...((await firebaseGet("sessionState")) || {}) };
-    const puzzleState = (await firebaseGet("puzzleState")) || {};
-    const ecoState = (await firebaseGet("ecoState")) || {};
-    const teamMetrics = { ...createInitialTeamMetrics(), ...((await firebaseGet("teamMetrics")) || {}) };
     const context = {
       gameState,
       targetFeedback,
       actionLog,
       lastRoleDebug,
-      puzzleState,
-      ecoState,
-      teamMetrics,
       metricsDelta: {},
-      salaId: sessionState.salaId,
-      availableOutputs: sessionState.availableOutputs || [],
     };
 
     pulseState = {
@@ -165,9 +156,6 @@ export async function startManualPulse({ onStatus } = {}) {
         pulseState,
         lastRoleActions,
         lastRoleDebug,
-        puzzleState: context.puzzleState,
-        ecoState: context.ecoState,
-        "sessionState/availableOutputs": context.availableOutputs,
       });
 
       onStatus?.(resultMessage);
@@ -185,11 +173,6 @@ export async function startManualPulse({ onStatus } = {}) {
     pulseState = createInitialPulseState();
     actionLog.unshift("Pulso resuelto. Las acciones tardias esperan al siguiente.");
 
-    // Apply accumulated metric deltas
-    for (const [key, delta] of Object.entries(context.metricsDelta)) {
-      context.teamMetrics[key] = (context.teamMetrics[key] || 0) + delta;
-    }
-
     await firebasePatch("", {
       gameState: context.gameState,
       targetFeedback: context.targetFeedback,
@@ -199,10 +182,6 @@ export async function startManualPulse({ onStatus } = {}) {
       pulseState,
       lastRoleActions,
       lastRoleDebug,
-      puzzleState: context.puzzleState,
-      ecoState: context.ecoState,
-      teamMetrics: context.teamMetrics,
-      "sessionState/availableOutputs": context.availableOutputs,
     });
     onStatus?.("Pulso resuelto. Las acciones tardias esperan al siguiente.");
   } catch (error) {

@@ -5,9 +5,7 @@ import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
-import { getEcosForRoom, getRoom, getZone, getZonesForRoom } from "../data/roomData.js";
-import { saveEcoToCodex } from "../services/codexService.js";
-import { saveHorusDecision } from "../services/sessionService.js";
+import { getRoom, getZone, getZonesForRoom } from "../data/roomData.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -17,8 +15,6 @@ import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
 import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView, updatePlayerZone } from "../services/playerService.js";
-import { firebasePatch } from "../services/firebaseClient.js";
-import { targetItems } from "../data/gameData.js";
 
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
 const SUCCESS_CLOSE_DELAY_MS = 2000;
@@ -65,9 +61,7 @@ export function PlayerScreen({ navigation, params }) {
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const [isDraggingItem, setIsDraggingItem] = useState(false);
   const [revealedSlots, setRevealedSlots] = useState({}); // { [targetId]: number[] }
-  const [ecoToast, setEcoToast] = useState(null);
   const revealedSlotsRef = useRef({});
-  const prevEcoStateRef = useRef({});
   const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
@@ -90,25 +84,16 @@ export function PlayerScreen({ navigation, params }) {
   const itemSeenState = remoteState?.itemSeenState || {};
   const cardUsage = remoteState?.cardUsage?.[role.id] || {};
   const sessionState = remoteState?.sessionState || {};
-  const currentSalaId = sessionState.salaId || "sala1_el_cierre";
+  const currentSalaId = sessionState.salaId || "sandbox";
   const playerZoneId = remoteState?.playerZones?.[role.id];
-  const currentZoneId = playerZoneId || sessionState.zoneId || "inicio";
+  const currentZoneId = playerZoneId || sessionState.zoneId || "all";
   const currentRoom = getRoom(currentSalaId);
   const salaZones = getZonesForRoom(currentSalaId);
   const activeZone = getZone(currentSalaId, currentZoneId);
-  const ecoState = remoteState?.ecoState || {};
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
-
-  // Hórus decision: show 3 options in Z4 once the decision puzzle is solved
-  const isHorusRoom = currentSalaId?.startsWith("horus_run_");
-  const horusDecisionMade = sessionState.horusDecision != null;
-  const puzzleState = remoteState?.puzzleState || {};
-  const horusDecisionPuzzleSolved = isHorusRoom && currentZoneId === "z4" &&
-    Object.entries(puzzleState).some(([id, p]) => id.startsWith("ph_") && id.endsWith("_decision") && p?.solved);
-  const showHorusDecision = isHorusRoom && currentZoneId === "z4" && !horusDecisionMade && !isGmMonitorView;
 
   // null = not a container; true = open; false = closed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -185,22 +170,6 @@ export function PlayerScreen({ navigation, params }) {
       ]);
     }
   }, [remoteInventorySlots]);
-
-  useEffect(() => {
-    if (isGmMonitorView) return;
-    const ecoDefs = getEcosForRoom(currentSalaId);
-    const prev = prevEcoStateRef.current;
-    for (const eco of ecoDefs) {
-      if (ecoState[eco.id]?.discovered && !prev[eco.id]?.discovered) {
-        setEcoToast(eco);
-        saveEcoToCodex(eco.id, eco.text, eco.codexLevel || 1, currentSalaId);
-        const timer = window.setTimeout(() => setEcoToast(null), 4000);
-        prevEcoStateRef.current = { ...ecoState };
-        return () => window.clearTimeout(timer);
-      }
-    }
-    prevEcoStateRef.current = { ...ecoState };
-  }, [ecoState, currentSalaId, isGmMonitorView]);
 
   useEffect(() => {
     searchTimersRef.current.forEach(clearTimeout);
@@ -324,32 +293,11 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
-  async function handleHorusDecision(decision) {
-    try {
-      await saveHorusDecision(decision);
-    } catch {
-      // Error de red silencioso; el siguiente ciclo reintentará.
-    }
-  }
-
   function handleItemClick(item) {
     setOpenedItem(item);
     if (!itemSeenState[item.id]?.seen) {
       markItemSeen(item.id).catch(() => {});
     }
-  }
-
-  // TODO [DEUDA TÉCNICA]: Función debug solo para testeo. Eliminar antes de producción.
-  async function handleDebugClearInventory() {
-    setPlayerInventory([null, null, null]);
-    const pickedUpResets = {};
-    Object.values(targetItems).flat().forEach((item) => {
-      if (item.type === "usable") pickedUpResets[`itemSeenState/${item.id}/pickedUp`] = null;
-    });
-    await firebasePatch("", {
-      [`playerInventories/${role.id}/slots`]: [null, null, null],
-      ...pickedUpResets,
-    }).catch(() => {});
   }
 
   async function handleInventorySlotDrop(itemId, slotIndex) {
@@ -512,33 +460,6 @@ export function PlayerScreen({ navigation, params }) {
             <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
           </aside>
         )}
-        {ecoToast && !isGmMonitorView && (
-          <aside className="eco-toast" role="status" aria-live="polite">
-            <span className="eco-toast-label">ECO</span>
-            <span className="eco-toast-text">"{ecoToast.text}"</span>
-          </aside>
-        )}
-        {showHorusDecision && (
-          <aside className="horus-decision-panel">
-            <h2>Hórus espera vuestra decisión</h2>
-            <p>Elegid el camino. No hay vuelta atrás.</p>
-            <div className="horus-decision-options">
-              <button className="horus-decision-btn horus-integration" onClick={() => handleHorusDecision("integration")}>
-                <strong>Integración</strong>
-                <span>Unirse al sistema</span>
-              </button>
-              <button className="horus-decision-btn horus-rejection" onClick={() => handleHorusDecision("rejection")}>
-                <strong>Rechazo</strong>
-                <span>Rechazar el sistema</span>
-              </button>
-              <button className="horus-decision-btn horus-deception" onClick={() => handleHorusDecision("deception")}>
-                <strong>Simulación</strong>
-                <span>Engañar al sistema</span>
-              </button>
-            </div>
-            {horusDecisionMade && <NBadge status="success">Decisión registrada: {sessionState.horusDecision}</NBadge>}
-          </aside>
-        )}
         {!isGmMonitorView && <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
           {visibleCards.map((card) => {
             const isCharging = pendingAction?.card === card.id;
@@ -575,7 +496,6 @@ export function PlayerScreen({ navigation, params }) {
             onItemClick={handleItemClick}
             onSlotDragStart={() => setIsDraggingItem(true)}
             onSlotDrop={handleInventorySlotDrop}
-            onDebugClear={handleDebugClearInventory}
             isDraggingItem={isDraggingItem}
           />
         )}

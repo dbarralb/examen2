@@ -70,9 +70,6 @@ export function AccessScreen({ navigation }) {
         <button className="react-link-button" type="button" onClick={() => navigation.go("gm")}>
           Entrar como Game Master
         </button>
-        <button className="react-link-button" type="button" onClick={() => navigation.go("codex")}>
-          Codex
-        </button>
       </NCard>
     </main>
   );

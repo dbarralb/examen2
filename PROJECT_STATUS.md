@@ -1,5 +1,14 @@
 ﻿# El Examen 2 - Estado del prototipo
 
+## Punto de control - Sandbox limpio para rediseno de puzzles
+
+- [x] El flujo React queda reducido a una sola sala sandbox.
+- [x] La sala activa es `sandbox` y solo contiene zonas de filtrado visual: `all`, `access`, `storage`.
+- [x] El loop jugable se conserva: lobby, seleccion de rol, pantalla de jugador, hotspots, cartas, carga/minijuego local, cola remota, pulso manual GM, overlay de resultado y monitores GM.
+- [x] La resolucion de acciones queda neutralizada en `src/services/gameRules.js`: registra resultado sandbox y no resuelve puzzles, no activa ecos, no avanza salas.
+- [x] Retiradas de la app React las rutas/pantallas narrativas no activas: Codex, pipeline de prompts, Horus, Sala 5, paneles de puzzles/ecos/metricas, guion de testeo, botones debug de GM y boton debug de inventario.
+- [x] `npm.cmd run build` pasa tras la limpieza.
+
 ## Plan activo - Nuevo panel de lobby tipo expediente
 
 - [x] Descartar la arquitectura por secciones/rasgos del panel anterior.
