@@ -159,6 +159,12 @@ export function buildInitialRemoteState(status = "role_select") {
     ...createInitialInventoryState(),
     sessionState: createInitialSessionState(),
     playerZones: {},
+    playerBoards: {
+      empollon: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
+      manitas:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
+      guaperas: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
+      mistica:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
+    },
   };
 }
 

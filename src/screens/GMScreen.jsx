@@ -3,7 +3,7 @@ import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
-import { getRoom, getZone, getZonesForRoom, SALA1_ROOM_ID } from "../data/roomData.js";
+import { getRoom, SALA1_ROOM_ID } from "../data/roomData.js";
 import { playerRoles } from "../data/roles.js";
 import { targets } from "../data/gameData.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
@@ -46,7 +46,6 @@ export function GMScreen() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
   const [sceneControlExpanded, setSceneControlExpanded] = useState(false);
-  const [testScriptExpanded, setTestScriptExpanded] = useState(false);
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
@@ -54,9 +53,7 @@ export function GMScreen() {
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
   const currentSalaId = sessionState.salaId || "sandbox";
-  const currentZoneId = sessionState.zoneId || "all";
   const currentRoom = getRoom(currentSalaId);
-  const salaZones = getZonesForRoom(currentSalaId);
   const gameState = remoteState?.gameState || {};
   // Firebase strips empty arrays → normalize to safe defaults
   const rawGmScene = gameState.gmSceneState || {};
@@ -180,16 +177,6 @@ export function GMScreen() {
       await refresh();
     } finally {
       setIsPulseBusy(false);
-    }
-  }
-
-  async function handleZoneChange(zoneId) {
-    try {
-      await firebasePatch("sessionState", { zoneId });
-      setStatusMessage(`Zona cambiada: ${salaZones.find((zone) => zone.id === zoneId)?.label || zoneId}`);
-      await refresh();
-    } catch {
-      setStatusMessage("No se pudo cambiar de zona.");
     }
   }
 
@@ -345,25 +332,6 @@ export function GMScreen() {
             </button>
           </div>
 
-          {/* Mapa jugadores → zona */}
-          <div className="gm-player-zone-map" aria-label="Posición de cada jugador">
-            {playerRoles.map((role) => {
-              const claim = remoteState?.lobby?.roleClaims?.[role.id];
-              const playerZoneId = remoteState?.playerZones?.[role.id];
-              const zone = playerZoneId ? getZone(currentSalaId, playerZoneId) : null;
-              const zoneLabel = zone?.label || playerZoneId || "—";
-              const isConnected = Boolean(claim);
-
-              return (
-                <div key={role.id} className={`gm-player-zone-row ${isConnected ? "connected" : "empty"}`}>
-                  <NBadge status={isConnected ? role.status : "muted"}>{role.label}</NBadge>
-                  <span className="gm-player-zone-location">
-                    {isConnected ? zoneLabel : "sin jugador"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
         </NCard>
 
         <NCard title="Cola de acciones" glow>
@@ -509,95 +477,6 @@ export function GMScreen() {
         )}
       </div>
 
-      {/* ---- Test Script Sala 1 ---- */}
-      <div className="react-gm-monitors-collapsible">
-        <button
-          className={`react-gm-monitors-toggle ${testScriptExpanded ? "expanded" : ""}`}
-          onClick={() => setTestScriptExpanded((v) => !v)}
-          aria-expanded={testScriptExpanded}
-        >
-          <span>Script de Test — Sala 1</span>
-          <NBadge status="info">11 checks</NBadge>
-          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{testScriptExpanded ? "▲" : "▼"}</span>
-        </button>
-        {testScriptExpanded && (
-          <section className="react-gm-test-script" aria-label="Script de test Sala 1">
-            <p className="react-status">
-              Abre 4 pestañas con los códigos de jugador (jugador1–jugador4). Cada test valida una parte del sistema.
-            </p>
-            <div className="react-list">
-              {[
-                {
-                  n: 1,
-                  title: "Ruta principal sin habilidades",
-                  steps: "1) jugador cualquiera → desk (sin carta, solo busca) → leer laser_week_note. 2) panel de seguridad → introducir código 7391. 3) showcase → recoger original_exam. ✓ Sala completable.",
-                },
-                {
-                  n: 2,
-                  title: "Código 7391 desactiva láser",
-                  steps: "Después del paso 2 del test 1: comprobar que laser_grid = disabled y showcase = laser_disabled en Flags/Estado.",
-                },
-                {
-                  n: 3,
-                  title: "Recoger examen → examStolen",
-                  steps: "Tras abrir vitrina: recoger original_exam. Comprobar badge 'Examen robado' = verde en panel GM.",
-                },
-                {
-                  n: 4,
-                  title: "Sustitución → replacedExam",
-                  steps: "Con blank_exam_copy en inventario + examStolen=true: usar copia sobre vitrina. Comprobar badge 'Examen sustituido' = verde.",
-                },
-                {
-                  n: 5,
-                  title: "a_lo_bestia con láser activo → alarma 3",
-                  steps: "Resetear. guaperas usa a_lo_bestia sobre showcase con laser_grid=active. Comprobar Alarma = 3 + photographed=true.",
-                },
-                {
-                  n: 6,
-                  title: "puenteo_rapido sin pista → alarma 2",
-                  steps: "Resetear. manitas usa puenteo_rapido sobre security_panel SIN mirar antes. Comprobar Alarma ≥ 2 + panel=code_error.",
-                },
-                {
-                  n: 7,
-                  title: "Alarma sube pero NO cambia gmSceneState automáticamente",
-                  steps: "Después de cualquier test con alarma: comprobar que 'Efectos activos' sigue en 0 hasta que el GM pulse un botón.",
-                },
-                {
-                  n: 8,
-                  title: "getAlarmRecommendations devuelve sugerencias correctas",
-                  steps: "Con alarma ≥ 1: panel 'Control de Escenario' debe mostrar al menos 1 recomendación. Con alarma ≥ 3: debe aparecer 'Modo contención'.",
-                },
-                {
-                  n: 9,
-                  title: "GM activa/desactiva efecto de escena",
-                  steps: "En Control de Escenario: pulsar 'Luz roja de alarma'. Verificar que se activa (badge verde). Pulsar de nuevo → se desactiva.",
-                },
-                {
-                  n: 10,
-                  title: "UI del jugador refleja gmSceneState",
-                  steps: "Con red_light_overlay activo: la pestaña del jugador debe mostrar overlay rojo. Con system_interference: texto de interferencia visible.",
-                },
-                {
-                  n: 11,
-                  title: "Acciones de personaje NO son requisito",
-                  steps: "Completar el test 1 (ruta principal) sin usar ninguna carta de personaje. El examen debe ser robable solo con búsqueda + código.",
-                },
-              ].map((test) => (
-                <article key={test.n} className="react-list-item gm-test-item">
-                  <strong>[{test.n}] {test.title}</strong>
-                  <span>{test.steps}</span>
-                </article>
-              ))}
-            </div>
-            <div className="button-row">
-              <p className="react-status">
-                Códigos de jugador disponibles en panel &quot;Partida&quot; arriba.
-                Abre cada código en una pestaña del navegador para simular los 4 jugadores.
-              </p>
-            </div>
-          </section>
-        )}
-      </div>
     </main>
   );
 }

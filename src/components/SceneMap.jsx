@@ -13,7 +13,7 @@ import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 const MAP_WIDTH = 1826;
 const MAP_HEIGHT = 1080;
 const MAP_ASPECT = MAP_WIDTH / MAP_HEIGHT;
-const MIN_SCALE = 1;
+const MIN_SCALE = 0.8;
 const MAX_SCALE = 3;
 const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
 const TARGET_FOCUS_SCALE = 1.45;
@@ -98,13 +98,17 @@ export function SceneMap({
   onLoadConfirm,
   revealedSlots = {},
   activeZone = null,
+  boardTargets = null,
+  backgroundSrc = null,
   onDeviceCommand,
   deviceCommandResult = null,
 }) {
-  // Filter targets to those in the active zone. If no zone is set, show all targets (backward compat).
-  const visibleTargets = activeZone
-    ? activeZone.targetIds.map((id) => getTarget(id)).filter(Boolean)
-    : targets;
+  // boardTargets takes priority; otherwise filter by activeZone or show all.
+  const visibleTargets = boardTargets
+    ? boardTargets
+    : activeZone
+      ? activeZone.targetIds.map((id) => getTarget(id)).filter(Boolean)
+      : targets;
   const viewportRef = useRef(null);
   const panRef = useRef(null);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0));
@@ -316,7 +320,7 @@ export function SceneMap({
           transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.scale})`,
         }}
       >
-        <BackgroundLayer />
+        <BackgroundLayer backgroundSrc={backgroundSrc} />
         <StructureLayer gameState={gameState} />
         {/* Dim layer: covers background/structure but sits below cards (same z-index as interactive, earlier in DOM) */}
         <div

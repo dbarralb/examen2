@@ -4,8 +4,7 @@ import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
-import { cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, targets } from "../data/gameData.js";
-import { getRoom, getZone, getZonesForRoom } from "../data/roomData.js";
+import { boardHotspots, cards, getCard, getContainerOpenState, getTargetStateLabel, objectImages, playerBoardSrc, targets } from "../data/gameData.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -14,7 +13,7 @@ import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView, updatePlayerZone } from "../services/playerService.js";
+import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
@@ -88,13 +87,7 @@ export function PlayerScreen({ navigation, params }) {
   const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
   const itemSeenState = remoteState?.itemSeenState || {};
   const cardUsage = remoteState?.cardUsage?.[role.id] || {};
-  const sessionState = remoteState?.sessionState || {};
-  const currentSalaId = sessionState.salaId || "sandbox";
-  const playerZoneId = remoteState?.playerZones?.[role.id];
-  const currentZoneId = playerZoneId || sessionState.zoneId || "all";
-  const currentRoom = getRoom(currentSalaId);
-  const salaZones = getZonesForRoom(currentSalaId);
-  const activeZone = getZone(currentSalaId, currentZoneId);
+  const boardSrc = playerBoardSrc[role.id] || null;
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
@@ -571,20 +564,6 @@ export function PlayerScreen({ navigation, params }) {
           <NBadge status={role.status}>{role.label}</NBadge>
           <NTimer seconds={elapsedSeconds} />
         </div>
-        {!isGmMonitorView && salaZones.length > 0 && (
-          <nav className="player-zone-nav" aria-label="Navegación de zona">
-            {salaZones.map((zone) => (
-              <button
-                key={zone.id}
-                type="button"
-                className={`player-zone-btn ${zone.id === currentZoneId ? "active" : ""}`}
-                onClick={() => updatePlayerZone(role.id, zone.id)}
-              >
-                {zone.label}
-              </button>
-            ))}
-          </nav>
-        )}
         <SceneMap
           gameState={gameState}
           targetFeedback={targetFeedback}
@@ -612,7 +591,8 @@ export function PlayerScreen({ navigation, params }) {
           onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
           onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
-          activeZone={activeZone}
+          boardTargets={boardHotspots}
+          backgroundSrc={isGmMonitorView ? null : boardSrc}
           onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}
           deviceCommandResult={isGmMonitorView ? null : deviceCommandResult}
         />

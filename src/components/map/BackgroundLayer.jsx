@@ -1,7 +1,15 @@
 import mapBackgroundFallback from "../../../assets/Pantalla de juego/Background_Green.png";
 import { backgroundTiles } from "../../data/mapData.js";
 
-export function BackgroundLayer() {
+export function BackgroundLayer({ backgroundSrc = null }) {
+  if (backgroundSrc) {
+    return (
+      <div className="map-layer map-layer-background">
+        <img className="scene-map-background" src={backgroundSrc} alt="Tablero del jugador" draggable="false" />
+      </div>
+    );
+  }
+
   const hasTiles = backgroundTiles.tiles.some((t) => t.src !== null);
 
   if (!hasTiles) {

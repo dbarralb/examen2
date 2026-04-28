@@ -1,3 +1,16 @@
+export const boardHotspots = [
+  { id: "hotspot_1", label: "Hotspot1", x: 20, y: 38, w: 9, h: 9, hotspotClass: "generico" },
+  { id: "hotspot_2", label: "Hotspot2", x: 48, y: 38, w: 9, h: 9, hotspotClass: "generico" },
+  { id: "hotspot_3", label: "Hotspot3", x: 76, y: 38, w: 9, h: 9, hotspotClass: "generico" },
+];
+
+export const playerBoardSrc = {
+  empollon: "/assets/boards/placeholder_empollon.svg",
+  manitas:  "/assets/boards/placeholder_manitas.svg",
+  guaperas: "/assets/boards/placeholder_guaperas.svg",
+  mistica:  "/assets/boards/placeholder_mistica.svg",
+};
+
 export const cards = [
   { id: "mirar_bien", label: "mirar_bien", roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/mirar_bien.png" },
   { id: "consultar_apuntes", label: "consultar_apuntes", roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/consultar_apuntes.png" },
