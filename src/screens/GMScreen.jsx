@@ -3,9 +3,9 @@ import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
-import { getRoom, SALA1_ROOM_ID } from "../data/roomData.js";
 import { playerRoles } from "../data/roles.js";
 import { targets } from "../data/gameData.js";
+import { SCENARIO_VARIANTS, getScenario } from "../data/scenarioData.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { forceStartGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
@@ -29,10 +29,7 @@ function getMonitorSrc(roleId) {
 }
 
 function getActionSummary(action) {
-  if (!action) {
-    return "Sin accion registrada.";
-  }
-
+  if (!action) return "Sin accion registrada.";
   const target = targets.find((item) => item.id === action.target);
   return `${formatCardLabel(action)} -> ${target?.label || action.target || "objetivo"}`;
 }
@@ -52,10 +49,10 @@ export function GMScreen() {
   const pulseState = remoteState?.pulseState || { status: "idle" };
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
-  const currentSalaId = sessionState.salaId || "sandbox";
-  const currentRoom = getRoom(currentSalaId);
+  const activeScenario = getScenario(sessionState.scenarioId || "sandbox");
   const gameState = remoteState?.gameState || {};
-  // Firebase strips empty arrays → normalize to safe defaults
+
+  // Firebase strips empty arrays — normalize to safe defaults
   const rawGmScene = gameState.gmSceneState || {};
   const gmSceneState = {
     activeVariant: rawGmScene.activeVariant || "normal",
@@ -69,11 +66,10 @@ export function GMScreen() {
     triggers: Array.isArray(rawAlarm.triggers) ? rawAlarm.triggers : [],
   };
   const flags = gameState.flags || {};
-  const isSala1 = currentSalaId === SALA1_ROOM_ID;
   const alarmRecommendations = useMemo(
-    () => (isSala1 ? getAlarmRecommendations(gameState) : []),
+    () => getAlarmRecommendations(gameState),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isSala1, alarmState.level, alarmState.noise, flags.photographed, flags.camera_fooled],
+    [alarmState.level, alarmState.noise],
   );
 
   async function refresh() {
@@ -88,16 +84,13 @@ export function GMScreen() {
     task: async ({ isCancelled }) => {
       try {
         const nextState = await getRemoteState();
-
         if (!isCancelled()) {
           setRemoteState(nextState);
           setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
           setStatusMessage("Sincronizado.");
         }
       } catch {
-        if (!isCancelled()) {
-          setStatusMessage("No se pudo refrescar Firebase.");
-        }
+        if (!isCancelled()) setStatusMessage("No se pudo refrescar Firebase.");
       }
     },
   });
@@ -109,14 +102,12 @@ export function GMScreen() {
         return gameTimer?.status === "running" ? getGameTimerElapsedSeconds(gameTimer) : current;
       });
     }, 500);
-
     return () => window.clearInterval(clockTimer);
   }, [remoteState?.session?.gameTimer]);
 
   async function handleStartGame() {
     setIsBusy(true);
     setStatusMessage("Abriendo lobby...");
-
     try {
       const nextState = await startGame();
       setRemoteState(nextState);
@@ -132,7 +123,6 @@ export function GMScreen() {
   async function handleForceStartGame() {
     setIsBusy(true);
     setStatusMessage("Forzando inicio (modo debug)...");
-
     try {
       const nextState = await forceStartGame();
       setRemoteState(nextState);
@@ -147,15 +137,14 @@ export function GMScreen() {
 
   async function handleResetGame() {
     setIsBusy(true);
-    setStatusMessage("Reseteando sandbox...");
-
+    setStatusMessage("Reseteando...");
     try {
       const nextState = await resetGame();
       setRemoteState(nextState);
       setElapsedSeconds(0);
-      setStatusMessage("Sandbox reseteado. Jugadores devueltos al acceso.");
+      setStatusMessage("Partida reseteada. Jugadores devueltos al acceso.");
     } catch {
-      setStatusMessage("No se pudo resetear el sandbox.");
+      setStatusMessage("No se pudo resetear.");
     } finally {
       setIsBusy(false);
     }
@@ -164,13 +153,8 @@ export function GMScreen() {
   async function handleStartPulse() {
     setIsPulseBusy(true);
     setStatusMessage("Preparando pulso...");
-
     try {
-      await startManualPulse({
-        onStatus(message) {
-          setStatusMessage(message);
-        },
-      });
+      await startManualPulse({ onStatus(message) { setStatusMessage(message); } });
       await refresh();
     } catch (error) {
       setStatusMessage(error.message || "El pulso ha fallado.");
@@ -180,15 +164,14 @@ export function GMScreen() {
     }
   }
 
-  async function handleSalaChange(salaId) {
+  /** Assign a scenario variant (A-D) to a specific player role. */
+  async function handleSetVariant(roleId, variant) {
     try {
-      const room = getRoom(salaId);
-      const firstZone = room?.zones?.[0]?.id || "all";
-      await firebasePatch("sessionState", { salaId, zoneId: firstZone });
-      setStatusMessage(`Sala cambiada: ${room?.label || salaId}`);
+      await firebasePatch(`playerBoards/${roleId}`, { variant });
+      setStatusMessage(`${roleId}: variante ${variant}`);
       await refresh();
     } catch {
-      setStatusMessage("No se pudo cambiar de sala.");
+      setStatusMessage("No se pudo cambiar la variante.");
     }
   }
 
@@ -208,15 +191,16 @@ export function GMScreen() {
         <NewtonLogo />
         <div>
           <NBadge status="info">Panel GM</NBadge>
-          <NBadge status={isSala1 ? "success" : "muted"}>{isSala1 ? "Sala 1 — Despacho" : "Sandbox"}</NBadge>
-          <h1>{isSala1 ? "Control Sala 1" : "Control sandbox"}</h1>
+          <NBadge status="muted">{activeScenario.label}</NBadge>
+          <h1>Control GM</h1>
         </div>
       </header>
 
+      {/* ---- Monitores de jugadores ---- */}
       <div className="react-gm-monitors-collapsible">
         <button
           className={`react-gm-monitors-toggle ${monitorsExpanded ? "expanded" : ""}`}
-          onClick={() => setMonitorsExpanded((value) => !value)}
+          onClick={() => setMonitorsExpanded((v) => !v)}
           aria-expanded={monitorsExpanded}
         >
           <span>Monitores de jugadores</span>
@@ -233,7 +217,6 @@ export function GMScreen() {
             {playerRoles.map((role) => {
               const claim = remoteState?.lobby?.roleClaims?.[role.id];
               const lastAction = remoteState?.lastRoleActions?.[role.id];
-
               return (
                 <article key={role.id} className="react-gm-monitor">
                   <header>
@@ -264,8 +247,11 @@ export function GMScreen() {
       )}
 
       <section className="react-gm-grid">
+        {/* ---- Partida ---- */}
         <NCard title="Partida" gold>
-          <NBadge status={getSessionBadgeStatus(session.status)}>{session.status === "in_game" ? "Partida en curso" : "Sin comenzar"}</NBadge>
+          <NBadge status={getSessionBadgeStatus(session.status)}>
+            {session.status === "in_game" ? "Partida en curso" : "Sin comenzar"}
+          </NBadge>
           <p className="session-code">
             GM: {session.accessCode || "sin generar"}
             {session.accessCode && (
@@ -301,39 +287,50 @@ export function GMScreen() {
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">
             <NButton onClick={handleStartGame} disabled={isBusy}>Abrir lobby</NButton>
-            <NButton variant="ghost" onClick={handleForceStartGame} disabled={isBusy} title="Inicia la partida sin esperar a que todos los jugadores estén listos">
+            <NButton variant="ghost" onClick={handleForceStartGame} disabled={isBusy} title="Inicia sin esperar jugadores">
               Debug: iniciar ya
             </NButton>
             <NButton variant="danger" onClick={handleResetGame} disabled={isBusy}>Resetear</NButton>
-            <NButton variant="ghost" onClick={() => setShowCoordinates((value) => !value)}>
+            <NButton variant="ghost" onClick={() => setShowCoordinates((v) => !v)}>
               {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
             </NButton>
           </div>
         </NCard>
 
-        <NCard title={currentRoom ? `Sala: ${currentRoom.label}` : "Sala"}>
-          {/* Selector de sala */}
-          <div className="gm-sala-selector" aria-label="Selector de sala">
-            <button
-              type="button"
-              className={`gm-zone-btn ${currentSalaId === "sandbox" ? "active" : ""}`}
-              onClick={() => handleSalaChange("sandbox")}
-              disabled={session.status !== "in_game"}
-            >
-              Sandbox
-            </button>
-            <button
-              type="button"
-              className={`gm-zone-btn ${currentSalaId === SALA1_ROOM_ID ? "active" : ""}`}
-              onClick={() => handleSalaChange(SALA1_ROOM_ID)}
-              disabled={session.status !== "in_game"}
-            >
-              Sala 1 — Despacho
-            </button>
+        {/* ---- Variantes por jugador ---- */}
+        <NCard title={`Variantes — ${activeScenario.label}`}>
+          <p className="react-status">
+            Cada jugador vive una variante del escenario (A/B/C/D).
+            Asigna aquí qué realidad ve cada uno.
+          </p>
+          <div className="gm-variant-grid">
+            {playerRoles.map((role) => {
+              const claim = remoteState?.lobby?.roleClaims?.[role.id];
+              const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
+              return (
+                <div key={role.id} className="gm-variant-row">
+                  <NBadge status={claim ? role.status : "muted"}>{role.label}</NBadge>
+                  <div className="button-row">
+                    {SCENARIO_VARIANTS.map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`gm-variant-btn ${variant === v ? "active" : ""}`}
+                        onClick={() => handleSetVariant(role.id, v)}
+                        disabled={session.status !== "in_game"}
+                        title={`Variante ${v}`}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
         </NCard>
 
+        {/* ---- Cola de acciones + pulso ---- */}
         <NCard title="Cola de acciones" glow>
           <ActionQueuePanel
             pulseState={pulseState}
@@ -343,13 +340,17 @@ export function GMScreen() {
             stackClassName="gm"
           />
           <div className="button-row">
-            <NButton onClick={handleStartPulse} disabled={isBusy || isPulseBusy || pulseState.status !== "idle"}>
+            <NButton
+              onClick={handleStartPulse}
+              disabled={isBusy || isPulseBusy || pulseState.status !== "idle"}
+            >
               {isPulseBusy ? "Pulso en curso" : "Comenzar pulso"}
             </NButton>
             <NButton variant="ghost" disabled>Auto pulso</NButton>
           </div>
         </NCard>
 
+        {/* ---- Historial ---- */}
         <NCard title="Historial">
           <div className="react-list">
             {actionLog.length === 0 ? (
@@ -365,7 +366,7 @@ export function GMScreen() {
         </NCard>
       </section>
 
-      {/* ---- Panel Control de Escenario (Sala 1) ---- */}
+      {/* ---- Control de Escenario (alarma + efectos GM) ---- */}
       <div className="react-gm-monitors-collapsible">
         <button
           className={`react-gm-monitors-toggle ${sceneControlExpanded ? "expanded" : ""}`}
@@ -374,109 +375,92 @@ export function GMScreen() {
         >
           <span>Control de Escenario</span>
           <span className="react-gm-monitors-toggle-badges">
-            {isSala1 && (
-              <>
-                <NBadge status={alarmState.level === 0 ? "muted" : alarmState.level >= 3 ? "danger" : "warning"}>
-                  Alarma {alarmState.level}
-                </NBadge>
-                {gmSceneState.activeEffects.length > 0 && (
-                  <NBadge status="warning">{gmSceneState.activeEffects.length} efecto{gmSceneState.activeEffects.length > 1 ? "s" : ""} activo{gmSceneState.activeEffects.length > 1 ? "s" : ""}</NBadge>
-                )}
-              </>
+            <NBadge status={alarmState.level === 0 ? "muted" : alarmState.level >= 3 ? "danger" : "warning"}>
+              Alarma {alarmState.level}
+            </NBadge>
+            {gmSceneState.activeEffects.length > 0 && (
+              <NBadge status="warning">
+                {gmSceneState.activeEffects.length} efecto{gmSceneState.activeEffects.length > 1 ? "s" : ""} activo{gmSceneState.activeEffects.length > 1 ? "s" : ""}
+              </NBadge>
             )}
-            {!isSala1 && <NBadge status="muted">Solo disponible en Sala 1</NBadge>}
           </span>
           <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{sceneControlExpanded ? "▲" : "▼"}</span>
         </button>
         {sceneControlExpanded && (
           <section className="react-gm-scene-control" aria-label="Control de escenario">
-            {!isSala1 ? (
-              <p className="react-status">Cambia a Sala 1 para usar el control de escenario.</p>
-            ) : (
-              <>
-                {/* Métricas de alarma */}
-                <div className="gm-scene-metrics">
-                  <div className="gm-scene-metric">
-                    <strong>Nivel de alarma:</strong>
-                    <NBadge status={alarmState.level === 0 ? "success" : alarmState.level >= 3 ? "danger" : "warning"}>
-                      {alarmState.level} — {["normal", "sospecha", "alarma", "contencion"][alarmState.level] || "?"}
-                    </NBadge>
-                  </div>
-                  <div className="gm-scene-metric">
-                    <strong>Ruido acumulado:</strong> {alarmState.noise}
-                  </div>
-                  {alarmState.triggers?.length > 0 && (
-                    <div className="gm-scene-metric">
-                      <strong>Últimos triggers:</strong>
-                      <span>{alarmState.triggers.slice(-5).join(", ")}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Flags clave */}
-                <div className="gm-scene-flags">
-                  <strong>Flags:</strong>
-                  {[
-                    ["examStolen", "Examen robado"],
-                    ["replacedExam", "Examen sustituido"],
-                    ["copyInInventory", "Copia en mano"],
-                    ["usedForce", "Fuerza usada"],
-                    ["usedBypass", "Bypass usado"],
-                    ["photographed", "Fotografiado"],
-                    ["camera_fooled", "Cámara engañada"],
-                    ["resolvedByMainPath", "Ruta principal"],
-                  ].map(([key, label]) => (
-                    <NBadge key={key} status={flags[key] ? "success" : "muted"}>{label}</NBadge>
-                  ))}
-                </div>
-
-                {/* Recomendaciones */}
-                {alarmRecommendations.length > 0 && (
-                  <div className="gm-scene-recommendations">
-                    <strong>Recomendaciones:</strong>
-                    {alarmRecommendations.map((rec) => (
-                      <div key={rec.id} className="gm-scene-rec">
-                        <span>{rec.label}</span>
-                        <small>{rec.reason}</small>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Botones de efectos */}
-                <div className="gm-scene-effects">
-                  <strong>Efectos de escena:</strong>
-                  <div className="button-row">
-                    {gmSceneEffects.map((effect) => {
-                      const isActive = gmSceneState.activeEffects.includes(effect.id);
-                      return (
-                        <button
-                          key={effect.id}
-                          type="button"
-                          className={`gm-effect-btn ${isActive ? "active" : ""}`}
-                          title={effect.description}
-                          onClick={() => handleToggleSceneEffect(effect.id)}
-                        >
-                          {isActive ? "✓ " : ""}{effect.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Variante activa */}
+            {/* Métricas de alarma */}
+            <div className="gm-scene-metrics">
+              <div className="gm-scene-metric">
+                <strong>Nivel de alarma:</strong>
+                <NBadge status={alarmState.level === 0 ? "success" : alarmState.level >= 3 ? "danger" : "warning"}>
+                  {alarmState.level} — {["normal", "sospecha", "alarma", "contencion"][alarmState.level] || "?"}
+                </NBadge>
+              </div>
+              <div className="gm-scene-metric">
+                <strong>Ruido acumulado:</strong> {alarmState.noise}
+              </div>
+              {alarmState.triggers?.length > 0 && (
                 <div className="gm-scene-metric">
-                  <strong>Variante de escena:</strong>
-                  <NBadge status={gmSceneState.activeVariant === "normal" ? "muted" : "warning"}>
-                    {gmSceneState.activeVariant}
-                  </NBadge>
+                  <strong>Últimos triggers:</strong>
+                  <span>{alarmState.triggers.slice(-5).join(", ")}</span>
                 </div>
-              </>
+              )}
+            </div>
+
+            {/* Flags activos */}
+            {Object.keys(flags).length > 0 && (
+              <div className="gm-scene-flags">
+                <strong>Flags activos:</strong>
+                {Object.entries(flags).filter(([, v]) => v === true).map(([key]) => (
+                  <NBadge key={key} status="success">{key}</NBadge>
+                ))}
+              </div>
             )}
+
+            {/* Recomendaciones */}
+            {alarmRecommendations.length > 0 && (
+              <div className="gm-scene-recommendations">
+                <strong>Recomendaciones:</strong>
+                {alarmRecommendations.map((rec) => (
+                  <div key={rec.id} className="gm-scene-rec">
+                    <span>{rec.label}</span>
+                    <small>{rec.reason}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Efectos de escena */}
+            <div className="gm-scene-effects">
+              <strong>Efectos de escena:</strong>
+              <div className="button-row">
+                {gmSceneEffects.map((effect) => {
+                  const isActive = gmSceneState.activeEffects.includes(effect.id);
+                  return (
+                    <button
+                      key={effect.id}
+                      type="button"
+                      className={`gm-effect-btn ${isActive ? "active" : ""}`}
+                      title={effect.description}
+                      onClick={() => handleToggleSceneEffect(effect.id)}
+                    >
+                      {isActive ? "✓ " : ""}{effect.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Variante de escena GM */}
+            <div className="gm-scene-metric">
+              <strong>Variante activa:</strong>
+              <NBadge status={gmSceneState.activeVariant === "normal" ? "muted" : "warning"}>
+                {gmSceneState.activeVariant}
+              </NBadge>
+            </div>
           </section>
         )}
       </div>
-
     </main>
   );
 }

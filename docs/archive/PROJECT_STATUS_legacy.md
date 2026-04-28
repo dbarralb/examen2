@@ -1,5 +1,25 @@
 ﻿# El Examen 2 - Estado del prototipo
 
+## Diseño de Sala 1 cerrado — Despacho del Profesor (Protocolo ECO)
+
+El GDD ha sido actualizado con el diseño definitivo de Sala 1.
+
+**Conceptos clave establecidos:**
+- Sala autosuficiente: el puzzle se puede resolver sin habilidades de personaje.
+- Las acciones de personaje son asistencias (aceleran, abren atajos), no dependencias.
+- El fallo no bloquea: siempre hay avance. El método define el perfil del jugador.
+- El sistema registra comportamiento, no penaliza. Observa y etiqueta.
+- Perfiles: Analítico, Impulsivo, Técnico, Caótico.
+- Flags generados: `resolvedByMainPath`, `usedForce`, `usedBypass`, `failedAttempts`, `alarmTriggered`, `replacedExam`, `noise`, `photographed`, `camera_fooled`.
+- Tono: espías + comedia + sistema frío evaluador.
+- Pregunta abierta que deja la sala: ¿Por qué el examen estaba ahí?
+
+**Lo que ha cambiado respecto al diseño anterior:**
+- La sala ya no es el Gimnasio. Es el Despacho del Profesor con vitrina y sistema láser.
+- El puzzle ya no gira en torno a la puerta de emergencia/sensor/panel del gimnasio.
+- Se eliminan las zonas: taquillas, cuadro eléctrico, material deportivo, sensor ambiental, puerta de emergencia, panel digital.
+- Se introducen las zonas: Entrada (ventana), Puerta acorazada (salida), Escritorio del profesor, Vitrina con sistema láser, Cámara de vigilancia.
+
 ## Punto de control - Sandbox limpio para rediseno de puzzles
 
 - [x] El flujo React queda reducido a una sola sala sandbox.
@@ -8,6 +28,72 @@
 - [x] La resolucion de acciones queda neutralizada en `src/services/gameRules.js`: registra resultado sandbox y no resuelve puzzles, no activa ecos, no avanza salas.
 - [x] Retiradas de la app React las rutas/pantallas narrativas no activas: Codex, pipeline de prompts, Horus, Sala 5, paneles de puzzles/ecos/metricas, guion de testeo, botones debug de GM y boton debug de inventario.
 - [x] `npm.cmd run build` pasa tras la limpieza.
+
+## Estado actual recomendado - React sandbox
+
+- La app React nueva sigue entrando por `react.html?screen=...`.
+- Pantallas activas previstas:
+  - `?screen=access`,
+  - `?screen=roles`,
+  - `?screen=waiting&role=...`,
+  - `?screen=player&role=...`,
+  - `?screen=gm`,
+  - `?screen=minigames`.
+- Pantallas retiradas del router React:
+  - `?screen=codex`,
+  - `?screen=pipeline`.
+- El GM React conserva:
+  - abrir lobby,
+  - resetear sandbox,
+  - selector de zona sandbox,
+  - modo coordenadas,
+  - monitores de jugador,
+  - cola de acciones,
+  - pulso manual,
+  - historial.
+- El jugador React conserva:
+  - validacion de codigo,
+  - rol,
+  - zonas sandbox,
+  - hotspots filtrados por zona,
+  - cartas por rol,
+  - drag/drop a slot,
+  - carga local/minijuego,
+  - encolado remoto,
+  - overlay de resultado,
+  - inventario basico,
+  - chat e historial.
+- `gameRules.js` es ahora un resolver sandbox: registra la accion y actualiza feedback del target sin mutar estados de puzzle.
+- `roomData.js` es ahora el lugar limpio para volver a introducir salas, zonas y futuras definiciones de puzzles.
+
+## Siguiente paso — Implementar Sala 1 en sandbox React
+
+- [ ] Actualizar `src/data/roomData.js` con las zonas y hotspots de Sala 1: `window_entry`, `armored_door`, `desk`, `showcase`, `camera`.
+- [ ] Actualizar `src/data/gameData.js` con los ítems de Sala 1: cuaderno de notas, copia del examen, manual del sistema láser, examen original.
+- [ ] Implementar reglas de Sala 1 en `src/services/gameRules.js`: acciones sobre escritorio, sistema láser, vitrina, cámara y puerta acorazada.
+- [ ] Implementar sistema de flags de comportamiento en `gameRules.js`: `resolvedByMainPath`, `usedForce`, `usedBypass`, `failedAttempts`, `alarmTriggered`, `replacedExam`, `noise`, `photographed`, `camera_fooled`.
+- [ ] Implementar perfil del jugador a partir de flags al completar la sala.
+- [ ] Implementar narrativa de respuesta del sistema evaluador (mensajes pasivo-agresivos por perfil).
+- [ ] Definir y colocar assets de hotspots de Sala 1 (sustituye assets del Gimnasio).
+
+## Deudas tecnicas de limpieza tras sandbox
+
+- Alta: actualizar o podar las secciones antiguas de este `PROJECT_STATUS.md`; desde `Estado actual` hacia abajo hay bloques historicos del legacy/prototipo previo que pueden contradecir el sandbox React actual.
+- Alta: limpiar Firebase antes de una prueba nueva, porque puede conservar `puzzleState`, `ecoState`, `teamMetrics`, `sessionState.availableOutputs` u otros restos de sesiones anteriores aunque la app ya no los use.
+- Alta: revisar el worktree antes del siguiente commit; quedaron cambios ajenos sin commitear en `.claude/settings.local.json`, borrados de `assets/actions/` y carpetas/archivos nuevos de design system y narrativa.
+- Media: decidir si los archivos retirados del router deben permanecer eliminados definitivamente o moverse a una carpeta `archive/`/rama de referencia:
+  - `CodexScreen.jsx`,
+  - `PipelineScreen.jsx`,
+  - `codexService.js`,
+  - `sessionService.js`,
+  - `teamProfile.js`.
+- Media: revisar `styles/react-app.css` con una pasada de limpieza mas fina; ya se quitaron estilos obvios de Codex/Horus/puzzles, pero conviene buscar estilos muertos no cubiertos por `rg`.
+- Media: simplificar `remoteState.js`; mantiene algunos campos legacy neutros como `lastRoleDebug` por compatibilidad con el pulso, pero se puede renombrar o compactar cuando el nuevo dominio este claro.
+- Media: decidir si `minigames` sigue como laboratorio visible en el router o si tambien debe quedar fuera hasta que haya diseno definitivo.
+- Media: normalizar textos visibles y comentarios a ASCII/acentos coherentes; el proyecto aun mezcla textos con y sin acentos por la historia de encoding.
+- Media: revisar `gameData.js` cuando se diseñen los puzzles nuevos; ahora sus items son placeholders sandbox y los targets son los seis hotspots base.
+- Baja: eliminar estilos residuales de features antiguas si no vuelven, especialmente clases de test/metricas antiguas que no aparezcan por busqueda pero sigan en CSS.
+- Baja: documentar una receta de reset de Firebase para empezar cada iteracion de diseno desde estado sandbox limpio.
 
 ## Plan activo - Nuevo panel de lobby tipo expediente
 

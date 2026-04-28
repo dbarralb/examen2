@@ -205,6 +205,8 @@ Ningún rol puede resolver la sala en solitario. Los puzles están diseñados pa
 
 **Límite de uso:** 3 usos por carta. Con 3 cartas y la mayor variedad de efectos alternativos, es el rol más impredecible y el más valioso en situaciones bloqueadas.
 
+**Inestabilidad inherente (regla 14.19):** Ninguna acción de la Mística garantiza un resultado concreto. Sus cartas tienen variabilidad o condiciones ocultas que el jugador no controla del todo. Cuantas más veces se usen en la misma sala, más impredecibles e intensas serán sus consecuencias.
+
 ---
 
 ## 6. Sistema de acciones
@@ -399,96 +401,240 @@ El chat del MVP es exclusivamente de texto. El historial colorea mensajes por ro
 
 ---
 
-## 10. Escenario MVP: Gimnasio
+## 10. Sala 1 — Despacho del Profesor (Protocolo ECO)
 
-### 10.1 Propósito
-El gimnasio es la primera sala para validar el sistema de juego.
+### 10.1 Intención de diseño
+La Sala 1 introduce el bucle principal del juego: explorar, interpretar pistas, ejecutar una secuencia y entender que las acciones tienen consecuencias.
 
-### 10.2 Objetivo del puzle
-Abrir la salida de emergencia sin activar la respuesta más agresiva del sistema.
+No se busca dificultad, sino aprendizaje. El objetivo oculto es que los jugadores entiendan que no están resolviendo un simple puzzle, sino siendo evaluados.
 
-### 10.3 Elementos de la sala (hotspots)
+### 10.2 Contexto narrativo
+Un grupo de alumnos se infiltra en el despacho de un profesor para robar un examen de ciencias que se encuentra dentro de una vitrina de cristal.
 
-| Hotspot | ID | Clase | Descripción |
-|---|---|---|---|
-| Puerta de emergencia | `door` | puerta | Objetivo principal. Resultado depende de condiciones previas. |
-| Panel digital | `panel` | información | Sistema de bloqueo digital. Entendible o bypasseable. |
-| Sensor ambiental | `sensor` | sensor | Detecta anomalías. Engañable, desmontable o desactivable. |
-| Taquillas | `locker` | contenedor | Cerradas por defecto. Contienen nota + ganzúa. |
-| Cuadro eléctrico | `electrical_box` | contenedor | Contiene esquema eléctrico. Reglas MVP pendientes de cierre. |
-| Material deportivo | `sports_gear` | genérico | Sin reglas MVP cerradas todavía. |
+El examen está expuesto de forma sospechosa, lo que sugiere que alguien quiere que lo encuentren.
 
-### 10.4 Ítems del escenario
+**Pregunta abierta que deja la sala:** ¿Por qué el examen estaba ahí?
+
+### 10.3 Objetivo
+Robar el examen sin levantar sospechas.
+
+**Solución base:**
+1. Encontrar la clave del sistema láser.
+2. Desactivar el sistema.
+3. Acceder a la vitrina.
+4. Sustituir el examen por una copia.
+5. Salir.
+
+### 10.4 Zonas
+
+| Zona | ID | Descripción |
+|---|---|---|
+| Entrada (ventana) | `window_entry` | Punto de acceso. Aporta contexto inicial y pistas de observación. |
+| Puerta acorazada | `armored_door` | Salida. Objetivo de salida al resolver la sala. |
+| Escritorio del profesor | `desk` | Contiene documentos, notas y pistas sobre la clave del sistema láser. |
+| Vitrina con sistema láser | `showcase` | Contiene el examen. Bloqueada por sistema láser activo. |
+| Cámara de vigilancia | `camera` | Sistema de vigilancia. Observable, engañable o bypasseable según acciones. |
+
+Cada zona contiene hotspots que aportan información relevante o contextual.
+
+### 10.5 Ítems del escenario
 
 | Ítem | Hotspot | Tipo | Contenido |
 |---|---|---|---|
-| Manual técnico | panel | readable | Protocolo 7-B: secuencia de bypass en emergencia. |
-| Nota | locker | readable | Revela la naturaleza real de la prueba (parcial o completa). |
-| Ganzúa | locker | usable | Permite combos de apertura silenciosa con acciones físicas. |
-| Esquema eléctrico | electrical_box | readable | Diagrama de cableado con referencia a bypass A3-B7. |
+| Cuaderno de notas | `desk` | readable | Contiene la clave del sistema láser parcialmente anotada. |
+| Copia del examen | `desk` | usable | Fotocopia en blanco. Necesaria para sustituir el original. |
+| Manual del sistema láser | `showcase` | readable | Protocolo de desactivación. Revela la secuencia correcta. |
+| Examen original | `showcase` | usable | El objetivo real. Solo accesible tras desactivar el láser. |
 
-### 10.5 Estados de contenedores
+### 10.6 Puzzle principal
 
-- **Taquilla cerrada** (`lockerState: "closed"`): muestra 2 slots "?" (nota + ganzúa). No hay búsqueda.
-- **Taquilla abierta limpia** (`clean_open`): se inicia búsqueda de 10s por slot. Revela nota completa + ganzúa.
-- **Taquilla reventada** (`broken_open`): se inicia búsqueda. Nota aparece como lore parcial.
+**Qué bloquea:** el examen dentro de la vitrina, protegido por el sistema láser.
 
-### 10.6 Reglas MVP implementadas
+**Qué pregunta realmente:** ¿son capaces los jugadores de observar, conectar pistas y ejecutar un plan básico?
 
-**Panel:**
-- `mirar_bien` o `consultar_apuntes` → panel entendido (`understood`), se revela hint.
-- `puenteo_rapido` → bypass (`tampered`). Si el panel no se entendió antes en el mismo pulso, activa alerta secundaria.
+**El puzzle es autosuficiente.** Las habilidades de los personajes no son obligatorias: aceleran la resolución, permiten atajos y generan consecuencias si se abusan, pero ninguna acción de personaje es una dependencia necesaria para completar la sala.
 
-**Sensor:**
-- `esto_vibra_raro` o `ritual_improvisado` → patrón detectado.
-- `y_si` con patrón detectado → sensor engañado (`fooled`).
-- `desmontar` → sensor desactivado (`disabled`).
+### 10.7 Reglas MVP
 
-**Taquillas:**
-- `apanar` → cerradura preparada.
-- `a_lo_bestia` con preparación → apertura limpia (`clean_open`), nota completa.
-- `a_lo_bestia` sin preparación → taquilla reventada (`broken_open`), nota rota (lore parcial).
-- `y_si` → apertura limpia directa, nota completa.
+**Escritorio:**
+- `mirar_bien` o `consultar_apuntes` → revela la clave del sistema láser y la copia del examen.
+- `y_si` → puede revelar directamente la clave por vía no convencional.
+- `a_lo_bestia` → busca sin método; revela ítems pero suma `alarmState.noise`.
 
-**Puerta:**
-- `mirar_bien` → puerta preparada (detecta cómo empujar sin forzar).
-- `empujar` con panel resuelto + sensor resuelto + puerta preparada → apertura limpia.
-- `empujar` con sensor resuelto pero sin todo → apertura forzada sin alarma.
-- `empujar` sin condiciones → apertura forzada + alarma.
-- `a_lo_bestia` → puerta reventada. Alarma si sensor o panel siguen activos.
+**Sistema láser (vitrina):**
+- `puenteo_rapido` con clave conocida → desactiva el láser (`laser_disabled`).
+- `puenteo_rapido` sin clave → intento fallido, escala `alarmState.level` a 2, añade trigger.
+- `desmontar` → desactiva el láser (`laser_disabled`) pero suma `alarmState.noise`.
+- `ritual_improvisado` → puede desactivar el láser por ruta alternativa, sin garantías.
 
-**Consecuencias narrativas:**
-- Nota completa → revela que la prueba evalúa cómo colaboran los jugadores.
-- Nota parcial → solo un fragmento legible: "...no todos... elegidos..."
-- Salida limpia + nota completa → se desbloquea pista oculta hacia la verdadera prueba (`hiddenRouteFlag`).
+**Vitrina (acceso al examen):**
+- Solo accesible cuando `laser_disabled`.
+- `empujar` o `apanar` con láser desactivado → acceso limpio (`showcase_open`).
+- `a_lo_bestia` con láser desactivado → acceso (`showcase_open`), suma `alarmState.noise`.
+- `a_lo_bestia` con láser activo → rompe vitrina (`showcase_broken`), escala `alarmState.level` a 3.
 
-### 10.7 Resultados posibles
-- **Resolución óptima:** salida limpia + nota completa + pista oculta desbloqueada.
-- **Resolución parcial:** se avanza pero con pérdida narrativa (nota rota, sin pista oculta).
-- **Resolución caótica:** puerta forzada con alarma, consecuencias negativas.
+**Sustitución del examen:**
+- Si el jugador tiene la copia (`copyInInventory`) y accede a la vitrina: puede sustituir (`replacedExam: true`).
+- Si sale con el original sin sustituir: `replacedExam: false`; el sistema lo registra y puede tener consecuencias posteriores.
+
+**Cámara de vigilancia:**
+- `esto_vibra_raro` → detecta punto ciego o ciclo de la cámara.
+- `y_si` con ciclo detectado → cámara engañada (`camera_fooled`).
+- `ritual_improvisado` → puede crear distracción visual.
+- `a_lo_bestia` → hace foto automática (consecuencia cómica, genera flag `photographed`).
+
+**Puerta acorazada (salida):**
+- `empujar` con misión completada → salida limpia.
+- `a_lo_bestia` → salida forzada, suma `alarmState.noise`.
+
+### 10.8 Estado de alarma y flags generados
+
+**Estado de alarma (Firebase / `gameState.alarmState`):**
+```javascript
+alarmState: {
+  level: 0,     // 0 normal · 1 sospecha · 2 alarma · 3 contención
+  noise: 0,     // acumulador — cada acción impulsiva suma
+  triggers: []  // registro de qué causó cada escalada
+}
+```
+
+**Umbrales de escalada (`updateAlarmLevel`):**
+```javascript
+if (noise >= 4) return 3;  // contención
+if (noise >= 2) return 2;  // alarma
+if (noise >= 1) return 1;  // sospecha
+return 0;                  // normal
+```
+
+**Efectos por nivel (`alarmEffects`):**
+
+| Nivel | Nombre | Modificadores activos |
+|---|---|---|
+| 0 | Normal | — |
+| 1 | Sospecha | `increaseFeedback`, `minorDelay` |
+| 2 | Alarma | `lockRandomObject`, `increaseCameraSpeed`, `restrictRepeatActions` |
+| 3 | Contención | `lockExitTemporarily`, `forceAlternateGoal`, `increaseSystemInterference` |
+
+**Hook en resolución de acción:**
+```
+resolveAction → applyActionLogic → [si generatesNoise] applyNoiseToAlarm → updateAlarmLevel → applyAlarmEffects
+```
+
+Los modificadores son stubs hasta que se implemente el contenido de sala. Cada acción real declarará `generatesNoise: true` y `noiseValue` cuando corresponda.
+
+| Nivel | Qué significa en partida |
+|---|---|
+| 0 | Sin incidencias. |
+| 1 | Ruido detectado. El sistema observa. Consecuencia cómica leve. |
+| 2 | Incidencia clara. Señal visible + frase del sistema. |
+| 3 | Escalada máxima. Consecuencias diferidas garantizadas en sala siguiente. |
+
+**Flags de comportamiento:**
+
+| Flag | Qué registra |
+|---|---|
+| `resolvedByMainPath` | Siguieron la secuencia lógica base. |
+| `usedForce` | Usaron fuerza en al menos un punto. |
+| `usedBypass` | Puentearon sin comprender el sistema. |
+| `failedAttempts` | Número de intentos fallidos registrados. |
+| `replacedExam` | Sustituyeron el examen por la copia. |
+| `photographed` | La cámara hizo una foto automática. |
+| `camera_fooled` | La cámara fue engañada o neutralizada. |
+
+### 10.9 Perfil del jugador
+
+El sistema clasifica el comportamiento del grupo a partir de los flags:
+
+| Perfil | Indicadores clave |
+|---|---|
+| **Analítico** | `resolvedByMainPath`, `alarmState.level <= 0`, `replacedExam: true`. |
+| **Impulsivo** | Alto `usedForce`, `alarmState.noise` alto, `failedAttempts > 0`. |
+| **Técnico** | `usedBypass`, acceso sin entender el sistema. |
+| **Caótico** | `alarmState.level >= 2`, `showcaseBroken`, `replacedExam: false`. |
+
+Los perfiles determinan la selección dinámica de salas siguientes, el ajuste de dificultad narrativa y los callbacks a decisiones previas.
+
+### 10.10 Tipos de fallo (no bloqueantes)
+
+La sala no tiene fracaso clásico. El jugador siempre puede completar el objetivo, pero de forma incorrecta. El sistema registra cómo lo ha hecho.
+
+| Tipo | Conducta |
+|---|---|
+| **Impulsividad** | No leer pistas, probar acciones sin contexto. |
+| **Fuerza bruta** | Romper la vitrina, ignorar sistemas. |
+| **Bypass técnico** | Hackear sin comprender el mecanismo. |
+| **Chapuza** | No sustituir el examen o sustituirlo incorrectamente. |
+
+### 10.11 Narrativa del fallo
+
+Al completar la sala, el sistema responde. El tono es frío, evaluador y levemente cómico.
+
+**Base:**
+> "Respuesta registrada."
+> "Metodología… cuestionable."
+
+**Variante cómica:**
+> "Protocolo ECO: sujeto detectado como 'resolutivo creativo'."
+> "Nivel de sutileza: preocupante."
+
+**Variante incómoda:**
+> "Solución obtenida sin proceso válido."
+> "Evaluación incompleta."
+
+El sistema nunca castiga directamente. Observa y etiqueta.
+
+### 10.12 Consecuencias cómicas
+
+El humor se usa como feedback del sistema:
+- Alarma absurda (música ridícula en lugar de sirena).
+- Cámara hace foto automática al recibir `a_lo_bestia` cerca.
+- Mensajes pasivo-agresivos del sistema.
+- Sustitución incorrecta del examen detectada más adelante en la narrativa.
+
+El jugador se ríe, pero entiende que algo ha quedado registrado.
+
+### 10.13 Estados de resolución (regla 14.16)
+
+**Condición mínima (progress gate):**
+- Examen robado. La sala puede completarse independientemente del método.
+
+**Condición óptima (clean solve):**
+- Examen sustituido por la copia + `alarmState.level === 0` + cámara no disparada.
+- Sistema responde con evaluación positiva. Perfil tendiente a Analítico.
+
+**Condiciones degradadas:**
+
+| Variante | Estado de alarma | Consecuencia |
+|---|---|---|
+| Examen robado con sospecha | `alarmState.level === 1` | Consecuencia cómica leve. Leve presión en sala siguiente. |
+| Examen robado con alarma | `alarmState.level === 2` | Señal visible + frase del sistema. Presión aumentada en sala siguiente. |
+| Vitrina rota, sin sustitución | `alarmState.level === 3`, `replacedExam: false` | Perfil Caótico. Contención activa. Sala siguiente ajustada a tensión máxima. |
+| Bypass sin comprensión | `usedBypass`, `alarmState.level <= 1` | Perfil Técnico. Evaluación futura limitada sin consecuencia inmediata. |
+| Examen robado sin sustituir | `replacedExam: false`, cualquier nivel | Detectado en sala posterior. Mensaje pasivo-agresivo del sistema. |
 
 ---
 
 ## 11. Filosofía de resolución
 
-### 11.1 Siempre progresable
-Los puzles no deben bloquearse por una única solución correcta. Si un jugador usa la fuerza, debe poder producirse avance.
+Las reglas sistémicas completas de diseño están en la **sección 14**. Este apartado recoge los principios de aplicación específicos al contenido de partida.
 
-### 11.2 Calidad de resolución
-La diferencia entre resolver "bien" o "mal" no debe ser bloquear el juego, sino afectar a:
-- claridad de la información conseguida,
-- cantidad de historia descubierta,
-- acceso a habitaciones o eventos ocultos,
-- tono y consecuencias de la escena.
+### 11.1 El fallo no bloquea el progreso. El fallo define la experiencia.
+Los puzles son autosuficientes y siempre progresables. La calidad del resultado, no el avance en sí, varía según el método. Ver regla 14.4.
 
-### 11.3 Pérdidas prioritarias
-La pérdida preferente para este proyecto es la **pérdida narrativa**:
-- notas rotas,
-- mensajes incompletos,
-- contexto oculto,
+### 11.2 Pérdidas prioritarias
+La pérdida preferente es la **pérdida narrativa y de perfil**:
+- información incompleta obtenida por no leer pistas,
+- contexto oculto que no se descubre,
+- perfil desfavorable que ajusta salas futuras,
 - rutas opcionales no descubiertas.
 
-Esto da valor al GM, a las habitaciones ocultas y a la rejugabilidad.
+Esto da valor al GM, a las salas ocultas y a la rejugabilidad. Ver reglas 14.3 y 14.8.
+
+### 11.3 Tono del sistema evaluador
+El sistema observa, etiqueta y responde. Nunca castiga directamente. El tono mezcla espías, comedia y frialdad institucional. Ver reglas 14.9 y 14.10.
+
+> "Solución válida."
+> "Proceso… discutible."
 
 ---
 
@@ -529,25 +675,232 @@ La interfaz y la mecánica deben explicar lo que ocurre. El GM lo refuerza, no l
 
 ---
 
-## 14. Sistema de capas del mapa
+## 14. Reglas Sistémicas Reutilizables
 
-### 14.1 Arquitectura
+Este apartado define las reglas aplicables a **todo el juego**, no solo a una sala concreta. Cualquier diseño de puzzle, zona o mecánica que entre en conflicto con estas reglas debe ser revisado antes de incorporarse.
+
+### 14.1 Regla de Puzzle Autosuficiente
+
+Todo puzzle debe poder resolverse **sin habilidades de personaje**.
+
+Debe existir siempre:
+- Un conjunto de pistas internas a la sala.
+- Una lógica interpretable sin acción de personaje.
+- Una acción final clara disponible para cualquier jugador.
+
+Las habilidades de personaje **nunca son requisito obligatorio**.
+
+### 14.2 Regla de Acciones como Modificadores
+
+Las acciones de personaje siempre cumplen uno de estos roles:
+- **Revelar** información oculta.
+- **Acelerar** la resolución.
+- **Permitir atajos** hacia la solución.
+- **Resolver instantáneamente** (con coste en flags o consecuencias).
+- **Generar consecuencias** si se usan sin contexto.
+
+Nunca deben ser la **única vía de progreso**.
+
+### 14.3 Regla de Doble Capa
+
+Todo puzzle tiene dos capas:
+- **Capa lógica:** la resolución base (qué hace el jugador).
+- **Capa de comportamiento:** cómo lo resuelve.
+
+El sistema evalúa la segunda, no solo la primera.
+
+### 14.4 Regla de Fallo No Bloqueante
+
+El fallo **nunca detiene el progreso**.
+
+El fallo:
+- Cambia el perfil del jugador.
+- Activa consecuencias (inmediatas o diferidas).
+- Modifica la experiencia en salas futuras.
+
+### 14.5 Regla de Registro de Comportamiento
+
+Cada acción relevante actualiza métricas globales:
+
+| Métrica | Qué mide |
+|---|---|
+| `forceCount` | Uso de fuerza o impacto directo. |
+| `analysisCount` | Lecturas, análisis, consultas. |
+| `repairCount` | Reparaciones y preparaciones técnicas. |
+| `intuitionCount` | Acciones de la Mística, rutas alternativas. |
+| `failedAttempts` | Intentos fallidos acumulados. |
+| `repeatedActions` | Acciones repetidas sobre el mismo target. |
+| `alarmState.noise` | Ruido acumulado por acciones impulsivas. |
+| `alarmState.level` | Nivel de escalada de alarma (0–3). |
+| `alarmState.triggers` | Registro de causas de escalada. |
+| `shortcutUsage` | Atajos usados sin comprender el sistema. |
+
+Estas métricas alimentan el sistema de decisión de salas y el perfil del grupo.
+
+### 14.6 Regla de Perfil Dinámico
+
+El juego clasifica al grupo en tiempo real:
+
+| Perfil | Indicadores principales |
+|---|---|
+| **Analítico** | Alto `analysisCount`, `alarmState.level === 0`, `resolvedByMainPath`. |
+| **Impulsivo** | Alto `forceCount`, `alarmState.noise` alto, `failedAttempts > 0`. |
+| **Técnico** | Alto `shortcutUsage`, `repairCount`, bypass sin comprensión. |
+| **Caótico** | `alarmState.level >= 2`, `alarmState.noise` alto, `replacedExam: false`. |
+
+El perfil **no es fijo**. Evoluciona con cada sala.
+
+### 14.7 Regla de Selección de Experiencia
+
+Las salas futuras no son fijas. Se seleccionan según el comportamiento acumulado:
+- Uso alto de fuerza → sala de tensión física.
+- Uso alto de deducción → puzzle cruzado entre zonas.
+- Comportamiento mixto → sala híbrida.
+
+### 14.8 Regla de Consecuencia Diferida
+
+Las consecuencias **no siempre son inmediatas**.
+
+Ejemplos:
+- Sustituir mal el examen → detectado en una sala posterior.
+- Generar ruido → incrementa presión o dificultad más adelante.
+- Bypass sin comprensión → limita evaluación futura o cierra rutas narrativas.
+
+### 14.9 Regla de Humor Funcional
+
+El humor no es decorativo. Debe:
+- Comunicar el estado del sistema al jugador.
+- Reforzar consecuencias sin eliminar la tensión.
+- Aliviar sin borrar la incomodidad de haber fallado.
+
+Formato:
+> "Mensaje serio + giro incómodo."
+
+### 14.10 Regla de Feedback del Sistema
+
+El sistema **nunca explica completamente**. Debe:
+- Observar.
+- Etiquetar.
+- Sugerir.
+- Nunca confirmar del todo.
+
+Esto mantiene la ambigüedad evaluadora y la sensación de ser observado.
+
+### 14.11 Regla de Diseño de Zonas
+
+Cada sala debe tener entre **5 y 6 zonas**.
+
+Cada zona debe:
+- Contener al menos un hotspot.
+- Aportar una pista, contexto o distracción.
+- Tener sentido espacial y narrativo dentro de la sala.
+
+### 14.12 Regla de Conexión de Pistas
+
+Las pistas **nunca deben ser aisladas**. Siempre deben:
+- Cruzarse entre zonas de la misma sala.
+- Confirmarse entre sí (dos fuentes, misma conclusión).
+- Permitir deducción sin que una sola pista sea suficiente por sí sola.
+
+### 14.13 Regla de Evaluación Invisible
+
+El jugador **no ve números ni stats**.
+
+Pero el sistema siempre está evaluando:
+- Cómo juega.
+- Qué prioriza.
+- Qué ignora.
+
+### 14.14 Regla de Intención Oculta
+
+Cada sala tiene una **pregunta real** distinta a la visible.
+
+Ejemplo:
+- **Visible:** robar el examen.
+- **Real:** ¿siguen instrucciones o piensan por su cuenta?
+
+Esta pregunta real no se comunica explícitamente al jugador. Solo se revela a través de las respuestas del sistema.
+
+### 14.15 Regla de Coherencia de Mundo
+
+Aunque el tono sea cómico:
+- El sistema debe parecer consistente internamente.
+- Las reglas deben mantenerse en todas las salas.
+- Las consecuencias deben sentirse lógicas dentro del mundo del juego.
+
+### 14.16 Regla de Legibilidad
+
+Cada consecuencia debe comunicarse mediante tres canales simultáneos:
+
+- **Señal visual o sonora:** algo perceptible e inmediato (alarma, flash, música ridícula, foto de cámara, texto parpadeante).
+- **Frase del sistema:** un mensaje del evaluador que etiqueta lo ocurrido sin explicarlo del todo.
+- **Cambio perceptible en el entorno:** el estado visible del hotspot, zona o sala cambia de forma que el jugador nota que algo es distinto.
+
+El jugador no ve números ni stats. Pero **siempre entiende que algo ha cambiado**.
+
+Esta regla se aplica a toda consecuencia, tanto positiva como negativa, tanto inmediata como diferida.
+
+### 14.17 Regla de Foco de Sala
+
+Cada sala debe tener exactamente:
+
+- **1 sistema principal:** el bloqueo central que define el puzzle. Todo gira en torno a él.
+- **1 sistema secundario:** una complicación adicional que añade tensión o rutas alternativas, pero no es el objetivo.
+- **El resto:** contexto, soporte o distracción. Aportan pistas o atmósfera, pero no son sistemas con reglas propias.
+
+Ejemplo en Sala 1:
+- **Principal:** sistema láser de la vitrina.
+- **Secundario:** cámara de vigilancia.
+- **Contexto/soporte:** escritorio, entrada (ventana), puerta acorazada.
+
+Si una sala acumula más de un sistema principal, se divide en dos salas o se reclasifica uno como secundario.
+
+### 14.19 Regla de Inestabilidad de la Mística
+
+Las acciones de la Mística nunca deben ser 100% fiables:
+
+- **Variabilidad:** el resultado varía según condiciones ocultas del estado de la sala, no solo de la acción en sí. El jugador no puede predecir exactamente qué ocurrirá.
+- **Condiciones ocultas:** algunas cartas solo producen ciertos resultados si el entorno cumple requisitos no documentados. Descubrirlos es parte del juego.
+- **Escalada por abuso:** cuantas más acciones de la Mística se usen en la misma sala, mayores y más impredecibles serán las consecuencias. El valor de la Mística está en la precisión, no en la cantidad.
+
+Esta regla se aplica al diseño de cada carta de la Mística en cualquier sala. Si una acción de la Mística produce siempre el mismo resultado sin condiciones, incumple esta regla.
+
+### 14.20 Regla de Estado de Puzzle
+
+Todo puzzle debe definir explícitamente tres niveles de resolución:
+
+- **Condición mínima (progress gate):** lo que permite avanzar. Siempre alcanzable.
+- **Condición óptima (clean solve):** la resolución completa y sin consecuencias negativas.
+- **Condiciones degradadas:** variantes en que se avanza pero con pérdida narrativa, perfil afectado o consecuencias diferidas.
+
+Ejemplo para Sala 1:
+- **Mínimo:** examen robado.
+- **Óptimo:** examen sustituido + sin alarma.
+- **Degradado:** examen robado con alarma activa, o sin sustituir la copia.
+
+Estas tres condiciones deben estar definidas antes de implementar cualquier puzzle. Si un puzzle solo tiene una condición de resolución, no cumple esta regla.
+
+---
+
+## 15. Sistema de capas del mapa
+
+### 15.1 Arquitectura
 El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten pan/zoom:
 
 1. **BackgroundLayer** — Grid 3x2 de tiles PNG (609x540px cada uno, 1826x1080 total). Fallback a imagen temporal si no hay tiles.
 2. **StructureLayer** — SVG inline (`viewBox="0 0 100 100"`) con contornos de salas, paredes, puertas y pasadizos. Cada elemento tiene estado reactivo al `gameState`.
 3. **InteractiveLayer** — Hotspots clicables, marcas/trazos dinámicos y cards de objeto.
 
-### 14.2 Datos
+### 15.2 Datos
 - Definidos en `src/data/mapData.js`: `backgroundTiles`, `rooms`, `structures`, `markDefinitions`.
 - Los elementos estructurales usan `visibleWhen(gameState)` para pasadizos secretos.
 - Las marcas usan `visibleWhen(gameState)` y animaciones CSS.
 
 ---
 
-## 15. Requisitos funcionales MVP
+## 16. Requisitos funcionales MVP
 
-### Jugadores
+### 16.1 Jugadores
 - Acceso a la web de jugador.
 - Introducción de código de partida.
 - Validación de sesión activa.
@@ -571,7 +924,7 @@ El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten 
 - Envío y recepción de mensajes en chat.
 - Overlay de resultado de pulso.
 
-### GM
+### 16.2 GM
 - Acceso a la web de GM.
 - Generación de código de 6 dígitos.
 - Monitores de observación de las 4 pantallas de jugador.
@@ -581,7 +934,7 @@ El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten 
 - Envío de mensajes al chat.
 - Herramientas debug: forzar inicio y modo coordenadas.
 
-### Sistema
+### 16.3 Sistema
 - Firebase Realtime Database como backend.
 - Polling cada 1 segundo como único mecanismo de sincronización.
 - Gestión de sesión con estados `role_select` / `in_game`.
@@ -595,7 +948,7 @@ El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten 
 
 ---
 
-## 16. Alcance del MVP
+## 17. Alcance del MVP
 
 ### Dentro de alcance
 - 1 partida de 4 jugadores + 1 GM,
@@ -615,10 +968,13 @@ El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten 
 - contador de usos por carta (3 usos, inhabilitación B&N),
 - cola de acciones con minijuego de confirmación,
 - pulsos manuales del GM,
-- reglas MVP del gimnasio implementadas,
-- consecuencias narrativas (nota, pista oculta),
+- reglas MVP de Sala 1 implementadas,
+- flags de comportamiento (resolvedByMainPath, usedForce, usedBypass, noise, etc.),
+- narrativa del fallo con respuesta del sistema evaluador,
+- perfil del jugador generado al completar la sala,
+- consecuencias cómicas y pasivo-agresivas del sistema,
 - monitores GM con observación en tiempo real,
-- 1 sala prototipo (gimnasio).
+- 1 sala prototipo (Despacho del Profesor).
 
 ### Fuera de alcance por ahora
 - sistema completo de cartas balanceadas,
@@ -634,22 +990,23 @@ El escenario usa 3 capas apiladas dentro de `.scene-map-world`, todas comparten 
 
 ---
 
-## 17. Preguntas abiertas para siguiente iteración
+## 18. Preguntas abiertas para siguiente iteración
 
 1. Qué cartas adicionales necesita cada rol y cómo se balancean con el límite de 3 usos.
 2. Cómo se estructura la navegación entre salas cuando haya más de una.
 3. Qué forma toma el dispositivo individual de cada rol.
-4. Qué reglas completas necesitan cuadro eléctrico y material deportivo.
-5. Cómo se integran minijuegos adicionales (hexer, puzzle de ondas) en el flujo de acciones.
-6. Cuándo retirar el botón `Forzar inicio` y sustituirlo por un modo simulación separado.
-7. Cómo se gestionan los pasadizos secretos y habitaciones ocultas a nivel de datos y navegación.
-8. Qué criterios determinan el resultado final de la partida (puntuación, evaluación narrativa).
-9. Si el límite de usos de carta debe resetearse entre salas o mantenerse a lo largo de toda la partida.
-10. Cómo se representa visualmente la pérdida narrativa (nota rota, lore incompleto) en la UI del jugador.
+4. Cómo se integran minijuegos adicionales (hexer, puzzle de ondas) en el flujo de acciones.
+5. Cuándo retirar el botón `Forzar inicio` y sustituirlo por un modo simulación separado.
+6. Cómo se gestionan los pasadizos secretos y habitaciones ocultas a nivel de datos y navegación.
+7. Qué criterios determinan el resultado final de la partida: ¿puntuación, perfil acumulado, evaluación narrativa?
+8. Si el límite de usos de carta debe resetearse entre salas o mantenerse a lo largo de toda la partida.
+9. Cómo se representa visualmente la pérdida narrativa (información incompleta, mensajes pasivo-agresivos del sistema) en la UI del jugador.
+10. Cuándo y cómo el sistema revela al jugador que ha sido evaluado: ¿al final de la sala, al final de la sesión, o de forma progresiva?
+11. Cómo se diseña la Sala 2 en función del perfil generado en Sala 1 (selección dinámica vs. sala fija con dificultad adaptada).
 
 ---
 
-## 18. Objetivo inmediato de producción
+## 19. Objetivo inmediato de producción
 
 Construir un prototipo navegable que permita validar tres cosas:
 

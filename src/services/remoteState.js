@@ -1,4 +1,22 @@
-import { SANDBOX_ROOM_ID, SANDBOX_START_ZONE_ID } from "../data/roomData.js";
+// ---------------------------------------------------------------------------
+// remoteState.js — Firebase state shape + factory functions
+//
+// This module defines the initial state written to Firebase on game reset,
+// and utility functions for reading state slices.
+//
+// What lives here:
+//   - Game timer (shared, GM-controlled)
+//   - Pulse state (shared, driven by pulseService)
+//   - Alarm / scene state (shared, driven by gameRules + gmSceneControl)
+//   - Player inventories (per-role, persisted per session)
+//   - Player boards (per-role: variant, hotspot states)
+//   - Session state (active scenario)
+//   - Action log / chat
+//
+// What does NOT live here:
+//   - Puzzle-specific flags or hotspot content — those are defined per scenario
+//   - Sandbox / Sala 1 legacy state — fully removed
+// ---------------------------------------------------------------------------
 
 export function createInitialGameTimer() {
   return {
@@ -32,79 +50,37 @@ export function createInitialPulseState() {
   };
 }
 
+/**
+ * Shared game state — alarm system, scene flags, GM effects.
+ * Scenario-specific puzzle state is NOT included here; it is injected
+ * per scenario when the adventure content is defined.
+ */
 export function createInitialGameState() {
   return {
-    // --- Sandbox state ---
-    doorState: "idle",
-    panelState: "idle",
-    sensorState: "idle",
-    lockerState: "idle",
-    noteState: "hidden",
     alarmState: { level: 0, noise: 0, triggers: [] },
-    electricalBoxState: "idle",
-    sportsGearState: "idle",
-    loreFlagTestRevealed: false,
-    hiddenRouteFlag: false,
-    noteFeedbackShown: false,
-    partialNoteFeedbackShown: false,
-    cleanExitFeedbackShown: false,
-    panelHintKnown: false,
-    lockerPrepared: false,
-    doorPrepared: false,
-    sensorPatternDetected: false,
-    sensorTrickedThisPulse: false,
-    // --- Sala 1: Despacho del Profesor ---
-    hotspotStates: {
-      window: "entered",
-      desk: "unsearched",
-      paper_bin: "unsearched",
-      security_panel: "awaiting_code",
-      laser_grid: "active",
-      showcase: "locked_laser_active",
-      camera: "idle",
-      armored_door: "locked",
-    },
-    discoveries: {},
-    flags: {
-      copyInInventory: false,
-      examStolen: false,
-      replacedExam: false,
-      resolvedByMainPath: false,
-      usedForce: false,
-      usedBypass: false,
-      photographed: false,
-      camera_fooled: false,
-    },
+    discoveries: {},   // keyed by discovery ID, value: true
+    flags: {},         // keyed by flag ID, value: true
     gmSceneState: {
       activeVariant: "normal",
       activeEffects: [],
       history: [],
     },
-    failedAttempts: 0,
   };
 }
 
+/**
+ * Target feedback — text shown to players after interacting with a hotspot.
+ * Starts empty; populated by resolveActionWithResult during pulse execution.
+ */
 export function createInitialTargetFeedback() {
   return {
-    // --- Sandbox ---
-    door: "Sandbox activo. Sin regla de puzzle asignada.",
-    panel: "Sandbox activo. Sin regla de puzzle asignada.",
-    sensor: "Sandbox activo. Sin regla de puzzle asignada.",
-    locker: "Sandbox activo. Sin regla de puzzle asignada.",
-    electrical_box: "Sandbox activo. Sin regla de puzzle asignada.",
-    sports_gear: "Sandbox activo. Sin regla de puzzle asignada.",
-    // --- Sala 1 ---
-    window: "Habéis entrado por la ventana. Silencio total por ahora.",
-    desk: "El escritorio del profesor. Papeles y notas por revisar.",
-    paper_bin: "La papelera. Puede haber algo útil entre los desperdicios.",
-    security_panel: "Panel del sistema de seguridad. Requiere código de 4 dígitos.",
-    laser_grid: "Cuadrícula láser activa. Cualquier movimiento en la vitrina la disparará.",
-    showcase: "Vitrina con el examen. Protegida por el sistema láser.",
-    camera: "Cámara de vigilancia. Parece que gira periódicamente.",
-    armored_door: "Puerta acorazada. Imposible forzar sin provocar alarma general.",
+    hotspot_1: "Sin contenido. Escenario pendiente.",
+    hotspot_2: "Sin contenido. Escenario pendiente.",
+    hotspot_3: "Sin contenido. Escenario pendiente.",
   };
 }
 
+/** Per-player inventory, item tracking, card usage. */
 export function createInitialInventoryState() {
   return {
     itemSeenState: {},
@@ -114,21 +90,33 @@ export function createInitialInventoryState() {
   };
 }
 
+/**
+ * Session state — tracks which scenario is active and which have been completed.
+ */
 export function createInitialSessionState() {
   return {
-    salaId: SANDBOX_ROOM_ID,
-    zoneId: SANDBOX_START_ZONE_ID,
-    completedSalas: [],
+    scenarioId: "sandbox",
+    completedScenarios: [],
   };
 }
 
-export function createInitialGameStateForSala() {
-  return createInitialGameState();
+/**
+ * Initial per-player board state.
+ * variant: A | B | C | D  — assigned by GM, controls which parallel reality the player sees.
+ * hotspot_1/2/3: hotspot state within the player's board (blank by default).
+ */
+function createInitialPlayerBoards() {
+  return {
+    empollon: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "A", scenarioId: "sandbox" },
+    manitas:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "B", scenarioId: "sandbox" },
+    guaperas: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "C", scenarioId: "sandbox" },
+    mistica:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "D", scenarioId: "sandbox" },
+  };
 }
 
-export function createInitialTargetFeedbackForSala() {
-  return createInitialTargetFeedback();
-}
+// ---------------------------------------------------------------------------
+// Full initial remote state — written to Firebase on game reset
+// ---------------------------------------------------------------------------
 
 export function buildInitialRemoteState(status = "role_select") {
   return {
@@ -150,28 +138,26 @@ export function buildInitialRemoteState(status = "role_select") {
     },
     lastRoleActions: {},
     playerViews: {},
+    playerZones: {},
+    playerBoards: createInitialPlayerBoards(),
     queuedActions: null,
-    actionLog: ["Sistema sandbox listo. Arrastra cartas a hotspots y resuelve pulsos manuales."],
+    actionLog: ["Sistema listo. Esperando inicio de partida."],
     chatMessages: [
-      { id: "gm-welcome", author: "GM", text: "Sandbox listo.", createdAt: 1 },
+      { id: "gm-welcome", author: "GM", text: "Sistema listo.", createdAt: 1 },
     ],
     lastRoleDebug: "Sin acciones resueltas todavia.",
     ...createInitialInventoryState(),
     sessionState: createInitialSessionState(),
-    playerZones: {},
-    playerBoards: {
-      empollon: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
-      manitas:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
-      guaperas: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
-      mistica:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle" },
-    },
   };
 }
 
+// ---------------------------------------------------------------------------
+// Utility functions
+// ---------------------------------------------------------------------------
+
+/** Normalize Firebase lists (objects or arrays) into a sorted array. */
 export function normalizeRemoteList(value) {
-  if (!value) {
-    return [];
-  }
+  if (!value) return [];
 
   if (Array.isArray(value)) {
     return Object.values(value).filter((item) => item !== null && item !== undefined);
@@ -184,6 +170,7 @@ export function normalizeRemoteList(value) {
   });
 }
 
+/** Get elapsed game seconds from the game timer object. */
 export function getGameTimerElapsedSeconds(gameTimer = createInitialGameTimer()) {
   const base = gameTimer.elapsedBeforeStartMs || 0;
 
@@ -192,4 +179,18 @@ export function getGameTimerElapsedSeconds(gameTimer = createInitialGameTimer())
   }
 
   return Math.floor(base / 1000);
+}
+
+// ---------------------------------------------------------------------------
+// Deprecated stubs — kept for pulseService.js compatibility
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use createInitialGameState() */
+export function createInitialGameStateForSala() {
+  return createInitialGameState();
+}
+
+/** @deprecated Use createInitialTargetFeedback() */
+export function createInitialTargetFeedbackForSala() {
+  return createInitialTargetFeedback();
 }
