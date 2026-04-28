@@ -12,12 +12,54 @@ export const cards = [
 ];
 
 export const targets = [
+  // --- Sandbox ---
   { id: "door", label: "puerta", stateKey: "doorState", hotspotClass: "puerta", x: 82, y: 42, w: 5, h: 8 },
   { id: "panel", label: "panel", stateKey: "panelState", hotspotClass: "informacion", x: 66, y: 36, w: 5, h: 8 },
   { id: "sensor", label: "sensor", stateKey: "sensorState", hotspotClass: "sensor", x: 50, y: 18, w: 5, h: 8 },
   { id: "locker", label: "taquilla", stateKey: "lockerState", hotspotClass: "contenedor", x: 18, y: 42, w: 5, h: 8 },
   { id: "electrical_box", label: "cuadro electrico", stateKey: "electricalBoxState", hotspotClass: "contenedor", x: 35, y: 32, w: 5, h: 8 },
   { id: "sports_gear", label: "material deportivo", stateKey: "sportsGearState", hotspotClass: "generico", x: 48, y: 68, w: 5, h: 8 },
+  // --- Sala 1: Despacho del Profesor ---
+  // hotspotId means state is read from gameState.hotspotStates[hotspotId]
+  { id: "window", label: "ventana", hotspotId: "window", hotspotClass: "puerta", x: 10, y: 20, w: 6, h: 10 },
+  { id: "desk", label: "escritorio", hotspotId: "desk", hotspotClass: "contenedor", x: 42, y: 52, w: 10, h: 8 },
+  { id: "paper_bin", label: "papelera", hotspotId: "paper_bin", hotspotClass: "contenedor", x: 58, y: 72, w: 5, h: 7 },
+  {
+    id: "security_panel",
+    label: "panel de seguridad",
+    hotspotId: "security_panel",
+    hotspotClass: "dispositivo",
+    x: 74, y: 32, w: 6, h: 9,
+    deviceConfig: {
+      deviceName: "PANEL-SYS-TEMA",
+      bootLines: [
+        "Localizando interfaz de seguridad...",
+        "Protocolo de acceso: CIFRADO",
+        "Bypass de certificado en curso...",
+        "Interceptando señal de control  ▒▒▒▒▒▒▒▒▒▒",
+        "Interceptando señal de control  █████▒▒▒▒▒",
+        "Interceptando señal de control  ██████████",
+        "Sistema de autenticación: expuesto.",
+        "Consola de comandos disponible.",
+        "Advertencia: cada intento fallido queda registrado.",
+      ],
+      commands: [
+        {
+          name: "seguridad",
+          description: "Acceder al menú de control del sistema de seguridad.",
+        },
+        {
+          name: "status",
+          description: "Estado del sistema láser y la vitrina.",
+          response: ["LASER-7: ACTIVO", "Acceso a vitrina: BLOQUEADO", "Intentos de autenticación: registrando."],
+        },
+      ],
+    },
+  },
+  { id: "laser_grid", label: "cuadrícula láser", hotspotId: "laser_grid", hotspotClass: "sensor", x: 52, y: 28, w: 7, h: 9 },
+  { id: "showcase", label: "vitrina", hotspotId: "showcase", hotspotClass: "contenedor", x: 68, y: 48, w: 8, h: 12 },
+  { id: "camera", label: "cámara de vigilancia", hotspotId: "camera", hotspotClass: "sensor", x: 82, y: 14, w: 5, h: 7 },
+  { id: "armored_door", label: "puerta acorazada", hotspotId: "armored_door", hotspotClass: "puerta", x: 85, y: 42, w: 6, h: 14 },
 ];
 
 export const objectImages = {
@@ -49,6 +91,7 @@ export const objectImages = {
 };
 
 export const targetItems = {
+  // --- Sandbox ---
   door: [],
   panel: [
     { id: "panel_note", label: "Nota sandbox", type: "readable", hotspot: "panel", content: "Placeholder de contenido. Sustituir cuando el puzzle este definido." },
@@ -62,6 +105,51 @@ export const targetItems = {
     { id: "wiring_diagram", label: "Esquema sandbox", type: "readable", hotspot: "electrical_box", content: "Placeholder de contenido. Sustituir cuando el puzzle este definido." },
   ],
   sports_gear: [],
+  // --- Sala 1: Despacho del Profesor ---
+  window: [],
+  desk: [
+    {
+      id: "laser_week_note",
+      label: "Nota semanal del sistema láser",
+      type: "readable",
+      hotspot: "desk",
+      content: "La clave del sistema láser cambia cada semana. Semana 3: 7391.",
+      grantsDiscovery: ["laser_code_known"],
+    },
+    {
+      id: "blank_exam_copy",
+      label: "Copia del examen en blanco",
+      type: "usable",
+      hotspot: "desk",
+      description: "Una copia sin rellenar, idéntica en formato al examen original.",
+      grantsFlagOnPickup: "copyInInventory",
+    },
+  ],
+  paper_bin: [
+    {
+      id: "crumpled_password_postit",
+      label: "Post-it arrugado",
+      type: "readable",
+      hotspot: "paper_bin",
+      content: "Arrugado y difícil de leer. Solo se distingue el final: ...91.",
+      grantsDiscovery: ["laser_code_partial_confirmed"],
+    },
+  ],
+  security_panel: [],
+  laser_grid: [],
+  showcase: [
+    {
+      id: "original_exam",
+      label: "Examen original",
+      type: "usable",
+      hotspot: "showcase",
+      description: "El examen de ciencias con las respuestas preparadas.",
+      requiresState: { showcase: ["open", "broken"] },
+      grantsFlagOnPickup: "examStolen",
+    },
+  ],
+  camera: [],
+  armored_door: [],
 };
 
 export function getTargetItems(targetId) {
@@ -85,6 +173,10 @@ export function getTarget(targetId) {
 }
 
 export function getTargetState(target, gameState) {
+  // Sala 1 hotspots store state in gameState.hotspotStates[hotspotId]
+  if (target.hotspotId) {
+    return gameState.hotspotStates?.[target.hotspotId] || "unknown";
+  }
   return gameState[target.stateKey] || "unknown";
 }
 
@@ -110,6 +202,16 @@ export function getContainerOpenState(targetId, gameState) {
   const target = targets.find((item) => item.id === targetId);
   if (target?.hotspotClass !== "contenedor") return null;
 
+  // Sala 1 containers: open based on hotspotStates
+  if (target.hotspotId) {
+    const state = gameState.hotspotStates?.[target.hotspotId] || "unknown";
+    // desk and paper_bin are always accessible for searching
+    if (targetId === "desk" || targetId === "paper_bin") return true;
+    // showcase opens when laser is disabled or it's broken
+    if (targetId === "showcase") return state === "open" || state === "broken" || state === "laser_disabled" || state === "replaced";
+    return true;
+  }
+
   if (targetId === "locker") {
     const state = gameState.lockerState || "unknown";
     return state === "idle" || state === "clean_open" || state === "broken_open";
@@ -129,6 +231,16 @@ export function getTargetStateLabel(target, gameState) {
 
   if (target.id === "sensor" && gameState.sensorPatternDetected && gameState.sensorState === "active") {
     return "active / patron detectado";
+  }
+
+  // Sala 1: add flag info to relevant hotspot labels
+  if (target.hotspotId) {
+    const state = getTargetState(target, gameState);
+    const flags = gameState.flags || {};
+    if (target.id === "showcase" && flags.examStolen) return `${state} / examen_robado`;
+    if (target.id === "security_panel" && (gameState.discoveries?.laser_code_known)) return `${state} / codigo_conocido`;
+    if (target.id === "camera" && flags.camera_fooled) return `${state} / engañada`;
+    return state;
   }
 
   return getTargetState(target, gameState);

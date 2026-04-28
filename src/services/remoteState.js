@@ -34,12 +34,13 @@ export function createInitialPulseState() {
 
 export function createInitialGameState() {
   return {
+    // --- Sandbox state ---
     doorState: "idle",
     panelState: "idle",
     sensorState: "idle",
     lockerState: "idle",
     noteState: "hidden",
-    alarmState: "off",
+    alarmState: { level: 0, noise: 0, triggers: [] },
     electricalBoxState: "idle",
     sportsGearState: "idle",
     loreFlagTestRevealed: false,
@@ -52,17 +53,55 @@ export function createInitialGameState() {
     doorPrepared: false,
     sensorPatternDetected: false,
     sensorTrickedThisPulse: false,
+    // --- Sala 1: Despacho del Profesor ---
+    hotspotStates: {
+      window: "entered",
+      desk: "unsearched",
+      paper_bin: "unsearched",
+      security_panel: "awaiting_code",
+      laser_grid: "active",
+      showcase: "locked_laser_active",
+      camera: "idle",
+      armored_door: "locked",
+    },
+    discoveries: {},
+    flags: {
+      copyInInventory: false,
+      examStolen: false,
+      replacedExam: false,
+      resolvedByMainPath: false,
+      usedForce: false,
+      usedBypass: false,
+      photographed: false,
+      camera_fooled: false,
+    },
+    gmSceneState: {
+      activeVariant: "normal",
+      activeEffects: [],
+      history: [],
+    },
+    failedAttempts: 0,
   };
 }
 
 export function createInitialTargetFeedback() {
   return {
+    // --- Sandbox ---
     door: "Sandbox activo. Sin regla de puzzle asignada.",
     panel: "Sandbox activo. Sin regla de puzzle asignada.",
     sensor: "Sandbox activo. Sin regla de puzzle asignada.",
     locker: "Sandbox activo. Sin regla de puzzle asignada.",
     electrical_box: "Sandbox activo. Sin regla de puzzle asignada.",
     sports_gear: "Sandbox activo. Sin regla de puzzle asignada.",
+    // --- Sala 1 ---
+    window: "Habéis entrado por la ventana. Silencio total por ahora.",
+    desk: "El escritorio del profesor. Papeles y notas por revisar.",
+    paper_bin: "La papelera. Puede haber algo útil entre los desperdicios.",
+    security_panel: "Panel del sistema de seguridad. Requiere código de 4 dígitos.",
+    laser_grid: "Cuadrícula láser activa. Cualquier movimiento en la vitrina la disparará.",
+    showcase: "Vitrina con el examen. Protegida por el sistema láser.",
+    camera: "Cámara de vigilancia. Parece que gira periódicamente.",
+    armored_door: "Puerta acorazada. Imposible forzar sin provocar alarma general.",
   };
 }
 

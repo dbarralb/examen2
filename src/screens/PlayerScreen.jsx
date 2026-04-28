@@ -15,6 +15,7 @@ import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
 import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView, updatePlayerZone } from "../services/playerService.js";
+import { firebasePatch } from "../services/firebaseClient.js";
 
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
 const SUCCESS_CLOSE_DELAY_MS = 2000;
@@ -61,6 +62,10 @@ export function PlayerScreen({ navigation, params }) {
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const [isDraggingItem, setIsDraggingItem] = useState(false);
   const [revealedSlots, setRevealedSlots] = useState({}); // { [targetId]: number[] }
+  const [deviceCommandResult, setDeviceCommandResult] = useState(null);
+  const [eventLog, setEventLog] = useState([]);
+  const [eventLogVisible, setEventLogVisible] = useState(false);
+  const prevGameStateRef = useRef(null);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
@@ -94,6 +99,90 @@ export function PlayerScreen({ navigation, params }) {
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
+
+  function logEvent(msg) {
+    const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    setEventLog((prev) => [{ time, msg }, ...prev].slice(0, 80));
+  }
+
+  // Track all puzzle-relevant state changes and auto-log them
+  useEffect(() => {
+    const prev = prevGameStateRef.current;
+    if (!prev) {
+      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, gmSceneState: remoteState?.gmSceneState };
+      return;
+    }
+
+    // ── gameState.hotspotStates ──
+    const hotspots = gameState.hotspotStates || {};
+    const prevHotspots = prev.gameState.hotspotStates || {};
+    for (const [key, val] of Object.entries(hotspots)) {
+      if (val !== prevHotspots[key]) logEvent(`hotspot.${key}: ${prevHotspots[key] ?? "—"} → ${val}`);
+    }
+
+    // ── gameState.flags ──
+    const flags = gameState.flags || {};
+    const prevFlags = prev.gameState.flags || {};
+    for (const [key, val] of Object.entries(flags)) {
+      if (val !== prevFlags[key]) logEvent(`flag.${key}: ${prevFlags[key] ?? "—"} → ${val}`);
+    }
+
+    // ── gameState.discoveries ──
+    const discoveries = gameState.discoveries || {};
+    const prevDisc = prev.gameState.discoveries || {};
+    for (const [key, val] of Object.entries(discoveries)) {
+      if (val !== prevDisc[key]) logEvent(`discovery.${key}: ${val}`);
+    }
+
+    // ── gameState.alarmState ──
+    const alarm = gameState.alarmState || {};
+    const prevAlarm = prev.gameState.alarmState || {};
+    if (alarm.level !== prevAlarm.level) logEvent(`alarm.level: ${prevAlarm.level ?? 0} → ${alarm.level}`);
+    if (alarm.noise !== prevAlarm.noise) logEvent(`alarm.noise: ${prevAlarm.noise ?? 0} → ${alarm.noise}`);
+    const prevTriggers = Array.isArray(prevAlarm.triggers) ? prevAlarm.triggers : [];
+    const nextTriggers = Array.isArray(alarm.triggers) ? alarm.triggers : [];
+    if (nextTriggers.length > prevTriggers.length) {
+      nextTriggers.slice(prevTriggers.length).forEach((t) => logEvent(`alarm.trigger: ${t}`));
+    }
+
+    // ── gameState.failedAttempts ──
+    if ((gameState.failedAttempts || 0) !== (prev.gameState.failedAttempts || 0)) {
+      logEvent(`failedAttempts: ${prev.gameState.failedAttempts ?? 0} → ${gameState.failedAttempts}`);
+    }
+
+    // ── actionLog — new entries ──
+    if (actionLog.length > prev.actionLog.length) {
+      actionLog.slice(prev.actionLog.length).forEach((entry) => logEvent(`acción: ${entry}`));
+    }
+
+    // ── cardUsage — increases per role+card ──
+    const allUsage = remoteState?.cardUsage || {};
+    const prevAllUsage = prev.allCardUsage || {};
+    for (const [rId, roleUsage] of Object.entries(allUsage)) {
+      if (typeof roleUsage !== "object" || !roleUsage) continue;
+      for (const [cardId, count] of Object.entries(roleUsage)) {
+        const prevCount = prevAllUsage?.[rId]?.[cardId] ?? 0;
+        if (count > prevCount) logEvent(`card.${cardId} (${rId}): uso ${prevCount} → ${count}`);
+      }
+    }
+
+    // ── gmSceneState — efectos activos ──
+    const gmScene = remoteState?.gmSceneState || {};
+    const prevGmScene = prev.gmSceneState || {};
+    const activeEffects = Array.isArray(gmScene.activeEffects) ? gmScene.activeEffects : [];
+    const prevEffects = Array.isArray(prevGmScene.activeEffects) ? prevGmScene.activeEffects : [];
+    for (const fx of activeEffects) {
+      if (!prevEffects.includes(fx)) logEvent(`gmScene.+${fx}`);
+    }
+    for (const fx of prevEffects) {
+      if (!activeEffects.includes(fx)) logEvent(`gmScene.-${fx}`);
+    }
+    if ((gmScene.activeVariant || "normal") !== (prevGmScene.activeVariant || "normal")) {
+      logEvent(`gmScene.variant: ${prevGmScene.activeVariant ?? "normal"} → ${gmScene.activeVariant}`);
+    }
+
+    prevGameStateRef.current = { gameState, actionLog, cardUsage, pulseState, gmSceneState: remoteState?.gmSceneState };
+  }); // intentionally no dep array — runs after every render to diff state
 
   // null = not a container; true = open; false = closed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,6 +328,46 @@ export function PlayerScreen({ navigation, params }) {
   useEffect(() => {
     queuePlayerViewPublish();
   }, [selectedTargetId, selectedCardId, pendingAction?.id, pendingAction?.target, pendingAction?.card, pendingAction?.status, pendingAction?.minigame?.status, pendingAction?.minigame?.result]);
+
+  async function handleDeviceCommand(targetId, cmd) {
+    logEvent(`cmd: ${targetId} → ${cmd.name}${cmd.arg ? ` [${cmd.arg}]` : ""}`);
+
+    if (targetId === "security_panel" && cmd.name === "seguridad_apagar") {
+      const code = (cmd.arg || "").trim();
+      if (code === "7391") {
+        await firebasePatch("", {
+          "gameState/hotspotStates/security_panel": "code_success",
+          "gameState/hotspotStates/laser_grid": "disabled",
+          "gameState/hotspotStates/showcase": "laser_disabled",
+          "gameState/flags/resolvedByMainPath": true,
+        });
+        logEvent("AUTH OK: láser desactivado, vitrina desbloqueada");
+        setDeviceCommandResult({
+          id: Date.now(),
+          lines: ["Clave correcta.", "Sistema láser: DESACTIVADO.", "Vitrina: desbloqueada."],
+          type: "system",
+        });
+      } else {
+        const failedAttempts = (gameState.failedAttempts || 0) + 1;
+        const alarmNoise = ((gameState.alarmState || {}).noise || 0) + 1;
+        const alarmTriggers = Array.isArray(gameState.alarmState?.triggers) ? [...gameState.alarmState.triggers] : [];
+        alarmTriggers.push("wrong_security_code");
+        await firebasePatch("", {
+          "gameState/hotspotStates/security_panel": "code_error",
+          "gameState/failedAttempts": failedAttempts,
+          "gameState/alarmState/noise": alarmNoise,
+          "gameState/alarmState/triggers": alarmTriggers,
+        });
+        logEvent(`AUTH FAIL: código incorrecto (intento ${failedAttempts})`);
+        setDeviceCommandResult({
+          id: Date.now(),
+          lines: [`Clave incorrecta. Intento ${failedAttempts} registrado.`, "¿Desea volver a intentarlo? Y/N"],
+          type: "error",
+          nextFlow: "seguridad_retry",
+        });
+      }
+    }
+  }
 
   function startLoad(cardId, targetId) {
     const card = getCard(cardId);
@@ -402,10 +531,41 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
+  // Firebase strips empty arrays → normalize to safe defaults
+  const rawGmScene = gameState.gmSceneState || {};
+  const gmActiveEffects = Array.isArray(rawGmScene.activeEffects) ? rawGmScene.activeEffects : [];
+  const gmVariant = rawGmScene.activeVariant || "normal";
+  const hasRedLight = gmActiveEffects.includes("red_light_overlay");
+  const hasSystemInterference = gmActiveEffects.includes("system_interference");
+  const hasCameraTracking = gmActiveEffects.includes("camera_tracking");
+  const hasDoorLocked = gmActiveEffects.includes("door_temporarily_locked");
+  const isContainment = gmVariant === "containment" || gmActiveEffects.includes("containment_mode");
+
   return (
-    <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
+    <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""} ${isContainment ? "gm-variant-containment" : ""}`}>
       <section className="player-scene-preview player-scene-live">
-        {gameState.alarmState === "on" && <img className="react-alarm-overlay" src={objectImages.alarm.on} alt="Alarma activa" />}
+        {/* GM scene state overlays — only GM triggers these */}
+        {hasRedLight && <div className="react-alarm-overlay react-alarm-overlay-red" aria-label="Alarma activa" />}
+        {hasSystemInterference && (
+          <div className="gm-system-interference" aria-live="assertive">
+            <span>[SISTEMA] Interferencia detectada. Acceso restringido.</span>
+          </div>
+        )}
+        {hasCameraTracking && (
+          <div className="gm-camera-tracking-badge" aria-label="Cámara en seguimiento">
+            REC ●
+          </div>
+        )}
+        {hasDoorLocked && (
+          <div className="gm-door-locked-badge" aria-label="Salida bloqueada">
+            SALIDA BLOQUEADA
+          </div>
+        )}
+        {isContainment && (
+          <div className="gm-containment-overlay" aria-live="assertive">
+            <span>MODO CONTENCIÓN ACTIVADO</span>
+          </div>
+        )}
         <div className="player-topbar">
           <NewtonLogo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
@@ -453,6 +613,8 @@ export function PlayerScreen({ navigation, params }) {
           onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
           activeZone={activeZone}
+          onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}
+          deviceCommandResult={isGmMonitorView ? null : deviceCommandResult}
         />
         {overlayActive && (
           <aside className="react-result-overlay">
@@ -548,6 +710,39 @@ export function PlayerScreen({ navigation, params }) {
           </form>
         </NCard>
       </aside>}
+      {!isGmMonitorView && (
+        <div className={`event-log-panel ${eventLogVisible ? "event-log-panel--open" : ""}`}>
+          <button
+            type="button"
+            className="event-log-toggle"
+            onClick={() => setEventLogVisible((v) => !v)}
+            aria-expanded={eventLogVisible}
+          >
+            <span>▸ LOG</span>
+            {eventLog.length > 0 && <span className="event-log-count">{eventLog.length}</span>}
+          </button>
+          {eventLogVisible && (
+            <div className="event-log-body">
+              <div className="event-log-header">
+                <span>Registro de eventos</span>
+                <button type="button" className="event-log-clear" onClick={() => setEventLog([])}>Limpiar</button>
+              </div>
+              <div className="event-log-entries">
+                {eventLog.length === 0 ? (
+                  <span className="event-log-empty">Sin eventos registrados.</span>
+                ) : (
+                  eventLog.map((e, i) => (
+                    <div key={i} className="event-log-entry">
+                      <span className="event-log-time">{e.time}</span>
+                      <span className="event-log-msg">{e.msg}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }

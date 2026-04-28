@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NBadge } from "./newton";
 import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
+import { DeviceConsole } from "./DeviceConsole.jsx";
 import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
@@ -97,6 +98,8 @@ export function SceneMap({
   onLoadConfirm,
   revealedSlots = {},
   activeZone = null,
+  onDeviceCommand,
+  deviceCommandResult = null,
 }) {
   // Filter targets to those in the active zone. If no zone is set, show all targets (backward compat).
   const visibleTargets = activeZone
@@ -108,7 +111,15 @@ export function SceneMap({
   const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: MIN_SCALE }));
   const [isPanning, setIsPanning] = useState(false);
   const [isFocusTransitioning, setIsFocusTransitioning] = useState(false);
+  const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
   const focusTransitionTimeoutRef = useRef(null);
+
+  // Close device console when the selected target changes or closes
+  useEffect(() => {
+    if (!selectedTargetId || selectedTargetId !== consoleOpenTargetId) {
+      setConsoleOpenTargetId(null);
+    }
+  }, [selectedTargetId, consoleOpenTargetId]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -160,7 +171,7 @@ export function SceneMap({
       return;
     }
 
-    const nextScale = clamp(TARGET_FOCUS_SCALE, MIN_SCALE, MAX_SCALE);
+    const FOCUS_PADDING = 28; // px margin around the combined hotspot+card box
     const cardStyle = getTargetCardStyle(target);
     const hotspotLeft = (target.x / 100) * layout.mapWidth;
     const hotspotTop = (target.y / 100) * layout.mapHeight;
@@ -177,13 +188,20 @@ export function SceneMap({
     const focusCenterX = (focusLeft + focusRight) / 2;
     const focusCenterY = (focusTop + focusBottom) / 2;
 
+    // Scale to fit the whole box in the viewport; cap at TARGET_FOCUS_SCALE, allow below MIN_SCALE
+    const boxW = focusRight - focusLeft + FOCUS_PADDING * 2;
+    const boxH = focusBottom - focusTop + FOCUS_PADDING * 2;
+    const fitScale = Math.min(layout.width / boxW, layout.height / boxH);
+    const nextScale = clamp(fitScale, 0.3, TARGET_FOCUS_SCALE);
+
+    // Position without clamping to map bounds — the card must always be fully visible
     window.clearTimeout(focusTransitionTimeoutRef.current);
     setIsFocusTransitioning(true);
-    setCamera(clampCamera({
+    setCamera({
       scale: nextScale,
       x: layout.width / 2 - focusCenterX * nextScale,
       y: layout.height / 2 - focusCenterY * nextScale,
-    }, layout));
+    });
     focusTransitionTimeoutRef.current = window.setTimeout(() => {
       setIsFocusTransitioning(false);
     }, FOCUS_TRANSITION_MS);
@@ -252,7 +270,7 @@ export function SceneMap({
   }
 
   function handleWheel(event) {
-    if (isMonitorView) {
+    if (isMonitorView || consoleOpenTargetId) {
       return;
     }
 
@@ -300,6 +318,11 @@ export function SceneMap({
       >
         <BackgroundLayer />
         <StructureLayer gameState={gameState} />
+        {/* Dim layer: covers background/structure but sits below cards (same z-index as interactive, earlier in DOM) */}
+        <div
+          className={`scene-target-dim ${selectedTargetId && !isMonitorView ? "active" : ""}`}
+          aria-hidden="true"
+        />
         <InteractiveLayer
           gameState={gameState}
           selectedTargetId={selectedTargetId}
@@ -322,8 +345,24 @@ export function SceneMap({
                 <h3>{target.label}</h3>
                 {target.hotspotClass && <span className="scene-object-card-class">{target.hotspotClass}</span>}
                 {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
-                <NBadge status="info">Estado: {getTargetStateLabel(target, gameState)}</NBadge>
+                {(() => {
+                  const stateLabel = getTargetStateLabel(target, gameState);
+                  const isDisabled = /disabled/i.test(stateLabel);
+                  return <NBadge status={isDisabled ? "danger" : "info"}>Estado: {stateLabel}</NBadge>;
+                })()}
                 <p>{targetFeedback[target.id]}</p>
+                {target.hotspotClass === "dispositivo" && !isMonitorView && (
+                  <button
+                    type="button"
+                    className={`device-connect-btn ${consoleOpenTargetId === target.id ? "active" : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConsoleOpenTargetId(consoleOpenTargetId === target.id ? null : target.id);
+                    }}
+                  >
+                    {consoleOpenTargetId === target.id ? "✕ Desconectar" : "▣ Conectarse a Dispositivo"}
+                  </button>
+                )}
                 <ObjectInventoryGrid
                   items={getTargetItems(target.id)}
                   seenState={itemSeenState}
@@ -389,6 +428,25 @@ export function SceneMap({
         </InteractiveLayer>
       </div>
       {showCoordinates && <CoordinateOverlay camera={camera} layout={layout} />}
+      {consoleOpenTargetId && (() => {
+        const consoleTarget = visibleTargets.find((t) => t.id === consoleOpenTargetId);
+        return consoleTarget?.deviceConfig ? (
+          <div
+            className="device-console-panel"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DeviceConsole
+              deviceName={consoleTarget.deviceConfig.deviceName}
+              deviceCommands={consoleTarget.deviceConfig.commands}
+              bootLines={consoleTarget.deviceConfig.bootLines}
+              onCommand={(cmd) => onDeviceCommand?.(consoleOpenTargetId, cmd)}
+              onClose={() => setConsoleOpenTargetId(null)}
+              commandResult={deviceCommandResult}
+            />
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 }

@@ -3,12 +3,14 @@ import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
-import { getRoom, getZonesForRoom } from "../data/roomData.js";
+import { getRoom, getZone, getZonesForRoom, SALA1_ROOM_ID } from "../data/roomData.js";
 import { playerRoles } from "../data/roles.js";
 import { targets } from "../data/gameData.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
-import { getRemoteState, resetGame, startGame } from "../services/gmService.js";
+import { forceStartGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
+import { getAlarmRecommendations } from "../services/gameRules.js";
+import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
 import { startManualPulse } from "../services/pulseService.js";
 import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 
@@ -43,6 +45,8 @@ export function GMScreen() {
   const [isPulseBusy, setIsPulseBusy] = useState(false);
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
+  const [sceneControlExpanded, setSceneControlExpanded] = useState(false);
+  const [testScriptExpanded, setTestScriptExpanded] = useState(false);
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
@@ -53,6 +57,27 @@ export function GMScreen() {
   const currentZoneId = sessionState.zoneId || "all";
   const currentRoom = getRoom(currentSalaId);
   const salaZones = getZonesForRoom(currentSalaId);
+  const gameState = remoteState?.gameState || {};
+  // Firebase strips empty arrays → normalize to safe defaults
+  const rawGmScene = gameState.gmSceneState || {};
+  const gmSceneState = {
+    activeVariant: rawGmScene.activeVariant || "normal",
+    activeEffects: Array.isArray(rawGmScene.activeEffects) ? rawGmScene.activeEffects : [],
+    history: Array.isArray(rawGmScene.history) ? rawGmScene.history : [],
+  };
+  const rawAlarm = gameState.alarmState || {};
+  const alarmState = {
+    level: rawAlarm.level ?? 0,
+    noise: rawAlarm.noise ?? 0,
+    triggers: Array.isArray(rawAlarm.triggers) ? rawAlarm.triggers : [],
+  };
+  const flags = gameState.flags || {};
+  const isSala1 = currentSalaId === SALA1_ROOM_ID;
+  const alarmRecommendations = useMemo(
+    () => (isSala1 ? getAlarmRecommendations(gameState) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isSala1, alarmState.level, alarmState.noise, flags.photographed, flags.camera_fooled],
+  );
 
   async function refresh() {
     const nextState = await getRemoteState();
@@ -107,6 +132,22 @@ export function GMScreen() {
     }
   }
 
+  async function handleForceStartGame() {
+    setIsBusy(true);
+    setStatusMessage("Forzando inicio (modo debug)...");
+
+    try {
+      const nextState = await forceStartGame();
+      setRemoteState(nextState);
+      setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
+      setStatusMessage("Partida iniciada directamente. Sin esperar jugadores.");
+    } catch {
+      setStatusMessage("No se pudo forzar el inicio.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function handleResetGame() {
     setIsBusy(true);
     setStatusMessage("Reseteando sandbox...");
@@ -145,10 +186,32 @@ export function GMScreen() {
   async function handleZoneChange(zoneId) {
     try {
       await firebasePatch("sessionState", { zoneId });
-      setStatusMessage(`Zona sandbox cambiada: ${salaZones.find((zone) => zone.id === zoneId)?.label || zoneId}`);
+      setStatusMessage(`Zona cambiada: ${salaZones.find((zone) => zone.id === zoneId)?.label || zoneId}`);
       await refresh();
     } catch {
       setStatusMessage("No se pudo cambiar de zona.");
+    }
+  }
+
+  async function handleSalaChange(salaId) {
+    try {
+      const room = getRoom(salaId);
+      const firstZone = room?.zones?.[0]?.id || "all";
+      await firebasePatch("sessionState", { salaId, zoneId: firstZone });
+      setStatusMessage(`Sala cambiada: ${room?.label || salaId}`);
+      await refresh();
+    } catch {
+      setStatusMessage("No se pudo cambiar de sala.");
+    }
+  }
+
+  async function handleToggleSceneEffect(effectId) {
+    try {
+      await toggleSceneEffect(effectId, "GM activó desde panel de escenario");
+      setStatusMessage(`Efecto de escena actualizado: ${effectId}`);
+      await refresh();
+    } catch {
+      setStatusMessage("No se pudo actualizar el efecto de escena.");
     }
   }
 
@@ -158,7 +221,8 @@ export function GMScreen() {
         <NewtonLogo />
         <div>
           <NBadge status="info">Panel GM</NBadge>
-          <h1>Control sandbox</h1>
+          <NBadge status={isSala1 ? "success" : "muted"}>{isSala1 ? "Sala 1 — Despacho" : "Sandbox"}</NBadge>
+          <h1>{isSala1 ? "Control Sala 1" : "Control sandbox"}</h1>
         </div>
       </header>
 
@@ -250,6 +314,9 @@ export function GMScreen() {
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">
             <NButton onClick={handleStartGame} disabled={isBusy}>Abrir lobby</NButton>
+            <NButton variant="ghost" onClick={handleForceStartGame} disabled={isBusy} title="Inicia la partida sin esperar a que todos los jugadores estén listos">
+              Debug: iniciar ya
+            </NButton>
             <NButton variant="danger" onClick={handleResetGame} disabled={isBusy}>Resetear</NButton>
             <NButton variant="ghost" onClick={() => setShowCoordinates((value) => !value)}>
               {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
@@ -258,20 +325,44 @@ export function GMScreen() {
         </NCard>
 
         <NCard title={currentRoom ? `Sala: ${currentRoom.label}` : "Sala"}>
-          <p className="react-status">Sandbox sin puzzles, ecos ni finales. Las zonas solo filtran hotspots visibles.</p>
-          <div className="gm-zone-selector" aria-label="Selector de zona">
-            {salaZones.map((zone) => (
-              <button
-                key={zone.id}
-                type="button"
-                className={`gm-zone-btn ${zone.id === currentZoneId ? "active" : ""}`}
-                onClick={() => handleZoneChange(zone.id)}
-                disabled={session.status !== "in_game"}
-              >
-                {zone.label}
-                {zone.targetIds.length > 0 && <span className="gm-zone-target-count">{zone.targetIds.length}</span>}
-              </button>
-            ))}
+          {/* Selector de sala */}
+          <div className="gm-sala-selector" aria-label="Selector de sala">
+            <button
+              type="button"
+              className={`gm-zone-btn ${currentSalaId === "sandbox" ? "active" : ""}`}
+              onClick={() => handleSalaChange("sandbox")}
+              disabled={session.status !== "in_game"}
+            >
+              Sandbox
+            </button>
+            <button
+              type="button"
+              className={`gm-zone-btn ${currentSalaId === SALA1_ROOM_ID ? "active" : ""}`}
+              onClick={() => handleSalaChange(SALA1_ROOM_ID)}
+              disabled={session.status !== "in_game"}
+            >
+              Sala 1 — Despacho
+            </button>
+          </div>
+
+          {/* Mapa jugadores → zona */}
+          <div className="gm-player-zone-map" aria-label="Posición de cada jugador">
+            {playerRoles.map((role) => {
+              const claim = remoteState?.lobby?.roleClaims?.[role.id];
+              const playerZoneId = remoteState?.playerZones?.[role.id];
+              const zone = playerZoneId ? getZone(currentSalaId, playerZoneId) : null;
+              const zoneLabel = zone?.label || playerZoneId || "—";
+              const isConnected = Boolean(claim);
+
+              return (
+                <div key={role.id} className={`gm-player-zone-row ${isConnected ? "connected" : "empty"}`}>
+                  <NBadge status={isConnected ? role.status : "muted"}>{role.label}</NBadge>
+                  <span className="gm-player-zone-location">
+                    {isConnected ? zoneLabel : "sin jugador"}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </NCard>
 
@@ -305,6 +396,208 @@ export function GMScreen() {
           </div>
         </NCard>
       </section>
+
+      {/* ---- Panel Control de Escenario (Sala 1) ---- */}
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${sceneControlExpanded ? "expanded" : ""}`}
+          onClick={() => setSceneControlExpanded((v) => !v)}
+          aria-expanded={sceneControlExpanded}
+        >
+          <span>Control de Escenario</span>
+          <span className="react-gm-monitors-toggle-badges">
+            {isSala1 && (
+              <>
+                <NBadge status={alarmState.level === 0 ? "muted" : alarmState.level >= 3 ? "danger" : "warning"}>
+                  Alarma {alarmState.level}
+                </NBadge>
+                {gmSceneState.activeEffects.length > 0 && (
+                  <NBadge status="warning">{gmSceneState.activeEffects.length} efecto{gmSceneState.activeEffects.length > 1 ? "s" : ""} activo{gmSceneState.activeEffects.length > 1 ? "s" : ""}</NBadge>
+                )}
+              </>
+            )}
+            {!isSala1 && <NBadge status="muted">Solo disponible en Sala 1</NBadge>}
+          </span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{sceneControlExpanded ? "▲" : "▼"}</span>
+        </button>
+        {sceneControlExpanded && (
+          <section className="react-gm-scene-control" aria-label="Control de escenario">
+            {!isSala1 ? (
+              <p className="react-status">Cambia a Sala 1 para usar el control de escenario.</p>
+            ) : (
+              <>
+                {/* Métricas de alarma */}
+                <div className="gm-scene-metrics">
+                  <div className="gm-scene-metric">
+                    <strong>Nivel de alarma:</strong>
+                    <NBadge status={alarmState.level === 0 ? "success" : alarmState.level >= 3 ? "danger" : "warning"}>
+                      {alarmState.level} — {["normal", "sospecha", "alarma", "contencion"][alarmState.level] || "?"}
+                    </NBadge>
+                  </div>
+                  <div className="gm-scene-metric">
+                    <strong>Ruido acumulado:</strong> {alarmState.noise}
+                  </div>
+                  {alarmState.triggers?.length > 0 && (
+                    <div className="gm-scene-metric">
+                      <strong>Últimos triggers:</strong>
+                      <span>{alarmState.triggers.slice(-5).join(", ")}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Flags clave */}
+                <div className="gm-scene-flags">
+                  <strong>Flags:</strong>
+                  {[
+                    ["examStolen", "Examen robado"],
+                    ["replacedExam", "Examen sustituido"],
+                    ["copyInInventory", "Copia en mano"],
+                    ["usedForce", "Fuerza usada"],
+                    ["usedBypass", "Bypass usado"],
+                    ["photographed", "Fotografiado"],
+                    ["camera_fooled", "Cámara engañada"],
+                    ["resolvedByMainPath", "Ruta principal"],
+                  ].map(([key, label]) => (
+                    <NBadge key={key} status={flags[key] ? "success" : "muted"}>{label}</NBadge>
+                  ))}
+                </div>
+
+                {/* Recomendaciones */}
+                {alarmRecommendations.length > 0 && (
+                  <div className="gm-scene-recommendations">
+                    <strong>Recomendaciones:</strong>
+                    {alarmRecommendations.map((rec) => (
+                      <div key={rec.id} className="gm-scene-rec">
+                        <span>{rec.label}</span>
+                        <small>{rec.reason}</small>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Botones de efectos */}
+                <div className="gm-scene-effects">
+                  <strong>Efectos de escena:</strong>
+                  <div className="button-row">
+                    {gmSceneEffects.map((effect) => {
+                      const isActive = gmSceneState.activeEffects.includes(effect.id);
+                      return (
+                        <button
+                          key={effect.id}
+                          type="button"
+                          className={`gm-effect-btn ${isActive ? "active" : ""}`}
+                          title={effect.description}
+                          onClick={() => handleToggleSceneEffect(effect.id)}
+                        >
+                          {isActive ? "✓ " : ""}{effect.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Variante activa */}
+                <div className="gm-scene-metric">
+                  <strong>Variante de escena:</strong>
+                  <NBadge status={gmSceneState.activeVariant === "normal" ? "muted" : "warning"}>
+                    {gmSceneState.activeVariant}
+                  </NBadge>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+      </div>
+
+      {/* ---- Test Script Sala 1 ---- */}
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${testScriptExpanded ? "expanded" : ""}`}
+          onClick={() => setTestScriptExpanded((v) => !v)}
+          aria-expanded={testScriptExpanded}
+        >
+          <span>Script de Test — Sala 1</span>
+          <NBadge status="info">11 checks</NBadge>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{testScriptExpanded ? "▲" : "▼"}</span>
+        </button>
+        {testScriptExpanded && (
+          <section className="react-gm-test-script" aria-label="Script de test Sala 1">
+            <p className="react-status">
+              Abre 4 pestañas con los códigos de jugador (jugador1–jugador4). Cada test valida una parte del sistema.
+            </p>
+            <div className="react-list">
+              {[
+                {
+                  n: 1,
+                  title: "Ruta principal sin habilidades",
+                  steps: "1) jugador cualquiera → desk (sin carta, solo busca) → leer laser_week_note. 2) panel de seguridad → introducir código 7391. 3) showcase → recoger original_exam. ✓ Sala completable.",
+                },
+                {
+                  n: 2,
+                  title: "Código 7391 desactiva láser",
+                  steps: "Después del paso 2 del test 1: comprobar que laser_grid = disabled y showcase = laser_disabled en Flags/Estado.",
+                },
+                {
+                  n: 3,
+                  title: "Recoger examen → examStolen",
+                  steps: "Tras abrir vitrina: recoger original_exam. Comprobar badge 'Examen robado' = verde en panel GM.",
+                },
+                {
+                  n: 4,
+                  title: "Sustitución → replacedExam",
+                  steps: "Con blank_exam_copy en inventario + examStolen=true: usar copia sobre vitrina. Comprobar badge 'Examen sustituido' = verde.",
+                },
+                {
+                  n: 5,
+                  title: "a_lo_bestia con láser activo → alarma 3",
+                  steps: "Resetear. guaperas usa a_lo_bestia sobre showcase con laser_grid=active. Comprobar Alarma = 3 + photographed=true.",
+                },
+                {
+                  n: 6,
+                  title: "puenteo_rapido sin pista → alarma 2",
+                  steps: "Resetear. manitas usa puenteo_rapido sobre security_panel SIN mirar antes. Comprobar Alarma ≥ 2 + panel=code_error.",
+                },
+                {
+                  n: 7,
+                  title: "Alarma sube pero NO cambia gmSceneState automáticamente",
+                  steps: "Después de cualquier test con alarma: comprobar que 'Efectos activos' sigue en 0 hasta que el GM pulse un botón.",
+                },
+                {
+                  n: 8,
+                  title: "getAlarmRecommendations devuelve sugerencias correctas",
+                  steps: "Con alarma ≥ 1: panel 'Control de Escenario' debe mostrar al menos 1 recomendación. Con alarma ≥ 3: debe aparecer 'Modo contención'.",
+                },
+                {
+                  n: 9,
+                  title: "GM activa/desactiva efecto de escena",
+                  steps: "En Control de Escenario: pulsar 'Luz roja de alarma'. Verificar que se activa (badge verde). Pulsar de nuevo → se desactiva.",
+                },
+                {
+                  n: 10,
+                  title: "UI del jugador refleja gmSceneState",
+                  steps: "Con red_light_overlay activo: la pestaña del jugador debe mostrar overlay rojo. Con system_interference: texto de interferencia visible.",
+                },
+                {
+                  n: 11,
+                  title: "Acciones de personaje NO son requisito",
+                  steps: "Completar el test 1 (ruta principal) sin usar ninguna carta de personaje. El examen debe ser robable solo con búsqueda + código.",
+                },
+              ].map((test) => (
+                <article key={test.n} className="react-list-item gm-test-item">
+                  <strong>[{test.n}] {test.title}</strong>
+                  <span>{test.steps}</span>
+                </article>
+              ))}
+            </div>
+            <div className="button-row">
+              <p className="react-status">
+                Códigos de jugador disponibles en panel &quot;Partida&quot; arriba.
+                Abre cada código en una pestaña del navegador para simular los 4 jugadores.
+              </p>
+            </div>
+          </section>
+        )}
+      </div>
     </main>
   );
 }

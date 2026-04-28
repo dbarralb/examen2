@@ -93,12 +93,14 @@ export async function startManualPulse({ onStatus } = {}) {
     const targetFeedback = { ...createInitialTargetFeedback(), ...((await firebaseGet("targetFeedback")) || {}) };
     const lastRoleActions = { ...((await firebaseGet("lastRoleActions")) || {}) };
     let lastRoleDebug = (await firebaseGet("lastRoleDebug")) || "Sin acciones resueltas todavia.";
+    const sessionState = (await firebaseGet("sessionState")) || {};
     const context = {
       gameState,
       targetFeedback,
       actionLog,
       lastRoleDebug,
       metricsDelta: {},
+      salaId: sessionState.salaId || "sandbox",
     };
 
     pulseState = {

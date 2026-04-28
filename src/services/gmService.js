@@ -1,4 +1,4 @@
-import { firebaseGet, firebasePatch, firebasePut } from "./firebaseClient.js";
+import { firebaseGet, firebasePatch, firebasePut, firebaseGetWithEtag, firebasePutIfMatch } from "./firebaseClient.js";
 import { generateSessionAccessCode, getOrCreateClientId } from "./clientIdentity.js";
 import { buildInitialRemoteState } from "./remoteState.js";
 import { storeSessionCode } from "./sessionAccess.js";
@@ -51,6 +51,25 @@ export async function startGame() {
     updatedAt: now,
   });
   await firebasePut("actionLog", nextLog);
+
+  return getRemoteState();
+}
+
+// Bypass lobby — for debugging with fewer than 4 players.
+export async function forceStartGame() {
+  const { data: session, etag } = await firebaseGetWithEtag("session");
+
+  if (session?.status === "in_game") {
+    return getRemoteState();
+  }
+
+  const now = Date.now();
+  await firebasePutIfMatch("session", {
+    ...(session || {}),
+    status: "in_game",
+    gameTimer: { status: "running", startedAt: now, elapsedBeforeStartMs: 0 },
+    updatedAt: now,
+  }, etag);
 
   return getRemoteState();
 }
