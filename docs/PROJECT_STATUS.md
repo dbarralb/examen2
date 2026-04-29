@@ -27,6 +27,8 @@
 - [x] Chat entre jugadores y GM
 - [x] HTML legacy archivado en `docs/OLD/html-legacy`
 - [x] Prototipos de minijuegos archivados en `docs/OLD/assets-legacy/minigames`
+- [x] Sistema de diseno activo unico: `El Examen 2 Design System`
+- [x] Sistema antiguo Instituto Newton archivado en `docs/OLD/design-systems`
 
 ### Pendiente
 
@@ -50,3 +52,5 @@
 | `src/services/remoteState.js` | Estado inicial de Firebase |
 | `docs/game_design.md` | Diseno narrativo y mecanicas |
 | `docs/architecture.md` | Referencia tecnica del sistema |
+| `docs/gm-operations.md` | Reglas operativas del panel GM |
+| `El Examen 2 Design System/` | Sistema de diseno activo |

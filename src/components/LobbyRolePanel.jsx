@@ -1,16 +1,3 @@
-import empollonPanelImage from "../../assets/Lobby/UI/Lobby_panel_empollon.png";
-import guaperasPanelImage from "../../assets/Lobby/UI/Lobby_panel_guaperas.png";
-import inputNameCardImage from "../../assets/Lobby/UI/Lobby_inputNamecard.png";
-import manitasPanelImage from "../../assets/Lobby/UI/Lobby_panel_manitas.png";
-import misticaPanelImage from "../../assets/Lobby/UI/Lobby_panel_mistica.png";
-
-const panelImagesByRole = {
-  empollon: empollonPanelImage,
-  guaperas: guaperasPanelImage,
-  manitas: manitasPanelImage,
-  mistica: misticaPanelImage,
-};
-
 export function LobbyRolePanel({
   role,
   nameDraft,
@@ -18,19 +5,30 @@ export function LobbyRolePanel({
   onNameChange,
   onNameCommit,
 }) {
-  const panelImage = panelImagesByRole[role.id] || empollonPanelImage;
-
   return (
-    <aside className="lobby-role-panel lobby-fixed-panel" aria-label={`Ficha de ${role.label}`}>
-      <img className="lobby-fixed-panel-image" src={panelImage} alt={`Ficha de ${role.label}`} draggable="false" />
+    <aside className="lobby-role-panel e2-panel" aria-label={`Ficha de ${role.label}`}>
+      <div className="lobby-panel-kicker">operator profile</div>
+      <h2>{role.label}</h2>
+      <p>{role.text}</p>
 
-      <div className="lobby-fixed-name" aria-label="Nombre de jugador">
-        <img className="lobby-fixed-name-image" src={inputNameCardImage} alt="" aria-hidden="true" draggable="false" />
-        <label className="sr-only" htmlFor="lobby-player-name">Nombre</label>
+      <dl className="lobby-role-specs">
+        <div>
+          <dt>Especialidad</dt>
+          <dd>{role.kicker}</dd>
+        </div>
+        <div>
+          <dt>Cartas</dt>
+          <dd>{role.cards}</dd>
+        </div>
+      </dl>
+
+      <label className="lobby-name-field" htmlFor="lobby-player-name">
+        <span>Operator ID</span>
         <input
           id="lobby-player-name"
           value={nameDraft}
           maxLength={24}
+          placeholder="// nombre..."
           onChange={(event) => onNameChange?.(event.target.value)}
           onBlur={onNameCommit}
           onKeyDown={(event) => {
@@ -39,7 +37,7 @@ export function LobbyRolePanel({
             }
           }}
         />
-      </div>
+      </label>
 
       {actionSlot}
     </aside>

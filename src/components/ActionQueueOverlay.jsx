@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { buildQueuedActionChipModels } from "../presentation/actionQueuePresentation.js";
 import { getPulseBadgeStatus, getPulseProgress } from "../presentation/pulsePresentation.js";
-import { NBadge, NProgress } from "./newton/index.js";
+import { NBadge, NProgress } from "./e2/index.js";
 
 function useTick(active) {
   const [, setTick] = useState(0);

@@ -88,7 +88,7 @@ a {
   line-height: 1.5;
 }
 
-.newton-logo {
+.e2-logo {
   display: inline-flex;
   align-items: center;
   gap: 14px;
@@ -96,33 +96,21 @@ a {
   text-transform: uppercase;
 }
 
-.newton-logo img {
-  width: 74px;
-  height: 74px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 18px rgba(207, 255, 138, 0.2));
-}
-
-.newton-logo span,
-.newton-logo strong {
+.e2-logo span,
+.e2-logo strong {
   display: block;
   line-height: 0.9;
 }
 
-.newton-logo span {
+.e2-logo span {
   color: var(--color-cream);
   font-size: 17px;
   letter-spacing: 0.1em;
 }
 
-.newton-logo strong {
+.e2-logo strong {
   font-size: 33px;
   font-weight: 900;
-}
-
-.newton-logo-compact img {
-  width: 70px;
-  height: 70px;
 }
 
 .n-card {
@@ -1183,7 +1171,7 @@ a {
   gap: 24px;
 }
 
-.lobby-footer .newton-logo img {
+.lobby-footer .e2-logo img {
   width: 116px;
   height: 116px;
 }
@@ -2801,20 +2789,141 @@ a {
 .software-load-arrows {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 4px;
+  gap: 6px;
   align-items: center;
 }
 
 .software-load-arrow {
-  width: 100%;
-  min-width: 0;
+  --arrow-color: var(--text-tertiary);
+  --arrow-bg: rgba(255, 255, 255, 0.035);
+  position: relative;
   aspect-ratio: 1;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.24));
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--arrow-color) 45%, transparent);
+  clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--arrow-color) 12%, transparent), transparent 44%),
+    var(--arrow-bg);
+  color: var(--arrow-color);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.28);
+  isolation: isolate;
+}
+
+.software-load-arrow::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--arrow-color) 18%, transparent);
+  clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
+  opacity: 0.9;
+}
+
+.software-load-arrow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.12) 3px,
+    rgba(0, 0, 0, 0.12) 4px
+  );
+  pointer-events: none;
+}
+
+.software-load-arrow.state-pulsed {
+  --arrow-color: var(--neon-cyan);
+  --arrow-bg: var(--neon-cyan-bg);
+  box-shadow: var(--neon-cyan-glow-sm), inset 0 0 22px rgba(0, 234, 255, 0.1);
+  animation: software-load-arrow-pulse 260ms linear infinite;
+}
+
+.software-load-arrow.state-confirmed {
+  --arrow-color: var(--neon-green);
+  --arrow-bg: var(--neon-green-bg);
+  box-shadow: var(--neon-green-glow-sm), inset 0 0 22px rgba(0, 255, 135, 0.1);
 }
 
 .software-load-arrow.is-wrong {
+  --arrow-color: var(--neon-magenta);
+  --arrow-bg: var(--neon-magenta-bg);
+  box-shadow: var(--neon-magenta-glow-md);
   animation: software-load-shake 120ms linear 2;
+}
+
+.software-load-arrow-index,
+.software-load-arrow-key {
+  position: absolute;
+  z-index: 4;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.software-load-arrow-index {
+  top: 6px;
+  left: 7px;
+  color: var(--text-ghost);
+}
+
+.software-load-arrow-key {
+  right: 7px;
+  bottom: 6px;
+  color: currentColor;
+  text-shadow: 0 0 6px currentColor;
+}
+
+.software-load-arrow-glyph {
+  position: relative;
+  z-index: 2;
+  width: 38%;
+  height: 38%;
+  transform: rotate(var(--arrow-rotation, 0deg));
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.software-load-arrow-glyph::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 7%;
+  width: 42%;
+  height: 56%;
+  background: currentColor;
+  clip-path: polygon(50% 0, 100% 42%, 66% 42%, 66% 100%, 34% 100%, 34% 42%, 0 42%);
+  transform: translateX(-50%);
+}
+
+.software-load-arrow-glyph::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 96%;
+  height: 32%;
+  border: 1px solid currentColor;
+  clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+  transform: translateX(-50%);
+  opacity: 0.42;
+}
+
+.software-load-arrow.direction-right {
+  --arrow-rotation: 90deg;
+}
+
+.software-load-arrow.direction-down {
+  --arrow-rotation: 180deg;
+}
+
+.software-load-arrow.direction-left {
+  --arrow-rotation: -90deg;
 }
 
 .software-load-minigame small {
@@ -2870,6 +2979,17 @@ a {
 
   75% {
     transform: translateX(4px);
+  }
+}
+
+@keyframes software-load-arrow-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.35);
   }
 }
 
@@ -3341,12 +3461,12 @@ a {
   right: 10px;
 }
 
-.react-player-monitor-view .newton-logo span,
-.react-player-monitor-view .newton-logo strong {
+.react-player-monitor-view .e2-logo span,
+.react-player-monitor-view .e2-logo strong {
   display: none;
 }
 
-.react-player-monitor-view .newton-logo img {
+.react-player-monitor-view .e2-logo img {
   width: 40px;
   height: 40px;
 }
@@ -3503,7 +3623,7 @@ code {
     right: 18px;
   }
 
-  .lobby-footer .newton-logo img {
+  .lobby-footer .e2-logo img {
     width: 76px;
     height: 76px;
   }
@@ -3582,12 +3702,12 @@ code {
     gap: 8px;
   }
 
-  .player-topbar .newton-logo span,
-  .player-topbar .newton-logo strong {
+  .player-topbar .e2-logo span,
+  .player-topbar .e2-logo strong {
     display: none;
   }
 
-  .player-topbar .newton-logo img {
+  .player-topbar .e2-logo img {
     width: 55px;
     height: 55px;
   }
@@ -4584,4 +4704,900 @@ code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ============================================================
+   EL EXAMEN 2 DESIGN SYSTEM IMPLEMENTATION
+   Punk-tech terminal layer over the existing React app.
+   ============================================================ */
+
+* {
+  scrollbar-color: var(--border-bright) var(--bg-base);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 0;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+}
+
+.react-screen,
+.e2-screen {
+  color: var(--text-primary);
+  background:
+    linear-gradient(rgba(0, 255, 135, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 135, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 15% 0%, rgba(0, 234, 255, 0.08), transparent 34%),
+    radial-gradient(circle at 92% 16%, rgba(255, 45, 120, 0.08), transparent 28%),
+    linear-gradient(135deg, var(--bg-base), var(--bg-void));
+  background-size: 44px 44px, 44px 44px, auto, auto, auto;
+}
+
+.react-screen::before,
+.lobby-screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  opacity: 0.45;
+}
+
+.react-screen > *,
+.lobby-screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+.react-screen h1,
+.react-screen h2,
+.react-screen h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.react-screen p {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+}
+
+.e2-logo {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-direction: column;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.e2-logo strong,
+.e2-logo span {
+  display: inline;
+  line-height: 0.9;
+}
+
+.e2-logo strong {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  text-shadow: var(--neon-green-glow-sm);
+}
+
+.e2-logo strong span {
+  color: var(--neon-green);
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.e2-logo small {
+  color: var(--text-ghost);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+
+.e2-logo-compact strong {
+  font-size: 24px;
+}
+
+.n-card,
+.e2-panel,
+.react-gm-monitor,
+.react-gm-monitors-toggle,
+.react-gm-coordinate-map,
+.react-gm-scene-control,
+.player-side-card,
+.scene-object-card,
+.item-modal,
+.event-log-body,
+.access-console,
+.waiting-console {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-dim);
+  border-radius: 0;
+  clip-path: var(--clip-md);
+  background:
+    radial-gradient(circle at 0 0, rgba(0, 255, 135, 0.08), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 40%),
+    var(--bg-surface);
+  box-shadow: none;
+}
+
+.n-card::after,
+.e2-panel::after,
+.react-gm-monitor::after,
+.scene-object-card::after,
+.item-modal::after,
+.access-console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(0, 0, 0, 0.09) 3px,
+    rgba(0, 0, 0, 0.09) 4px
+  );
+  opacity: 0.55;
+}
+
+.n-card > *,
+.e2-panel > *,
+.react-gm-monitor > *,
+.scene-object-card > *,
+.item-modal > *,
+.access-console > * {
+  position: relative;
+  z-index: 1;
+}
+
+.n-card-glow {
+  border-color: rgba(0, 255, 135, 0.72);
+  box-shadow: var(--neon-green-glow-md);
+}
+
+.n-card-gold {
+  border-color: rgba(255, 234, 0, 0.72);
+  box-shadow: var(--neon-yellow-glow-sm);
+}
+
+.n-card-title {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.n-card-title span {
+  color: var(--neon-green);
+}
+
+.n-btn,
+.session-code-copy,
+.gm-variant-btn,
+.gm-effect-btn,
+.drop-zone-confirm-btn,
+.drop-zone-cancel-btn,
+.react-link-button,
+.event-log-toggle,
+.event-log-clear,
+.react-chat-form button {
+  border: 1px solid var(--border-mid);
+  border-radius: 0;
+  clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.n-btn:hover:not(:disabled),
+.session-code-copy:hover,
+.gm-variant-btn:hover:not(:disabled),
+.gm-effect-btn:hover,
+.drop-zone-confirm-btn:hover,
+.drop-zone-cancel-btn:hover,
+.react-link-button:hover,
+.event-log-toggle:hover,
+.event-log-clear:hover,
+.react-chat-form button:hover:not(:disabled) {
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+  box-shadow: var(--neon-green-glow-sm);
+  text-decoration: none;
+}
+
+.n-btn-primary,
+.drop-zone-confirm-btn {
+  border-color: var(--neon-green);
+  background: var(--neon-green);
+  color: var(--bg-void);
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.n-btn-danger {
+  border-color: var(--neon-magenta);
+  background: var(--neon-magenta-bg);
+  color: var(--neon-magenta);
+}
+
+.n-btn-ghost,
+.react-link-button {
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.n-btn:disabled,
+.react-chat-form button:disabled,
+.gm-variant-btn:disabled {
+  opacity: 0.38;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.n-badge {
+  border: 1px solid currentColor;
+  border-radius: 0;
+  clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.n-badge span {
+  border-radius: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.n-badge-info,
+.n-badge-success,
+.n-badge-lime {
+  color: var(--neon-green);
+}
+
+.n-badge-warning,
+.n-badge-amber {
+  color: var(--neon-yellow);
+}
+
+.n-badge-danger {
+  color: var(--neon-magenta);
+}
+
+.n-badge-muted,
+.n-badge-slate,
+.n-badge-room {
+  color: var(--text-tertiary);
+}
+
+.n-progress-track {
+  height: 8px;
+  border: 1px solid var(--border-dim);
+  background: var(--bg-void);
+}
+
+.n-progress-fill {
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.n-progress-blue,
+.n-progress-lime {
+  background: var(--neon-green);
+}
+
+.n-progress-gold,
+.n-progress-amber {
+  background: var(--neon-yellow);
+}
+
+.n-progress-crimson {
+  background: var(--neon-magenta);
+}
+
+.n-timer {
+  color: var(--neon-green);
+  font-family: var(--font-mono);
+  text-shadow: var(--neon-green-glow-sm);
+}
+
+.react-form input,
+.react-chat-form input,
+.lobby-name-field input,
+.n-field input,
+.n-field textarea,
+.n-field select {
+  border: 1px solid var(--border-mid);
+  border-radius: 0;
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  caret-color: var(--neon-green);
+}
+
+.react-form input:focus,
+.react-chat-form input:focus,
+.lobby-name-field input:focus,
+.n-field input:focus,
+.n-field textarea:focus,
+.n-field select:focus {
+  border-color: var(--neon-green);
+  box-shadow: var(--neon-green-glow-sm);
+  outline: none;
+}
+
+/* Access */
+
+.react-access-screen {
+  padding: 24px;
+}
+
+.access-console {
+  width: min(560px, 100%);
+  gap: 16px;
+}
+
+.access-console h1 {
+  margin-top: 0;
+  color: var(--text-primary);
+  text-shadow: var(--neon-green-glow-sm);
+}
+
+.access-console .n-badge {
+  align-self: flex-start;
+}
+
+.access-console::before {
+  content: "> awaiting auth";
+  position: absolute;
+  right: 18px;
+  top: 14px;
+  color: var(--text-ghost);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* Lobby */
+
+.lobby-screen {
+  min-height: 100vh;
+  padding: clamp(16px, 3vw, 32px);
+  overflow: hidden auto;
+  background:
+    linear-gradient(rgba(0, 255, 135, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 135, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 24% 12%, rgba(0, 234, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 80% 8%, rgba(255, 45, 120, 0.1), transparent 32%),
+    var(--bg-void);
+  background-size: 44px 44px, 44px 44px, auto, auto, auto;
+}
+
+.lobby-screen::after {
+  display: none;
+}
+
+.lobby-command-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(16px, 3vw, 32px);
+  width: min(1440px, 100%);
+  margin: 0 auto 24px;
+  border-bottom: 1px solid rgba(0, 255, 135, 0.18);
+  padding-bottom: 18px;
+}
+
+.lobby-title-block span,
+.lobby-panel-kicker,
+.lobby-name-field span,
+.lobby-role-card-status,
+.lobby-role-card-index,
+.lobby-command-status span {
+  color: var(--text-ghost);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lobby-title-block h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(42px, 6vw, 96px);
+  letter-spacing: 0.08em;
+  line-height: 0.92;
+  text-shadow: var(--neon-green-glow-sm);
+}
+
+.lobby-title-block p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.lobby-command-status {
+  min-width: 128px;
+  border: 1px solid var(--border-mid);
+  clip-path: var(--clip-sm);
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  text-align: right;
+}
+
+.lobby-command-status strong {
+  display: block;
+  color: var(--neon-green);
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.lobby-layout {
+  width: min(1440px, 100%);
+  min-height: min(720px, calc(100svh - 160px));
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: clamp(18px, 3vw, 34px);
+  margin: 0 auto;
+}
+
+.lobby-role-panel {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  width: auto;
+  aspect-ratio: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(22px, 3vw, 34px);
+  filter: none;
+}
+
+.lobby-role-panel h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(42px, 5vw, 74px);
+  letter-spacing: 0.08em;
+  line-height: 0.9;
+}
+
+.lobby-role-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.lobby-role-specs {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.lobby-role-specs div {
+  border-left: 2px solid var(--neon-green);
+  padding-left: 12px;
+}
+
+.lobby-role-specs dt {
+  color: var(--text-ghost);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.lobby-role-specs dd {
+  margin: 3px 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.lobby-name-field {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.lobby-name-field input {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+}
+
+.lobby-panel-action-area {
+  display: grid;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.lobby-hold-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 22px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.lobby-action-button {
+  position: relative;
+  width: 100%;
+  min-height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--neon-green);
+  clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
+  background: var(--neon-green-bg);
+  color: var(--neon-green);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.lobby-action-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0, 255, 135, 0.32), rgba(0, 255, 135, 0.08));
+  transform: translateX(-102%);
+  opacity: 0;
+}
+
+.lobby-action-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.lobby-action-button:hover:not(:disabled) {
+  background: var(--neon-green-bg-hi);
+  box-shadow: var(--neon-green-glow-md);
+}
+
+.lobby-action-button:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.lobby-action-button.is-holding::before {
+  opacity: 1;
+  animation: lobbyHoldFill var(--lobby-hold-duration, 1000ms) linear forwards;
+}
+
+.lobby-role-grid {
+  position: relative;
+  inset: auto;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 18px);
+  align-items: stretch;
+  justify-content: stretch;
+  touch-action: auto;
+  user-select: auto;
+}
+
+.lobby-role-card {
+  position: relative;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-mid);
+  clip-path: var(--clip-md);
+  padding: 18px;
+  background:
+    radial-gradient(circle at 0 0, rgba(0, 234, 255, 0.08), transparent 44%),
+    var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), background var(--transition-fast);
+}
+
+.lobby-role-card::after {
+  content: "";
+  position: absolute;
+  right: -18px;
+  bottom: 18px;
+  width: 120px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.35;
+  transform: rotate(-18deg);
+}
+
+.lobby-role-card:hover,
+.lobby-role-card.selected {
+  border-color: var(--neon-green);
+  background:
+    radial-gradient(circle at 0 0, rgba(0, 255, 135, 0.12), transparent 48%),
+    var(--bg-panel);
+  box-shadow: var(--neon-green-glow-sm);
+  transform: translateY(-2px);
+}
+
+.lobby-role-card.claimed {
+  border-color: var(--neon-yellow);
+}
+
+.lobby-role-card.other-previewing {
+  border-color: var(--neon-cyan);
+}
+
+.lobby-role-card strong {
+  margin-top: auto;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4vw, 58px);
+  letter-spacing: 0.08em;
+  line-height: 0.9;
+  text-transform: uppercase;
+}
+
+.lobby-role-card-status {
+  align-self: flex-end;
+  border: 1px solid currentColor;
+  clip-path: polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%);
+  padding: 4px 8px;
+  color: var(--neon-green);
+}
+
+.lobby-role-card.claimed .lobby-role-card-status {
+  color: var(--neon-yellow);
+}
+
+.lobby-role-card.other-previewing .lobby-role-card-status {
+  color: var(--neon-cyan);
+}
+
+.lobby-role-card-index {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  color: var(--text-ghost);
+  font-size: 18px;
+}
+
+.lobby-role-card-kicker,
+.lobby-role-card-cards,
+.lobby-role-card-player {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.lobby-role-card-cards {
+  color: var(--text-tertiary);
+}
+
+.lobby-role-card-player {
+  margin-top: 4px;
+  color: var(--neon-green);
+}
+
+.lobby-system-log {
+  width: min(1440px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px auto 0;
+  border-top: 1px solid rgba(0, 255, 135, 0.16);
+  padding-top: 12px;
+  color: var(--neon-green);
+  font-family: var(--font-mono);
+}
+
+.lobby-system-log p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.lobby-transitioning {
+  animation: glitch-x 0.24s steps(1) 2;
+}
+
+/* GM and Player restyle */
+
+.react-screen-header {
+  border-bottom: 1px solid rgba(0, 255, 135, 0.18);
+  padding-bottom: 18px;
+}
+
+.react-gm-grid {
+  gap: 18px;
+}
+
+.react-gm-monitors-toggle {
+  clip-path: var(--clip-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.react-gm-monitors-toggle:hover {
+  border-color: var(--neon-green);
+  background: var(--bg-panel);
+}
+
+.react-gm-monitors-collapsible .react-gm-monitor-wall {
+  border-color: var(--border-dim);
+  border-radius: 0;
+  background: rgba(8, 12, 20, 0.78);
+}
+
+.react-gm-monitor iframe {
+  background: var(--bg-void);
+}
+
+.session-code,
+.player-code-value,
+.react-status,
+.react-list-item,
+.react-chat-message,
+.player-monitor-action-strip,
+.event-log-entry {
+  font-family: var(--font-mono);
+}
+
+.player-scene-preview {
+  border: 1px solid var(--border-dim);
+  border-radius: 0;
+  background: var(--bg-void);
+  box-shadow: none;
+}
+
+.player-topbar,
+.player-monitor-action-strip,
+.event-log-toggle,
+.scene-queue-overlay,
+.react-result-overlay {
+  border: 1px solid var(--border-dim);
+  border-radius: 0;
+  clip-path: var(--clip-sm);
+  background: rgba(8, 12, 20, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.player-topbar {
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.react-action-card {
+  border-radius: 0;
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.react-action-card:hover,
+.react-action-card.selected {
+  filter: saturate(1.15) brightness(1.12) drop-shadow(0 0 12px rgba(0, 255, 135, 0.32));
+}
+
+.action-info-popover {
+  border-radius: 0;
+  border-color: var(--neon-green);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.scene-map-hotspot {
+  border-radius: 0;
+  font-family: var(--font-mono);
+}
+
+.scene-map-hotspot.selected,
+.scene-map-hotspot:hover {
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.react-chat-form {
+  gap: 8px;
+}
+
+.item-modal-backdrop {
+  background: rgba(5, 8, 16, 0.86);
+}
+
+.event-log-panel {
+  font-family: var(--font-mono);
+}
+
+.gm-effect-btn.active,
+.gm-variant-btn.active {
+  border-color: var(--neon-green);
+  background: var(--neon-green-bg);
+  color: var(--neon-green);
+  box-shadow: var(--neon-green-glow-sm);
+}
+
+.gm-system-interference,
+.gm-camera-tracking-badge,
+.gm-door-locked-badge,
+.gm-containment-overlay span {
+  border-radius: 0;
+  font-family: var(--font-mono);
+}
+
+@media (max-width: 980px) {
+  .lobby-command-bar {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .lobby-command-status {
+    width: 100%;
+    text-align: left;
+  }
+
+  .lobby-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+@media (max-width: 680px) {
+  .lobby-screen {
+    padding: 14px;
+  }
+
+  .lobby-role-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-role-card {
+    min-height: 220px;
+  }
+
+  .lobby-title-block h1 {
+    font-size: 48px;
+  }
 }

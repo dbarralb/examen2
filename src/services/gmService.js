@@ -55,6 +55,38 @@ export async function startGame() {
   return getRemoteState();
 }
 
+export async function forceStartGameWithReadyPlayers() {
+  const now = Date.now();
+  const remoteState = await getRemoteState();
+  const roleClaims = remoteState?.lobby?.roleClaims || {};
+  const readyClaims = Object.values(roleClaims).filter(Boolean);
+
+  if (readyClaims.length < 1) {
+    throw new Error("Necesitas al menos 1 jugador preparado para iniciar.");
+  }
+
+  const session = remoteState?.session || {};
+  const nextLog = [
+    `GM inicia partida con ${readyClaims.length} jugador(es) preparado(s). ${new Date().toLocaleTimeString()}`,
+    ...normalizeActionLog(remoteState.actionLog),
+  ];
+
+  await firebasePatch("session", {
+    ...session,
+    status: "in_game",
+    gmClientId: session.gmClientId || getOrCreateClientId(),
+    gameTimer: {
+      status: "running",
+      startedAt: now,
+      elapsedBeforeStartMs: 0,
+    },
+    updatedAt: now,
+  });
+  await firebasePut("actionLog", nextLog);
+
+  return getRemoteState();
+}
+
 export async function resetGame() {
   const initialState = buildInitialRemoteState("role_select");
   initialState.actionLog = [

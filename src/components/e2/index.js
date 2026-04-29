@@ -1,4 +1,4 @@
-export { NewtonLogo } from "./NewtonLogo.jsx";
+export { E2Logo } from "./E2Logo.jsx";
 export { NButton } from "./NButton.jsx";
 export { NBadge } from "./NBadge.jsx";
 export { NCard } from "./NCard.jsx";

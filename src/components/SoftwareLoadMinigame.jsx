@@ -1,23 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NButton } from "./newton";
-import arrowDownConfirmed from "../../assets/Pantalla de juego/Arrows/Arrow_Down_Confirmed.png";
-import arrowDownIdle from "../../assets/Pantalla de juego/Arrows/Arrow_Down_Idle.png";
-import arrowDownPulsed from "../../assets/Pantalla de juego/Arrows/Arrow_Down_Pulsed.png";
-import arrowLeftConfirmed from "../../assets/Pantalla de juego/Arrows/Arrow_Left_Confirmed.png";
-import arrowLeftIdle from "../../assets/Pantalla de juego/Arrows/Arrow_Left_Idle.png";
-import arrowLeftPulsed from "../../assets/Pantalla de juego/Arrows/Arrow_Left_Pulsed.png";
-import arrowRightConfirmed from "../../assets/Pantalla de juego/Arrows/Arrow_Right_Confirmed.png";
-import arrowRightIdle from "../../assets/Pantalla de juego/Arrows/Arrow_Right_Idle.png";
-import arrowRightPulsed from "../../assets/Pantalla de juego/Arrows/Arrow_Right_Pulsed.png";
-import arrowUpConfirmed from "../../assets/Pantalla de juego/Arrows/Arrow_Up_Confirmed.png";
-import arrowUpIdle from "../../assets/Pantalla de juego/Arrows/Arrow_Up_Idle.png";
-import arrowUpPulsed from "../../assets/Pantalla de juego/Arrows/Arrow_Up_Pulsed.png";
+import { NButton } from "./e2";
 
-const DIRECTION_ASSETS = {
-  up: { idle: arrowUpIdle, pulsed: arrowUpPulsed, confirmed: arrowUpConfirmed, label: "arriba" },
-  down: { idle: arrowDownIdle, pulsed: arrowDownPulsed, confirmed: arrowDownConfirmed, label: "abajo" },
-  left: { idle: arrowLeftIdle, pulsed: arrowLeftPulsed, confirmed: arrowLeftConfirmed, label: "izquierda" },
-  right: { idle: arrowRightIdle, pulsed: arrowRightPulsed, confirmed: arrowRightConfirmed, label: "derecha" },
+const DIRECTION_META = {
+  up: { label: "arriba", key: "W" },
+  down: { label: "abajo", key: "S" },
+  left: { label: "izquierda", key: "A" },
+  right: { label: "derecha", key: "D" },
 };
 
 const KEY_DIRECTIONS = {
@@ -103,8 +91,8 @@ export function SoftwareLoadMinigame({ action, onChange, onSuccess, onRetry, onC
         index,
         state,
         isWrong: index === minigame.wrongIndex,
-        asset: DIRECTION_ASSETS[direction]?.[state] || DIRECTION_ASSETS.up[state],
-        label: DIRECTION_ASSETS[direction]?.label || direction,
+        keyLabel: DIRECTION_META[direction]?.key || "?",
+        label: DIRECTION_META[direction]?.label || direction,
       };
     });
   }, [minigame.currentIndex, minigame.pulsedIndex, minigame.status, minigame.wrongIndex, sequence]);
@@ -249,13 +237,15 @@ export function SoftwareLoadMinigame({ action, onChange, onSuccess, onRetry, onC
       </div>
       <div className="software-load-arrows" aria-hidden="true">
         {arrowItems.map((arrow) => (
-          <img
+          <span
             key={`${arrow.direction}-${arrow.index}-${minigame.wrongFlashId}`}
-            className={`software-load-arrow ${arrow.isWrong ? "is-wrong" : ""}`}
-            src={arrow.asset}
-            alt=""
-            draggable="false"
-          />
+            className={`software-load-arrow direction-${arrow.direction} state-${arrow.state} ${arrow.isWrong ? "is-wrong" : ""}`}
+            title={arrow.label}
+          >
+            <span className="software-load-arrow-index">{String(arrow.index + 1).padStart(2, "0")}</span>
+            <span className="software-load-arrow-glyph" />
+            <span className="software-load-arrow-key">{arrow.keyLabel}</span>
+          </span>
         ))}
       </div>
       {!isTerminal && <small>Pulsa WASD o las flechas en orden para completar la carga.</small>}

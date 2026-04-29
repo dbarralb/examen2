@@ -5,7 +5,18 @@
       "Bash(curl -s \"https://project-butterfly-d0242-default-rtdb.firebaseio.com/.json\")",
       "Bash(powershell -Command \"Rename-Item -Path 'Instituto Newton Design System' -NewName 'Instituto Newton Design System OLD' -Force; Rename-Item -Path 'Instituto Newton Design System V2' -NewName 'Instituto Newton Design System V2 OLD' -Force\")",
       "Bash(npm run:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(xargs wc:*)",
+      "Bash(npm.cmd run:*)",
+      "Bash(grep -E \"\\\\.\\(js|jsx\\)$\")",
+      "Bash(grep -E \"\\\\.tsx?$|\\\\.jsx?$\")",
+      "Bash(grep -E \"\\\\.jsx?$\")",
+      "Bash(mv gdd_el_examen_2_mvp.md docs/archive/)",
+      "Bash(mv gimnasio_logica_programable_mvp.md docs/archive/)",
+      "Bash(mv GYM_NARRATIVE_AND_CHARACTER_PROMPTS.md docs/archive/)",
+      "Bash(mv GYM_SCENE_ART_DIRECTION.md docs/archive/)",
+      "Bash(mv sistema_narrativo_Examen2_protocolo_eco.md docs/archive/)",
+      "Bash(grep -E \"\\\\.\\(md|txt|doc\\)$\")"
     ]
   }
 }

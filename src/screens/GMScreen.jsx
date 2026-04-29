@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { NBadge, NButton, NCard, NTimer, NewtonLogo } from "../components/newton";
+import { E2Logo, NBadge, NButton, NCard, NTimer } from "../components/e2";
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
@@ -9,7 +9,7 @@ import { DEFAULT_SCENARIO_ID, SCENARIO_VARIANTS, getScenario } from "../data/sce
 import { getScenarioHotspots } from "../data/scenarioContent.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
-import { getRemoteState, resetGame, startGame } from "../services/gmService.js";
+import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { getAlarmRecommendations } from "../services/gameRules.js";
 import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
 import { startManualPulse } from "../services/pulseService.js";
@@ -53,6 +53,7 @@ export function GMScreen() {
   const activeScenario = getScenario(sessionState.scenarioId || DEFAULT_SCENARIO_ID);
   const coordinateTargets = getScenarioHotspots(activeScenario.id, "A");
   const gameState = remoteState?.gameState || {};
+  const readyPlayerCount = Object.values(remoteState?.lobby?.roleClaims || {}).filter(Boolean).length;
 
   // Firebase strips empty arrays — normalize to safe defaults
   const rawGmScene = gameState.gmSceneState || {};
@@ -137,6 +138,21 @@ export function GMScreen() {
     }
   }
 
+  async function handleForceStartGame() {
+    setIsBusy(true);
+    setStatusMessage("Iniciando partida...");
+    try {
+      const nextState = await forceStartGameWithReadyPlayers();
+      setRemoteState(nextState);
+      setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
+      setStatusMessage(`Partida iniciada con ${readyPlayerCount || 1} jugador(es) preparado(s).`);
+    } catch (error) {
+      setStatusMessage(error.message || "No se pudo iniciar la partida.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function handleStartPulse() {
     setIsPulseBusy(true);
     setStatusMessage("Preparando pulso...");
@@ -175,7 +191,7 @@ export function GMScreen() {
   return (
     <main className="react-screen react-gm-screen">
       <header className="react-screen-header">
-        <NewtonLogo />
+        <E2Logo />
         <div>
           <NBadge status="info">Panel GM</NBadge>
           <NBadge status="muted">{activeScenario.label}</NBadge>
@@ -276,11 +292,21 @@ export function GMScreen() {
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">
             <NButton onClick={handleStartGame} disabled={isBusy}>Abrir lobby</NButton>
+            <NButton
+              variant="secondary"
+              onClick={handleForceStartGame}
+              disabled={isBusy || session.status === "in_game" || readyPlayerCount < 1}
+            >
+              Iniciar partida
+            </NButton>
             <NButton variant="danger" onClick={handleResetGame} disabled={isBusy}>Resetear</NButton>
             <NButton variant="ghost" onClick={() => setShowCoordinates((v) => !v)}>
               {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
             </NButton>
           </div>
+          <p className="react-status gm-start-rule">
+            Inicio manual GM: disponible con {readyPlayerCount} jugador(es) preparado(s).
+          </p>
         </NCard>
 
         {/* ---- Variantes por jugador ---- */}

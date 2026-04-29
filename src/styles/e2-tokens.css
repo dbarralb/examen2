@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+:root {
+  --bg-void: #050810;
+  --bg-base: #080C14;
+  --bg-deep: #050810;
+  --bg-surface: #0D1220;
+  --bg-raised: #131927;
+  --bg-panel: #161D2E;
+  --bg-panel-hi: #1A2235;
+  --bg-overlay: rgba(8, 12, 20, 0.86);
+
+  --border-dim: #1E2A3F;
+  --border-mid: #2A3855;
+  --border-bright: #3D5070;
+  --border-subtle: var(--border-dim);
+  --border-active: var(--neon-green);
+  --border-accent: var(--neon-cyan);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #A8B4CC;
+  --text-tertiary: #6B7A96;
+  --text-ghost: #3A4560;
+  --text-disabled: #2E3A50;
+
+  --neon-green: #00FF87;
+  --neon-green-dim: #00CC6A;
+  --neon-green-ultra: #AAFFDD;
+  --neon-green-bg: rgba(0, 255, 135, 0.08);
+  --neon-green-bg-hi: rgba(0, 255, 135, 0.16);
+  --neon-green-glow-sm: 0 0 6px rgba(0, 255, 135, 0.7);
+  --neon-green-glow-md: 0 0 14px rgba(0, 255, 135, 0.55), 0 0 30px rgba(0, 255, 135, 0.25);
+  --neon-green-glow-lg: 0 0 20px rgba(0, 255, 135, 0.7), 0 0 50px rgba(0, 255, 135, 0.35);
+
+  --neon-magenta: #FF2D78;
+  --neon-magenta-dim: #CC2460;
+  --neon-magenta-ultra: #FFAAC9;
+  --neon-magenta-bg: rgba(255, 45, 120, 0.08);
+  --neon-magenta-bg-hi: rgba(255, 45, 120, 0.16);
+  --neon-magenta-glow-sm: 0 0 6px rgba(255, 45, 120, 0.7);
+  --neon-magenta-glow-md: 0 0 14px rgba(255, 45, 120, 0.55), 0 0 30px rgba(255, 45, 120, 0.25);
+
+  --neon-purple: #9B00FF;
+  --neon-purple-dim: #7A00CC;
+  --neon-purple-bg: rgba(155, 0, 255, 0.08);
+  --neon-purple-glow-sm: 0 0 6px rgba(155, 0, 255, 0.7);
+  --neon-purple-glow-md: 0 0 14px rgba(155, 0, 255, 0.55), 0 0 30px rgba(155, 0, 255, 0.25);
+
+  --neon-cyan: #00EAFF;
+  --neon-cyan-dim: #00BBCC;
+  --neon-cyan-bg: rgba(0, 234, 255, 0.08);
+  --neon-cyan-glow-sm: 0 0 6px rgba(0, 234, 255, 0.7);
+  --neon-cyan-glow-md: 0 0 14px rgba(0, 234, 255, 0.55), 0 0 30px rgba(0, 234, 255, 0.25);
+
+  --neon-yellow: #FFEA00;
+  --neon-yellow-dim: #CCBB00;
+  --neon-yellow-bg: rgba(255, 234, 0, 0.08);
+  --neon-yellow-glow-sm: 0 0 6px rgba(255, 234, 0, 0.7);
+  --neon-yellow-glow-md: 0 0 14px rgba(255, 234, 0, 0.55), 0 0 30px rgba(255, 234, 0, 0.25);
+
+  --color-success: var(--neon-green);
+  --color-success-bg: var(--neon-green-bg);
+  --color-error: var(--neon-magenta);
+  --color-danger: var(--neon-magenta);
+  --color-danger-bg: var(--neon-magenta-bg);
+  --color-warning: var(--neon-yellow);
+  --color-warning-bg: var(--neon-yellow-bg);
+  --color-info: var(--neon-cyan);
+  --color-info-bg: var(--neon-cyan-bg);
+  --color-accent: var(--neon-purple);
+
+  --fg-primary: var(--text-primary);
+  --fg-secondary: var(--text-secondary);
+  --fg-muted: var(--text-tertiary);
+  --fg-inverse: var(--bg-void);
+  --fg-accent: var(--neon-green);
+
+  --color-lime: var(--neon-green);
+  --color-lime-hover: var(--neon-green-ultra);
+  --color-lime-dim: var(--neon-green-bg);
+  --color-amber: var(--neon-yellow);
+  --color-amber-hover: #FFF36A;
+  --color-amber-dim: var(--neon-yellow-bg);
+  --color-crimson: var(--neon-magenta);
+  --color-crimson-hover: var(--neon-magenta-ultra);
+  --color-crimson-dim: var(--neon-magenta-bg);
+  --color-cream: var(--text-secondary);
+  --color-cream-dim: var(--text-tertiary);
+  --color-gray-100: #DCE5F7;
+  --color-gray-200: var(--text-secondary);
+  --color-gray-300: var(--text-tertiary);
+  --color-gray-400: var(--text-ghost);
+  --color-teal-mid: var(--bg-panel);
+  --color-olive: var(--bg-raised);
+  --color-slate: var(--neon-purple);
+  --color-slate-light: var(--neon-cyan);
+
+  --font-display: 'Bebas Neue', 'Impact', sans-serif;
+  --font-body: 'Space Grotesk', 'DM Sans', sans-serif;
+  --font-ui: 'Space Grotesk', 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  --text-3xs: 11px;
+  --text-2xs: 13px;
+  --text-xs: 15px;
+  --text-sm: 18px;
+  --text-md: 24px;
+  --text-lg: 32px;
+  --text-xl: 48px;
+  --text-2xl: 64px;
+  --text-3xl: 96px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --clip-sm: polygon(12px 0%, 100% 0%, 100% 100%, 0% 100%, 0% 12px);
+  --clip-md: polygon(16px 0%, 100% 0%, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0% 100%, 0% 16px);
+  --clip-lg: polygon(24px 0%, 100% 0%, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0% 100%, 0% 24px);
+
+  --shadow-card: var(--neon-green-glow-sm);
+  --shadow-raised: var(--neon-cyan-glow-sm);
+  --shadow-deep: var(--neon-green-glow-md);
+  --glow-lime: var(--neon-green-glow-md);
+  --glow-amber: var(--neon-yellow-glow-md);
+  --glow-crimson: var(--neon-magenta-glow-md);
+
+  --transition-fast: 80ms linear;
+  --transition-base: 150ms linear;
+  --transition-slow: 300ms linear;
+  --ease-standard: linear;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.82; }
+  94% { opacity: 1; }
+  96% { opacity: 0.88; }
+  97% { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes glitch-x {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: var(--neon-green-glow-sm); }
+  50% { box-shadow: var(--neon-green-glow-md); }
+}

@@ -7,9 +7,12 @@
 | Capa | Tecnologia |
 |---|---|
 | UI | React (Vite) |
+| Sistema de diseno | `El Examen 2 Design System` |
 | Estado compartido | Firebase Realtime Database |
 | Sincronizacion | Polling 1s |
 | Routing | URL search params (`?screen=player&role=empollon`) |
+
+El sistema antiguo `Instituto Newton Design System` esta archivado en `docs/OLD/design-systems` y no debe usarse para nuevas pantallas.
 
 ## Escenarios y contenido
 
@@ -61,7 +64,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 
 1. GM abre lobby.
 2. Jugadores reclaman rol.
-3. La partida arranca cuando los roles estan completos.
+3. La partida arranca automaticamente cuando los roles estan completos, o manualmente desde GM con al menos 1 jugador preparado.
 4. Cada jugador ve su variante del almacen.
 5. Jugador abre hotspot, arrastra carta/item y completa minijuego.
 6. La accion entra en `queuedActions`.

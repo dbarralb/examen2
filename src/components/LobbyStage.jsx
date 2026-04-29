@@ -1,13 +1,36 @@
 import { useEffect, useRef, useState } from "react";
-import { NewtonLogo } from "./newton";
+import { E2Logo } from "./e2";
 import { LobbyRolePanel } from "./LobbyRolePanel.jsx";
 import { getLobbyRoles } from "../data/roles.js";
 import { getClaimForRole, getPlayerDisplayName, getPreviewingPlayer } from "../services/lobbyService.js";
-import changeButtonImage from "../../assets/Lobby/UI/Lobby_Button_Change.png";
-import continueButtonImage from "../../assets/Lobby/UI/Lobby_Button_Continue.png";
-import mouseHoldIcon from "../../assets/Lobby/UI/Icons/Mouse_Hold_icon.png";
 
-const selectorImage = "/assets/Lobby/Selector.png";
+function getRolePanelState({ claim, isOwnPreview, isWaiting, previewingPlayer }) {
+  if (claim) {
+    return {
+      label: isWaiting ? "listo" : "reservado",
+      className: "claimed",
+    };
+  }
+
+  if (isOwnPreview) {
+    return {
+      label: isWaiting ? "tu rol" : "seleccionando",
+      className: "previewed",
+    };
+  }
+
+  if (previewingPlayer) {
+    return {
+      label: "seleccionando",
+      className: "other-previewing",
+    };
+  }
+
+  return {
+    label: "disponible",
+    className: "available",
+  };
+}
 
 export function LobbyStage({
   mode = "select",
@@ -31,12 +54,12 @@ export function LobbyStage({
 }) {
   const roles = getLobbyRoles();
   const isWaiting = mode === "waiting";
-  const title = isWaiting ? "Esperando jugadores..." : "Selecciona un rol";
-  const ownDisplayName = getPlayerDisplayName(ownPlayer, lobby.players);
-  const actionImage = isWaiting ? changeButtonImage : continueButtonImage;
-  const actionLabel = isWaiting ? "Cambiar rol" : "Continuar";
+  const title = isWaiting ? "Awaiting squad" : "Select operator";
+  const subtitle = isWaiting ? "all operators must lock profile before breach" : "preview role, set name, hold to lock";
+  const actionLabel = isWaiting ? "Cambiar rol" : "Mantener para confirmar";
   const isActionDisabled = isBusy || (!isWaiting && !selectedRoleId);
   const holdDurationMs = 1000;
+  const ownDisplayName = getPlayerDisplayName(ownPlayer, lobby.players);
   const [isHoldingAction, setIsHoldingAction] = useState(false);
   const holdTimerRef = useRef(null);
   const holdCompletedRef = useRef(false);
@@ -138,126 +161,100 @@ export function LobbyStage({
   }
 
   return (
-    <main className={`react-screen lobby-screen ${isWaiting ? "lobby-screen-waiting" : "lobby-screen-select"} ${isTransitioning ? "lobby-transitioning" : ""}`}>
-      <header className="lobby-banner">
-        <h1>{title}</h1>
+    <main className={`react-screen lobby-screen e2-screen ${isWaiting ? "lobby-screen-waiting" : "lobby-screen-select"} ${isTransitioning ? "lobby-transitioning" : ""}`}>
+      <header className="lobby-command-bar">
+        <E2Logo />
+        <div className="lobby-title-block">
+          <span>// lobby node</span>
+          <h1>{title}</h1>
+          <p>{subtitle}</p>
+        </div>
+        <div className="lobby-command-status" aria-live="polite">
+          {countdownSeconds !== null ? (
+            <>
+              <span>launch</span>
+              <strong>{countdownSeconds}s</strong>
+            </>
+          ) : (
+            <>
+              <span>sync</span>
+              <strong>{isWaiting ? "armed" : "online"}</strong>
+            </>
+          )}
+        </div>
       </header>
 
-      <LobbyRolePanel
-        role={selectedRole}
-        nameDraft={nameDraft}
-        actionSlot={(
-          <div className="lobby-panel-action-area">
-            {countdownSeconds !== null && (
-              <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
-            )}
-            {!isWaiting && (
-              <div className="lobby-hold-hint" aria-hidden="true">
-                <span>Manten</span>
-                <img src={mouseHoldIcon} alt="" draggable="false" />
-                <span>para confirmar</span>
-              </div>
-            )}
-            <button
-              className={`lobby-image-action-button ${isHoldingAction ? "is-holding" : ""}`}
-              type="button"
-              onPointerDown={startContinueHold}
-              onPointerUp={cancelContinueHold}
-              onPointerCancel={cancelContinueHold}
-              onClick={handleActionClick}
-              disabled={isActionDisabled}
-              aria-label={actionLabel}
-              style={{ "--lobby-hold-duration": `${holdDurationMs}ms` }}
-            >
-              <img src={actionImage} alt="" aria-hidden="true" draggable="false" />
-            </button>
-          </div>
-        )}
-        onNameChange={onNameChange}
-        onNameCommit={onNameCommit}
-      />
-
-      <section className="lobby-character-row" aria-label="Personajes disponibles">
-        {roles.map((role) => {
-          const claim = getClaimForRole(lobby, role.id);
-          const isOwnPreview = selectedRoleId === role.id;
-          const previewingPlayer = !claim ? getPreviewingPlayer(lobby, role.id) : null;
-          const isSelected = Boolean(claim || isOwnPreview || previewingPlayer);
-          const showSelector = isOwnPreview;
-          const playerForClaim = claim?.clientId ? lobby.players[claim.clientId] : null;
-          const labelName = claim?.name || getPlayerDisplayName(playerForClaim, lobby.players);
-          const previewName = previewingPlayer ? getPlayerDisplayName(previewingPlayer, lobby.players) : null;
-
-          return (
-            <button
-              key={role.id}
-              className={`lobby-character lobby-character-${role.id} ${isOwnPreview ? "previewed" : ""} ${claim ? "claimed" : ""} ${previewingPlayer ? "other-previewing" : ""}`}
-              type="button"
-              onClick={() => onSelectRole?.(role.id)}
-            >
-              {showSelector && <img className="lobby-selector" src={selectorImage} alt="" aria-hidden="true" draggable="false" />}
-              <img className="lobby-character-image" src={isSelected ? role.lobby.selectedImage : role.lobby.idleImage} alt={role.label} draggable="false" />
-              <span className="lobby-character-meta">
-                {claim ? (
-                  <>
-                    <strong>{role.label}</strong>
-                    <span className="lobby-character-player">{labelName}</span>
-                    <em>Listo</em>
-                  </>
-                ) : isOwnPreview && !isWaiting ? (
-                  <>
-                    <strong>{role.label}</strong>
-                    <span className="lobby-character-player">{ownDisplayName}</span>
-                    <em>Seleccionando...</em>
-                  </>
-                ) : previewingPlayer ? (
-                  <>
-                    <strong>{role.label}</strong>
-                    <span className="lobby-character-player">{previewName}</span>
-                    <em>Eligiendo...</em>
-                  </>
-                ) : (
-                  <>
-                    <strong>{role.label}</strong>
-                    <em>Disponible</em>
-                  </>
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </section>
-
-      <footer className="lobby-footer">
-        <NewtonLogo compact />
-        <div className="lobby-footer-action-area">
-          {countdownSeconds !== null && (
-            <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
-          )}
-          {!isWaiting && (
-            <div className="lobby-hold-hint" aria-hidden="true">
-              <span>Mantén</span>
-              <img src={mouseHoldIcon} alt="" draggable="false" />
-              <span>para confirmar</span>
+      <section className="lobby-layout">
+        <LobbyRolePanel
+          role={selectedRole}
+          nameDraft={nameDraft}
+          actionSlot={(
+            <div className="lobby-panel-action-area">
+              {!isWaiting && (
+                <div className="lobby-hold-hint" aria-hidden="true">
+                  <span>[hold]</span>
+                  <span>1000ms lock window</span>
+                </div>
+              )}
+              {countdownSeconds !== null && (
+                <strong className="lobby-countdown">Entrando en {countdownSeconds}</strong>
+              )}
+              <button
+                className={`lobby-action-button ${isHoldingAction ? "is-holding" : ""}`}
+                type="button"
+                onPointerDown={startContinueHold}
+                onPointerUp={cancelContinueHold}
+                onPointerLeave={cancelContinueHold}
+                onPointerCancel={cancelContinueHold}
+                onClick={handleActionClick}
+                disabled={isActionDisabled}
+                style={{ "--lobby-hold-duration": `${holdDurationMs}ms` }}
+              >
+                <span>{actionLabel}</span>
+              </button>
             </div>
           )}
-          <button
-            className={`lobby-image-action-button ${isHoldingAction ? "is-holding" : ""}`}
-            type="button"
-            onPointerDown={startContinueHold}
-            onPointerUp={cancelContinueHold}
-            onPointerCancel={cancelContinueHold}
-            onClick={handleActionClick}
-            disabled={isActionDisabled}
-            aria-label={actionLabel}
-            style={{ "--lobby-hold-duration": `${holdDurationMs}ms` }}
-          >
-            <img src={actionImage} alt="" aria-hidden="true" draggable="false" />
-          </button>
-        </div>
-      </footer>
+          onNameChange={onNameChange}
+          onNameCommit={onNameCommit}
+        />
 
-      <p className="lobby-status-debug" role="status" aria-live="polite">{status}</p>
+        <section className="lobby-role-grid" aria-label="Personajes disponibles">
+          {roles.map((role) => {
+            const claim = getClaimForRole(lobby, role.id);
+            const isOwnPreview = selectedRoleId === role.id;
+            const previewingPlayer = !claim ? getPreviewingPlayer(lobby, role.id) : null;
+            const playerForClaim = claim?.clientId ? lobby.players[claim.clientId] : null;
+            const labelName = claim?.name || getPlayerDisplayName(playerForClaim, lobby.players);
+            const previewName = previewingPlayer ? getPlayerDisplayName(previewingPlayer, lobby.players) : null;
+            const state = getRolePanelState({ claim, isOwnPreview, isWaiting, previewingPlayer });
+            const playerName = claim ? labelName : isOwnPreview ? ownDisplayName : previewName;
+
+            return (
+              <button
+                key={role.id}
+                className={`lobby-role-card role-${role.id} ${state.className} ${isOwnPreview ? "selected" : ""}`}
+                type="button"
+                onClick={() => onSelectRole?.(role.id)}
+                aria-pressed={isOwnPreview}
+              >
+                <span className="lobby-role-card-index">{role.id.slice(0, 2)}</span>
+                <span className="lobby-role-card-status">{state.label}</span>
+                <strong>{role.label}</strong>
+                <span className="lobby-role-card-kicker">{role.kicker}</span>
+                <span className="lobby-role-card-cards">{role.cards}</span>
+                <span className="lobby-role-card-player">
+                  {playerName || (state.className === "available" ? "sin operador" : "resolviendo...")}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      </section>
+
+      <footer className="lobby-system-log">
+        <span aria-hidden="true">&gt;</span>
+        <p role="status" aria-live="polite">{status}</p>
+      </footer>
     </main>
   );
 }

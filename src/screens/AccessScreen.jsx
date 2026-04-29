@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NBadge, NButton, NCard, NewtonLogo } from "../components/newton";
+import { E2Logo, NBadge, NButton, NCard } from "../components/e2";
 import { getActiveSessionCode, getSession, normalizeSessionCode, storeSessionCode } from "../services/sessionAccess.js";
 
 export function AccessScreen({ navigation }) {
@@ -48,7 +48,7 @@ export function AccessScreen({ navigation }) {
   return (
     <main className="react-screen react-access-screen">
       <NCard className="access-console" glow>
-        <NewtonLogo />
+        <E2Logo />
         <NBadge status="info">Acceso restringido</NBadge>
         <h1>Código de sesión</h1>
         <p>

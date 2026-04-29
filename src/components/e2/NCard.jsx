@@ -3,7 +3,7 @@ export function NCard({ title, children, glow = false, gold = false, className =
 
   return (
     <section className={`n-card ${modifiers} ${className}`.trim()}>
-      {title && <h2 className="n-card-title">{title}</h2>}
+      {title && <h2 className="n-card-title"><span aria-hidden="true">//</span> {title}</h2>}
       {children}
     </section>
   );

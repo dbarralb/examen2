@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ActionQueueChip } from "./ActionQueueChip.jsx";
-import { NBadge, NProgress } from "./newton";
+import { NBadge, NProgress } from "./e2";
 import { buildQueuedActionChipModels } from "../presentation/actionQueuePresentation.js";
 import { getPulseBadgeStatus, getPulseProgress } from "../presentation/pulsePresentation.js";
 

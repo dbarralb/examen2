@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { NBadge, NCard, NProgress, NTimer, NewtonLogo } from "../components/newton";
+import { E2Logo, NBadge, NCard, NProgress, NTimer } from "../components/e2";
 import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
@@ -545,7 +545,7 @@ export function PlayerScreen({ navigation, params }) {
           </div>
         )}
         <div className="player-topbar">
-          <NewtonLogo compact />
+          <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
           <NTimer seconds={elapsedSeconds} />
         </div>

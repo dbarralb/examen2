@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { NBadge } from "./newton";
+import { NBadge } from "./e2";
 import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
 import { DeviceConsole } from "./DeviceConsole.jsx";
 import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
