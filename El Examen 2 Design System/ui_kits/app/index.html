@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Examen 2 — UI Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+  body { background: #050810; font-family: 'Space Grotesk', sans-serif; }
+
+  :root {
+    --bg-void: #050810; --bg-base: #080C14; --bg-surface: #0D1220;
+    --bg-raised: #131927; --bg-panel: #161D2E; --bg-panel-hi: #1A2235;
+    --border-dim: #1E2A3F; --border-mid: #2A3855; --border-bright: #3D5070;
+    --text-primary: #FFFFFF; --text-secondary: #A8B4CC;
+    --text-tertiary: #6B7A96; --text-ghost: #3A4560; --text-disabled: #2E3A50;
+    --neon-green: #00FF87; --neon-magenta: #FF2D78;
+    --neon-purple: #9B00FF; --neon-cyan: #00EAFF; --neon-yellow: #FFEA00;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-ui: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  @keyframes blink { 0%,50%{opacity:1}51%,100%{opacity:0} }
+  @keyframes flicker { 0%,100%{opacity:1}93%{opacity:0.85}94%{opacity:1}96%{opacity:0.9}97%{opacity:1} }
+  @keyframes scanMove { 0%{transform:translateY(-100%)}100%{transform:translateY(100vh)} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+  @keyframes glitchX { 0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-1px)} }
+
+  .scanlines-overlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.045) 2px, rgba(0,0,0,0.045) 4px);
+  }
+  .scan-beam {
+    position: fixed; left: 0; right: 0; height: 60px; pointer-events: none; z-index: 9998;
+    background: linear-gradient(to bottom, transparent, rgba(0,234,255,0.015), transparent);
+    animation: scanMove 8s linear infinite;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="scanlines-overlay"></div>
+<div class="scan-beam"></div>
+
+<script type="text/babel" src="Sidebar.jsx"></script>
+<script type="text/babel" src="TopBar.jsx"></script>
+<script type="text/babel" src="ScreenLogin.jsx"></script>
+<script type="text/babel" src="ScreenDashboard.jsx"></script>
+<script type="text/babel" src="ScreenTerminal.jsx"></script>
+<script type="text/babel" src="ScreenMission.jsx"></script>
+<script type="text/babel" src="App.jsx"></script>
+</body>
+</html>

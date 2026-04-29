@@ -12,6 +12,15 @@
 // blank. Content is defined per scenario when the adventure is written.
 // ---------------------------------------------------------------------------
 
+import {
+  getScenarioContainerOpenState,
+  getScenarioItem,
+  getScenarioTarget,
+  getScenarioTargetImage,
+  getScenarioTargetItems,
+  getScenarioTargetStateLabel,
+} from "./scenarioContent.js";
+
 // ---------------------------------------------------------------------------
 // 1. Hotspot families
 // ---------------------------------------------------------------------------
@@ -72,14 +81,14 @@ export const cards = [
 // 5. Utility functions
 // ---------------------------------------------------------------------------
 
-/** Items contained in a hotspot. Empty until scenario defines content. */
-export function getTargetItems(_targetId) {
-  return [];
+/** Items contained in a hotspot. Scenario-aware when IDs are provided. */
+export function getTargetItems(targetId, scenarioId = "almacen", variant = "A") {
+  return getScenarioTargetItems(targetId, scenarioId, variant);
 }
 
-/** Find an item by ID. Returns null until scenario defines items. */
-export function getItem(_itemId) {
-  return null;
+/** Find an item by ID. */
+export function getItem(itemId, scenarioId = "almacen", variant = "A") {
+  return getScenarioItem(itemId, scenarioId, variant);
 }
 
 /** Find a card by ID. */
@@ -89,7 +98,7 @@ export function getCard(cardId) {
 
 /** Find a hotspot by ID. */
 export function getTarget(targetId) {
-  return boardHotspots.find((t) => t.id === targetId);
+  return getScenarioTarget(targetId, "almacen", "A") || boardHotspots.find((t) => t.id === targetId);
 }
 
 /**
@@ -97,13 +106,13 @@ export function getTarget(targetId) {
  * Generic hotspots have no puzzle state yet — returns "idle" as baseline.
  * When scenario logic is implemented, this reads from playerBoards or gameState.
  */
-export function getTargetState(_target, _gameState) {
-  return "idle";
+export function getTargetState(target, gameState) {
+  return getScenarioTargetStateLabel(target, gameState);
 }
 
 /** Hotspot image. Returns empty string until scenario art is defined. */
-export function getTargetImage(_target, _gameState) {
-  return "";
+export function getTargetImage(target, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioTargetImage(target, gameState, scenarioId, variant);
 }
 
 /**
@@ -111,13 +120,11 @@ export function getTargetImage(_target, _gameState) {
  * All hotspots are accessible by default until a scenario adds lock logic.
  * Returns null for non-container families (no inventory grid rendered).
  */
-export function getContainerOpenState(targetId, _gameState) {
-  const target = boardHotspots.find((t) => t.id === targetId);
-  if (!target || target.family !== "contenedor") return null;
-  return true;
+export function getContainerOpenState(targetId, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioContainerOpenState(targetId, gameState, scenarioId, variant);
 }
 
 /** Short state label used in event log and GM coordinate overlay. */
-export function getTargetStateLabel(target, _gameState) {
-  return target?.id ? "idle" : "—";
+export function getTargetStateLabel(target, gameState) {
+  return getScenarioTargetStateLabel(target, gameState);
 }

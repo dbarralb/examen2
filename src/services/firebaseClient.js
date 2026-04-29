@@ -1,12 +1,54 @@
-const firebaseBaseUrl = "https://project-butterfly-d0242-default-rtdb.firebaseio.com";
+import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
-export function firebaseUrl(path = "") {
+const firebaseBaseUrl =
+  import.meta.env.VITE_FIREBASE_DATABASE_URL ||
+  "https://project-butterfly-d0242-default-rtdb.firebaseio.com";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: firebaseBaseUrl,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
+
+const hasFirebaseAuthConfig =
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.appId;
+
+let authUserPromise = null;
+
+async function getFirebaseAuthToken() {
+  if (!hasFirebaseAuthConfig) {
+    return null;
+  }
+
+  if (!authUserPromise) {
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    authUserPromise = signInAnonymously(getAuth(app)).then(({ user }) => user);
+  }
+
+  const user = await authUserPromise;
+  return user.getIdToken();
+}
+
+export function firebaseUrl(path = "", authToken = null) {
   const normalizedPath = path ? `/${path}` : "/";
-  return `${firebaseBaseUrl}${normalizedPath}.json`;
+  const url = new URL(`${firebaseBaseUrl}${normalizedPath}.json`);
+
+  if (authToken) {
+    url.searchParams.set("auth", authToken);
+  }
+
+  return url.toString();
 }
 
 export async function firebaseGet(path = "") {
-  const response = await fetch(firebaseUrl(path), { cache: "no-store" });
+  const authToken = await getFirebaseAuthToken();
+  const response = await fetch(firebaseUrl(path, authToken), { cache: "no-store" });
 
   if (!response.ok) {
     throw new Error(`Firebase GET failed: ${response.status}`);
@@ -16,7 +58,8 @@ export async function firebaseGet(path = "") {
 }
 
 export async function firebasePut(path = "", data) {
-  const response = await fetch(firebaseUrl(path), {
+  const authToken = await getFirebaseAuthToken();
+  const response = await fetch(firebaseUrl(path, authToken), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -30,7 +73,8 @@ export async function firebasePut(path = "", data) {
 }
 
 export async function firebaseGetWithEtag(path = "") {
-  const response = await fetch(firebaseUrl(path), {
+  const authToken = await getFirebaseAuthToken();
+  const response = await fetch(firebaseUrl(path, authToken), {
     cache: "no-store",
     headers: { "X-Firebase-ETag": "true" },
   });
@@ -46,7 +90,8 @@ export async function firebaseGetWithEtag(path = "") {
 }
 
 export async function firebasePutIfMatch(path = "", data, etag) {
-  const response = await fetch(firebaseUrl(path), {
+  const authToken = await getFirebaseAuthToken();
+  const response = await fetch(firebaseUrl(path, authToken), {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -67,7 +112,8 @@ export async function firebasePutIfMatch(path = "", data, etag) {
 }
 
 export async function firebasePatch(path = "", data) {
-  const response = await fetch(firebaseUrl(path), {
+  const authToken = await getFirebaseAuthToken();
+  const response = await fetch(firebaseUrl(path, authToken), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 20px 16px; font-family: var(--font-ui); }
+  .row { display: flex; gap: 20px; }
+
+  /* Progress bar */
+  .progress-group { display: flex; flex-direction: column; gap: 8px; width: 240px; }
+  .prog-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-ghost); display: flex; justify-content: space-between; }
+  .prog-track { height: 6px; background: var(--bg-panel); border: 1px solid var(--border-dim); position: relative; }
+  .prog-fill { height: 100%; position: relative; }
+  .prog-fill::after { content: ''; position: absolute; right: 0; top: -2px; width: 2px; height: 10px; background: inherit; }
+  .g { background: var(--neon-green); box-shadow: 0 0 8px rgba(0,255,135,0.6); }
+  .m { background: var(--neon-magenta); box-shadow: 0 0 8px rgba(255,45,120,0.6); }
+  .c { background: var(--neon-cyan); box-shadow: 0 0 8px rgba(0,234,255,0.6); }
+
+  /* Toggle / checkbox */
+  .toggle-group { display: flex; flex-direction: column; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 10px; }
+  .toggle {
+    width: 36px; height: 18px; border-radius: 0;
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+    position: relative; cursor: pointer; flex-shrink: 0;
+  }
+  .toggle-on  { background: rgba(0,255,135,0.2); border: 1px solid var(--neon-green); box-shadow: 0 0 8px rgba(0,255,135,0.3); }
+  .toggle-off { background: var(--bg-panel); border: 1px solid var(--border-mid); }
+  .toggle-knob { position: absolute; top: 2px; width: 12px; height: 12px; background: var(--neon-green); clip-path: polygon(2px 0%, 100% 0%, calc(100% - 2px) 100%, 0% 100%); transition: left 100ms; }
+  .toggle-on .toggle-knob  { left: calc(100% - 14px); box-shadow: 0 0 6px rgba(0,255,135,0.7); }
+  .toggle-off .toggle-knob { left: 2px; background: var(--text-ghost); }
+  .toggle-label { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+
+  .divider { width: 1px; background: var(--border-dim); }
+</style>
+</head><body>
+<div class="row">
+  <div class="progress-group">
+    <div class="prog-label"><span>EXPLOIT PROGRESS</span><span style="color:#00FF87">73%</span></div>
+    <div class="prog-track"><div class="prog-fill g" style="width:73%"></div></div>
+    <div class="prog-label"><span>FIREWALL BREACH</span><span style="color:#FF2D78">41%</span></div>
+    <div class="prog-track"><div class="prog-fill m" style="width:41%"></div></div>
+    <div class="prog-label"><span>DATA EXTRACTED</span><span style="color:#00EAFF">100%</span></div>
+    <div class="prog-track"><div class="prog-fill c" style="width:100%"></div></div>
+    <div class="prog-label"><span>MEMORY WIPE</span><span style="color:#6B7A96">0%</span></div>
+    <div class="prog-track"><div class="prog-fill" style="width:0%"></div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="toggle-group">
+    <div class="toggle-row">
+      <div class="toggle toggle-on"><div class="toggle-knob"></div></div>
+      <div class="toggle-label">stealth mode</div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle toggle-off"><div class="toggle-knob"></div></div>
+      <div class="toggle-label">packet logging</div>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle toggle-on" style="border-color:var(--neon-cyan);box-shadow:0 0 8px rgba(0,234,255,0.3)"><div class="toggle-knob" style="background:var(--neon-cyan);box-shadow:0 0 6px rgba(0,234,255,0.7);left:calc(100% - 14px)"></div></div>
+      <div class="toggle-label">autoexploit</div>
+    </div>
+  </div>
+</div>
+</body></html>

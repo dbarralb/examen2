@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; font-family: var(--font-mono); }
+  .row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .label { font-size: 9px; color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 6px; text-align: center; }
+  svg { display: block; }
+</style>
+</head><body>
+<div class="row">
+  <!-- Corner tick accent -->
+  <div>
+    <svg width="48" height="48" viewBox="0 0 48 48">
+      <polyline points="16,4 4,4 4,16" fill="none" stroke="#00FF87" stroke-width="2" filter="url(#g)"/>
+      <polyline points="32,44 44,44 44,32" fill="none" stroke="#00FF87" stroke-width="2"/>
+      <defs><filter id="g"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    </svg>
+    <div class="label">corner tick</div>
+  </div>
+
+  <!-- Diagonal slash divider -->
+  <div>
+    <svg width="80" height="24" viewBox="0 0 80 24">
+      <line x1="0" y1="20" x2="60" y2="4" stroke="#00FF87" stroke-width="1.5" opacity="0.6"/>
+      <line x1="16" y1="20" x2="76" y2="4" stroke="#00FF87" stroke-width="0.5" opacity="0.25"/>
+    </svg>
+    <div class="label">slash divider</div>
+  </div>
+
+  <!-- Scribble underline (graffiti) -->
+  <div>
+    <svg width="100" height="20" viewBox="0 0 100 20">
+      <path d="M2,14 Q15,8 28,14 Q42,20 55,12 Q68,4 82,12 Q92,17 98,14" fill="none" stroke="#FF2D78" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+      <defs><filter id="gm"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <path d="M2,14 Q15,8 28,14 Q42,20 55,12 Q68,4 82,12 Q92,17 98,14" fill="none" stroke="#FF2D78" stroke-width="2.5" stroke-linecap="round" opacity="0.85" filter="url(#gm)"/>
+    </svg>
+    <div class="label">scribble line</div>
+  </div>
+
+  <!-- Bracket accent (graffiti) -->
+  <div>
+    <svg width="48" height="56" viewBox="0 0 48 56">
+      <path d="M36,4 L8,4 L4,8 L4,48 L8,52 L36,52" fill="none" stroke="#9B00FF" stroke-width="2" stroke-linecap="square" opacity="0.9"/>
+      <path d="M34,4 L8,4" fill="none" stroke="#9B00FF" stroke-width="3.5" stroke-linecap="square" opacity="0.4"/>
+    </svg>
+    <div class="label">bracket accent</div>
+  </div>
+
+  <!-- Noise / glitch bar -->
+  <div>
+    <svg width="80" height="40" viewBox="0 0 80 40">
+      <rect x="0" y="14" width="80" height="12" fill="#00EAFF" opacity="0.07"/>
+      <rect x="0" y="17" width="80" height="2" fill="#00EAFF" opacity="0.25"/>
+      <rect x="20" y="15" width="40" height="10" fill="#00EAFF" opacity="0.04"/>
+      <rect x="0" y="18" width="35" height="1" fill="#00EAFF" opacity="0.5"/>
+      <rect x="45" y="18" width="35" height="1" fill="#00EAFF" opacity="0.5"/>
+      <rect x="10" y="20" width="60" height="1" fill="#ffffff" opacity="0.08"/>
+    </svg>
+    <div class="label">glitch bar</div>
+  </div>
+
+  <!-- Diamond marker -->
+  <div>
+    <svg width="24" height="24" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" fill="none" stroke="#FFEA00" stroke-width="1.5" transform="rotate(45 12 12)"/>
+      <rect x="9" y="9" width="6" height="6" fill="#FFEA00" opacity="0.4" transform="rotate(45 12 12)"/>
+      <defs><filter id="gy"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      <rect x="6" y="6" width="12" height="12" fill="none" stroke="#FFEA00" stroke-width="1" transform="rotate(45 12 12)" filter="url(#gy)" opacity="0.6"/>
+    </svg>
+    <div class="label">diamond</div>
+  </div>
+
+  <!-- Scanline overlay sample -->
+  <div style="position:relative;width:80px;height:48px;background:#161D2E;border:1px solid #1E2A3F;overflow:hidden;">
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px)"></div>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#00FF87;font-family:var(--font-mono);letter-spacing:0.1em">SCAN</div>
+    <div class="label" style="position:absolute;bottom:-18px;left:0;right:0">scanlines</div>
+  </div>
+</div>
+</body></html>

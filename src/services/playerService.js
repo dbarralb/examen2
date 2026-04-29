@@ -145,12 +145,6 @@ export async function clearPendingItemUsage(roleId) {
   });
 }
 
-export async function updatePlayerZone(roleId, zoneId) {
-  await firebasePatch("", {
-    [`playerZones/${roleId}`]: zoneId,
-  });
-}
-
 export async function updatePlayerView(role, viewState) {
   const now = Date.now();
   const view = {

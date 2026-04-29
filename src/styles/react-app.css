@@ -1037,8 +1037,7 @@ a {
   user-select: none;
 }
 
-.lobby-character-guaperas,
-.lobby-character-bruto {
+.lobby-character-guaperas {
   --lobby-character-scale: 1.1;
 }
 
@@ -1649,8 +1648,7 @@ a {
   border-left-color: #2ecc71;
 }
 
-.react-chat-message.role-guaperas,
-.react-chat-message.role-bruto {
+.react-chat-message.role-guaperas {
   border-left-color: #e74c3c;
 }
 
@@ -4200,8 +4198,6 @@ code {
   -webkit-user-drag: none;
 }
 
-/* TODO [DEUDA TÉCNICA]: Botón debug solo para testeo. Eliminar antes de producción. */
-
 /* ── Drop zone staged state ──────────────────────────────────────────── */
 .react-drop-slot.staged {
   border-color: var(--color-amber);
@@ -4330,7 +4326,7 @@ code {
   line-height: 1.7;
 }
 
-/* ---- GM Scene State overlays (Sala 1) ---- */
+/* ---- GM Scene State overlays ---- */
 
 .react-alarm-overlay-red {
   background: rgba(220, 30, 30, 0.22);

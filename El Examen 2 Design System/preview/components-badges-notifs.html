@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; font-family: var(--font-ui); }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+  }
+  .badge-ok     { background: rgba(0,255,135,0.12); color: #00FF87; border: 1px solid rgba(0,255,135,0.3); }
+  .badge-err    { background: rgba(255,45,120,0.12); color: #FF2D78; border: 1px solid rgba(255,45,120,0.3); }
+  .badge-warn   { background: rgba(255,234,0,0.1);  color: #FFEA00; border: 1px solid rgba(255,234,0,0.3); }
+  .badge-info   { background: rgba(0,234,255,0.1);  color: #00EAFF; border: 1px solid rgba(0,234,255,0.3); }
+  .badge-purple { background: rgba(155,0,255,0.12); color: #9B00FF; border: 1px solid rgba(155,0,255,0.3); }
+  .badge-ghost  { background: transparent; color: var(--text-ghost); border: 1px solid var(--border-mid); clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%); }
+
+  .notifs { display: flex; flex-direction: column; gap: 6px; }
+  .notif {
+    padding: 10px 14px;
+    background: var(--bg-panel);
+    border-left: 2px solid;
+    display: flex; align-items: flex-start; gap: 10px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  }
+  .notif-icon { font-family: var(--font-mono); font-size: 12px; margin-top: 1px; }
+  .notif-content { flex: 1; }
+  .notif-title { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+  .notif-body { font-size: 10px; color: var(--text-secondary); font-family: var(--font-mono); }
+  .notif-ok    { border-left-color: var(--neon-green); }
+  .notif-ok .notif-title { color: var(--neon-green); }
+  .notif-ok .notif-icon  { color: var(--neon-green); }
+  .notif-err   { border-left-color: var(--neon-magenta); }
+  .notif-err .notif-title { color: var(--neon-magenta); }
+  .notif-err .notif-icon  { color: var(--neon-magenta); }
+  .notif-warn  { border-left-color: var(--neon-yellow); }
+  .notif-warn .notif-title { color: var(--neon-yellow); }
+  .notif-warn .notif-icon  { color: var(--neon-yellow); }
+</style>
+</head><body>
+<div class="badges">
+  <span class="badge badge-ok">[OK]</span>
+  <span class="badge badge-err">[ERR]</span>
+  <span class="badge badge-warn">[WARN]</span>
+  <span class="badge badge-info">[INFO]</span>
+  <span class="badge badge-purple">ENCRYPTED</span>
+  <span class="badge badge-ghost">OFFLINE</span>
+</div>
+<div class="notifs">
+  <div class="notif notif-ok">
+    <div class="notif-icon">▸</div>
+    <div class="notif-content">
+      <div class="notif-title">Connection Established</div>
+      <div class="notif-body">node 0x7F3A — latency: 12ms</div>
+    </div>
+  </div>
+  <div class="notif notif-err">
+    <div class="notif-icon">✕</div>
+    <div class="notif-content">
+      <div class="notif-title">Auth Failed</div>
+      <div class="notif-body">2 attempts remaining before lockout</div>
+    </div>
+  </div>
+  <div class="notif notif-warn">
+    <div class="notif-icon">⚠</div>
+    <div class="notif-content">
+      <div class="notif-title">Anomaly Detected</div>
+      <div class="notif-body">sector 7F — integrity: DEGRADED</div>
+    </div>
+  </div>
+</div>
+</body></html>

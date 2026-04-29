@@ -1,118 +1,66 @@
-# Game Design Document — El Examen II
+# Game Design Document - El Examen II
 
-> Estado: **Blank slate** — framework listo, contenido narrativo pendiente de redacción.
-
----
+> Estado: Nivel 1 activo - Almacen.
 
 ## Concepto
 
-**El Examen II** es un juego de escape room narrativo cooperativo para 4 jugadores + 1 GM.
+Juego narrativo cooperativo asimetrico tipo point & click. Cuatro alumnos exploran el mismo espacio, pero no perciben la misma realidad.
 
-Los jugadores son estudiantes del Instituto Newton, cada uno con una personalidad y habilidades distintas. Viven una aventura que sucede en el mismo escenario, pero cada jugador existe en una **realidad paralela** de ese lugar.
+La verdad no esta en lo que ve un jugador, sino en lo que el grupo reconstruye al comparar perspectivas.
 
----
+## Loop principal
 
-## Estructura de la aventura
+1. Observar el escenario propio.
+2. Compartir informacion por voz o chat.
+3. Detectar contradicciones entre realidades.
+4. Usar cartas de rol sobre hotspots.
+5. Completar el minijuego de carga.
+6. Esperar el pulso del GM.
+7. Resolver acciones y actualizar el tablero.
 
-### Escenarios
+## Nivel 1 - Almacen del gimnasio
 
-Un escenario es un lugar físico del instituto (pasillo, almacén, laboratorio, etc.).
-Cada escenario tiene hasta **4 variantes** (A, B, C, D) — versiones paralelas del mismo lugar.
+Objetivo: salir del almacen hacia el gimnasio.
 
-El GM decide qué variante ve cada jugador. Por ejemplo:
-- Jugadores A + B ven el "Almacén A" (realidad calmada, luces encendidas)
-- Jugadores C + D ven el "Almacén B" (realidad alterada, algo ha pasado aquí)
+Realidades iniciales:
 
-Los jugadores pueden descubrir que no todos están en el mismo sitio durante el pulso.
+- Realidad A: Empollon + Guaperas
+- Realidad B: Manitas + Mistica
+- Realidades C/D: reservadas para futuros niveles o pruebas
 
----
+Elementos activos:
 
-## Los 4 jugadores
+- Pizarra: plan del robo del examen, incompleto o desplazado segun realidad.
+- Taquillas: contenedor de herramientas/pistas y pista del mecanismo fisico.
+- Caja: introduce la regla "no todo lo que ves es real".
+- Balones: contradiccion observable entre realidades.
+- Panel de salida: combina codigo numerico y mecanismo fisico.
 
-| Rol | Descripción | Cartas |
+## Roles
+
+| Rol | Funcion | Cartas |
 |---|---|---|
-| **El Empollón** | Analítico, metódico. Sabe cómo funcionan los sistemas. | mirar_bien, consultar_apuntes |
-| **La Manitas** | Práctica, ingeniosa. Arregla y rompe cosas. | apanar, puenteo_rapido, desmontar |
-| **El Guaperas** | Directo, impulsivo. Usa la fuerza. | a_lo_bestia, empujar |
-| **La Mística** | Intuitiva, observadora. Percibe lo que otros no ven. | y_si, esto_vibra_raro, ritual_improvisado |
+| Empollon | Instrucciones, logica y reglas de sistemas | mirar_bien, consultar_apuntes |
+| Manitas | Mecanismos, herramientas y manipulacion fisica | apanar, puenteo_rapido, desmontar |
+| Guaperas | Fuerza, empuje y avance bajo riesgo | a_lo_bestia, empujar |
+| Mistica | Anomalias, duplicados y falsos positivos | y_si, esto_vibra_raro, ritual_improvisado |
 
----
+Las habilidades no son obligatorias para todo, pero aceleran y aclaran la resolucion.
 
-## Game loop
+## Regla fundamental
 
-```
-1. Ver el escenario (tablero paneable con fondo de variante)
-2. Hacer clic en un hotspot → ver la tarjeta del elemento
-3. Elegir una carta de acción y arrastrarla al hotspot
-4. Completar el minijuego de carga
-5. Acción encolada → esperar pulso del GM
-6. GM inicia pulso → acciones se resuelven con resultado visible
-7. El tablero refleja los cambios → volver al paso 2
-```
+No todo lo que ves es real.
 
----
+El nivel debe provocar:
 
-## Hotspots y tarjetas de elemento
+- "Yo no tengo toda la informacion."
+- "Necesito a los demas."
+- "Algo no encaja."
+- "Lo hemos resuelto juntos."
 
-Cada tablero tiene **3 hotspots**. Cada hotspot pertenece a una **familia**:
+## Pendiente de diseno
 
-| Familia | Descripción |
-|---|---|
-| Acceso | Entradas, salidas, puertas |
-| Contenedor | Cajas, muebles, mochilas |
-| Dispositivo | Electrónica, paneles |
-| Información | Notas, carteles, documentos |
-| Objeto | Elementos físicos sueltos |
-| Sensor | Cámaras, detectores |
-
-Al hacer clic en un hotspot, el jugador ve la **tarjeta de elemento** (blank hasta que el escenario se diseñe):
-- Nombre del elemento
-- Familia
-- Descripción narrativa
-- Acciones disponibles según el rol
-
----
-
-## Sistema de alarma
-
-Compartida entre todos los jugadores. Escala de 0 a 3:
-
-| Nivel | Estado | Consecuencias |
-|---|---|---|
-| 0 | Normal | Sin restricciones |
-| 1 | Sospecha | Tensión creciente |
-| 2 | Alarma | El GM activa efectos (luz roja, bloqueos) |
-| 3 | Contención | Salida bloqueada, interferencia máxima |
-
-El ruido se acumula con acciones fallidas o ruidosas. El GM decide cuándo y cómo reaccionar narrativamente.
-
----
-
-## Sistema de pulso
-
-El **pulso** es el momento en que las acciones encoladas se resuelven. El GM lo inicia manualmente.
-
-**Arquitectura futura**: El pulso pasará a ser una **ventana de visibilidad** — durante el pulso, los jugadores podrán ver los tableros de los demás durante unos segundos. Esto crea el momento de coordinación narrativa entre realidades paralelas.
-
----
-
-## Inventario
-
-Cada jugador tiene:
-- **3 slots** en la barra de inventario (siempre visibles)
-- Los items se recogen de hotspots de tipo contenedor
-- Los items pueden usarse como parte de una acción (arrastrar item + carta)
-
----
-
-## Lo que falta definir (pendiente de guion)
-
-- [ ] Nombre y descripción de cada escenario
-- [ ] Contenido de las 4 variantes por escenario
-- [ ] Qué hay en cada hotspot por variante
-- [ ] Qué items existen y dónde
-- [ ] Lógica de resolución de acciones (gameRules.js → resolveActionWithResult)
-- [ ] Flags de progreso y condición de victoria
-- [ ] Arte de fondos por variante
-- [ ] Texto narrativo de tarjetas de elemento
-- [ ] Conexión entre realidades paralelas (qué sabe un jugador del otro)
+- Arte final por variante.
+- Ajuste fino de combinaciones y flags de victoria.
+- Pulso como ventana de visibilidad temporal entre jugadores.
+- Interferencias de comunicacion progresivas.

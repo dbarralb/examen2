@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 export const SCENARIO_VARIANTS = ["A", "B", "C", "D"];
-export const DEFAULT_SCENARIO_ID = "sandbox";
+export const DEFAULT_SCENARIO_ID = "almacen";
 export const DEFAULT_VARIANT = "A";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,17 @@ export const DEFAULT_VARIANT = "A";
 // ---------------------------------------------------------------------------
 
 export const scenarios = [
+  {
+    id: "almacen",
+    label: "Almacen",
+    description: "Primer nivel: almacen del gimnasio fragmentado en realidades paralelas.",
+    variants: {
+      A: { label: "Almacen A", backgroundSrc: "/assets/boards/placeholder_empollon.svg" },
+      B: { label: "Almacen B", backgroundSrc: "/assets/boards/placeholder_mistica.svg" },
+      C: { label: "Almacen C", backgroundSrc: "/assets/boards/placeholder_manitas.svg" },
+      D: { label: "Almacen D", backgroundSrc: "/assets/boards/placeholder_guaperas.svg" },
+    },
+  },
   {
     id: "sandbox",
     label: "Sandbox",
@@ -32,18 +43,6 @@ export const scenarios = [
       D: { label: "Sandbox D", backgroundSrc: "/assets/boards/placeholder_mistica.svg" },
     },
   },
-  // ── Add new scenarios below ────────────────────────────────────────────────
-  // {
-  //   id: "almacen",
-  //   label: "Almacén",
-  //   description: "...",
-  //   variants: {
-  //     A: { label: "Almacén A", backgroundSrc: "/assets/boards/almacen_a.svg" },
-  //     B: { label: "Almacén B", backgroundSrc: "/assets/boards/almacen_b.svg" },
-  //     C: { label: "Almacén C", backgroundSrc: "/assets/boards/almacen_c.svg" },
-  //     D: { label: "Almacén D", backgroundSrc: "/assets/boards/almacen_d.svg" },
-  //   },
-  // },
 ];
 
 // ---------------------------------------------------------------------------

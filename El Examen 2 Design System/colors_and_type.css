@@ -1,0 +1,313 @@
+/* ============================================================
+   EL EXAMEN 2 — Design Tokens
+   Colors + Typography CSS Variables
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+/* ============================================================
+   COLOR TOKENS
+   ============================================================ */
+:root {
+
+  /* --- Backgrounds --- */
+  --bg-void:        #050810;   /* deepest — page background */
+  --bg-base:        #080C14;   /* base dark */
+  --bg-surface:     #0D1220;   /* panel base */
+  --bg-raised:      #131927;   /* elevated panel */
+  --bg-panel:       #161D2E;   /* modal / card surface */
+  --bg-panel-hi:    #1A2235;   /* hovered panel */
+  --bg-overlay:     rgba(8,12,20,0.85); /* scrim overlay */
+
+  /* --- Borders --- */
+  --border-dim:     #1E2A3F;   /* inactive panel border */
+  --border-mid:     #2A3855;   /* slightly visible border */
+  --border-bright:  #3D5070;   /* visible UI border */
+
+  /* --- Text --- */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #A8B4CC;
+  --text-tertiary:  #6B7A96;
+  --text-ghost:     #3A4560;
+  --text-disabled:  #2E3A50;
+
+  /* --- Primary Accent: Neon Green --- */
+  --neon-green:           #00FF87;
+  --neon-green-dim:       #00CC6A;
+  --neon-green-ultra:     #AAFFDD;
+  --neon-green-bg:        rgba(0,255,135,0.08);
+  --neon-green-bg-hi:     rgba(0,255,135,0.16);
+  --neon-green-glow-sm:   0 0 6px rgba(0,255,135,0.7);
+  --neon-green-glow-md:   0 0 14px rgba(0,255,135,0.55), 0 0 30px rgba(0,255,135,0.25);
+  --neon-green-glow-lg:   0 0 20px rgba(0,255,135,0.7), 0 0 50px rgba(0,255,135,0.35);
+
+  /* --- Secondary Accent: Magenta --- */
+  --neon-magenta:         #FF2D78;
+  --neon-magenta-dim:     #CC2460;
+  --neon-magenta-ultra:   #FFAAC9;
+  --neon-magenta-bg:      rgba(255,45,120,0.08);
+  --neon-magenta-bg-hi:   rgba(255,45,120,0.16);
+  --neon-magenta-glow-sm: 0 0 6px rgba(255,45,120,0.7);
+  --neon-magenta-glow-md: 0 0 14px rgba(255,45,120,0.55), 0 0 30px rgba(255,45,120,0.25);
+
+  /* --- Accent: Electric Purple --- */
+  --neon-purple:          #9B00FF;
+  --neon-purple-dim:      #7A00CC;
+  --neon-purple-ultra:    #D4AAFF;
+  --neon-purple-bg:       rgba(155,0,255,0.08);
+  --neon-purple-glow-sm:  0 0 6px rgba(155,0,255,0.7);
+  --neon-purple-glow-md:  0 0 14px rgba(155,0,255,0.55), 0 0 30px rgba(155,0,255,0.25);
+
+  /* --- Accent: Cyan --- */
+  --neon-cyan:            #00EAFF;
+  --neon-cyan-dim:        #00BBCC;
+  --neon-cyan-bg:         rgba(0,234,255,0.08);
+  --neon-cyan-glow-sm:    0 0 6px rgba(0,234,255,0.7);
+  --neon-cyan-glow-md:    0 0 14px rgba(0,234,255,0.55), 0 0 30px rgba(0,234,255,0.25);
+
+  /* --- Accent: Acid Yellow --- */
+  --neon-yellow:          #FFEA00;
+  --neon-yellow-dim:      #CCBB00;
+  --neon-yellow-bg:       rgba(255,234,0,0.08);
+  --neon-yellow-glow-sm:  0 0 6px rgba(255,234,0,0.7);
+  --neon-yellow-glow-md:  0 0 14px rgba(255,234,0,0.55), 0 0 30px rgba(255,234,0,0.25);
+
+  /* --- Semantic Colors --- */
+  --color-success:        var(--neon-green);
+  --color-error:          var(--neon-magenta);
+  --color-warning:        var(--neon-yellow);
+  --color-info:           var(--neon-cyan);
+  --color-accent:         var(--neon-purple);
+
+  /* --- Scan line overlay --- */
+  --scanline-opacity: 0.035;
+
+  /* ============================================================
+     TYPOGRAPHY TOKENS
+     ============================================================ */
+
+  /* Font families */
+  --font-display:   'Bebas Neue', 'Impact', sans-serif;
+  --font-ui:        'Space Grotesk', 'DM Sans', sans-serif;
+  --font-mono:      'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  /* Type scale */
+  --text-3xs:  11px;
+  --text-2xs:  13px;
+  --text-xs:   15px;
+  --text-sm:   18px;
+  --text-md:   24px;
+  --text-lg:   32px;
+  --text-xl:   48px;
+  --text-2xl:  64px;
+  --text-3xl:  96px;
+
+  /* Line heights */
+  --leading-tight:   1.1;
+  --leading-snug:    1.3;
+  --leading-normal:  1.5;
+  --leading-loose:   1.75;
+  --leading-terminal: 1.6;  /* slightly loose for terminal readability */
+
+  /* Letter spacing */
+  --tracking-display:  0.08em;
+  --tracking-label:    0.12em;
+  --tracking-wide:     0.05em;
+  --tracking-normal:   0;
+  --tracking-tight:    -0.02em;
+
+  /* ============================================================
+     SPACING TOKENS
+     ============================================================ */
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-24:  96px;
+  --space-32:  128px;
+
+  /* ============================================================
+     BORDER RADIUS
+     ============================================================ */
+  --radius-none:  0px;
+  --radius-sm:    2px;
+  --radius-md:    4px;   /* max used — panels prefer clip-path */
+
+  /* ============================================================
+     CLIP PATHS (cut corners)
+     ============================================================ */
+  --clip-sm:    polygon(12px 0%, 100% 0%, 100% 100%, 0% 100%, 0% 12px);
+  --clip-md:    polygon(16px 0%, 100% 0%, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0% 100%, 0% 16px);
+  --clip-lg:    polygon(24px 0%, 100% 0%, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0% 100%, 0% 24px);
+  --clip-slash: polygon(0 0, calc(100% - 32px) 0, 100% 32px, 100% 100%, 0 100%);
+
+  /* ============================================================
+     TRANSITIONS
+     ============================================================ */
+  --transition-fast:  80ms linear;
+  --transition-base:  150ms linear;
+  --transition-slow:  300ms linear;
+}
+
+/* ============================================================
+   SEMANTIC ELEMENT STYLES
+   ============================================================ */
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+h2, .h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+h3, .h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+h4, .h4 {
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+h5, .h5 {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-label);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+p, .body {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.caption {
+  font-family: var(--font-mono);
+  font-size: var(--text-3xs);
+  font-weight: 400;
+  color: var(--text-ghost);
+  letter-spacing: 0.04em;
+}
+
+code, .code, .terminal {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  line-height: var(--leading-terminal);
+  color: var(--neon-green);
+}
+
+/* ============================================================
+   ANIMATION KEYFRAMES
+   ============================================================ */
+
+@keyframes flicker {
+  0%,100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.85; }
+  94% { opacity: 1; }
+  96% { opacity: 0.9; }
+  97% { opacity: 1; }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes glitch-x {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-1px); }
+  80% { transform: translateX(1px); }
+}
+
+@keyframes scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+@keyframes pulse-glow {
+  0%,100% { box-shadow: var(--neon-green-glow-sm); }
+  50% { box-shadow: var(--neon-green-glow-md); }
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+.flicker { animation: flicker 4s infinite; }
+.blink   { animation: blink 1s steps(1) infinite; }
+.glitch  { animation: glitch-x 0.3s steps(1) infinite; }
+
+.neon-green { color: var(--neon-green); }
+.neon-magenta { color: var(--neon-magenta); }
+.neon-purple { color: var(--neon-purple); }
+.neon-cyan { color: var(--neon-cyan); }
+.neon-yellow { color: var(--neon-yellow); }
+
+.glow-green   { text-shadow: 0 0 8px var(--neon-green), 0 0 20px rgba(0,255,135,0.4); }
+.glow-magenta { text-shadow: 0 0 8px var(--neon-magenta), 0 0 20px rgba(255,45,120,0.4); }
+.glow-cyan    { text-shadow: 0 0 8px var(--neon-cyan), 0 0 20px rgba(0,234,255,0.4); }
+.glow-yellow  { text-shadow: 0 0 8px var(--neon-yellow), 0 0 20px rgba(255,234,0,0.4); }
+
+.cut-sm   { clip-path: var(--clip-sm); }
+.cut-md   { clip-path: var(--clip-md); }
+.cut-lg   { clip-path: var(--clip-lg); }
+.cut-slash { clip-path: var(--clip-slash); }

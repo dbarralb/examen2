@@ -1,5 +1,7 @@
 # Instituto Newton — Design System
 
+> Carpeta canonica consolidada. Absorbe el contenido util de `Instituto Newton Design System V2` y la preview suelta `Design system_clear color 26_04`.
+
 ## Overview
 
 **Instituto Newton** is a video escape room game set inside a prestigious scientific institute with over 100 years of history. The tagline is *"Gravedad para mentes brillantes"* (Gravity for brilliant minds).

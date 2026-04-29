@@ -31,8 +31,8 @@ export const playerRoles = [
     cards: "a_lo_bestia, empujar",
     status: "danger",
     lobby: {
-      idleImage: "/assets/Lobby/Characters/Bruto_Idle.png",
-      selectedImage: "/assets/Lobby/Characters/Bruto_Selected.png",
+      idleImage: "/assets/Lobby/Characters/Guaperas_Idle.png",
+      selectedImage: "/assets/Lobby/Characters/Guaperas_Selected.png",
     },
   },
   {
@@ -51,12 +51,8 @@ export const playerRoles = [
 
 export const lobbyRoleOrder = ["guaperas", "empollon", "mistica", "manitas"];
 
-export const legacyRoleAliases = {
-  bruto: "guaperas",
-};
-
 export function normalizeRoleId(roleId) {
-  return legacyRoleAliases[roleId] || roleId;
+  return roleId;
 }
 
 export function getRole(roleId) {

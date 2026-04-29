@@ -100,6 +100,8 @@ export function SceneMap({
   activeZone = null,
   boardTargets = null,
   backgroundSrc = null,
+  scenarioId = "almacen",
+  variant = "A",
   onDeviceCommand,
   deviceCommandResult = null,
 }) {
@@ -336,7 +338,7 @@ export function SceneMap({
         >
           {visibleTargets.map((target) => {
             const isOpen = selectedTargetId === target.id;
-            const targetImage = getTargetImage(target, gameState);
+            const targetImage = getTargetImage(target, gameState, scenarioId, variant);
 
             return (
               <article
@@ -368,12 +370,12 @@ export function SceneMap({
                   </button>
                 )}
                 <ObjectInventoryGrid
-                  items={getTargetItems(target.id)}
+                  items={getTargetItems(target.id, scenarioId, variant)}
                   seenState={itemSeenState}
                   onItemClick={isMonitorView ? undefined : onItemClick}
                   onItemDragStart={isMonitorView ? undefined : onItemDragStart}
                   revealedSlots={revealedSlots[target.id] || []}
-                  containerOpen={getContainerOpenState(target.id, gameState)}
+                  containerOpen={getContainerOpenState(target.id, gameState, scenarioId, variant)}
                 />
                 <section
                   className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""} ${

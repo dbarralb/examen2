@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 18px 16px; font-family: var(--font-ui); }
+  .row { display: flex; flex-direction: column; gap: 8px; }
+  .item { display: flex; align-items: center; gap: 12px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .sample { font-size: 14px; font-weight: 500; flex: 1; }
+  .token { font-family: var(--font-mono); font-size: 10px; color: var(--text-ghost); width: 130px; }
+  .hex { font-family: var(--font-mono); font-size: 10px; color: var(--text-disabled); }
+  .sep { height: 1px; background: var(--border-dim); margin: 4px 0; }
+</style>
+</head><body>
+<div class="row">
+  <div class="item"><div class="dot" style="background:#ffffff"></div><div class="sample" style="color:#ffffff">Primary text</div><div class="token">--text-primary</div><div class="hex">#FFFFFF</div></div>
+  <div class="item"><div class="dot" style="background:#A8B4CC"></div><div class="sample" style="color:#A8B4CC">Secondary text</div><div class="token">--text-secondary</div><div class="hex">#A8B4CC</div></div>
+  <div class="item"><div class="dot" style="background:#6B7A96"></div><div class="sample" style="color:#6B7A96">Tertiary text</div><div class="token">--text-tertiary</div><div class="hex">#6B7A96</div></div>
+  <div class="item"><div class="dot" style="background:#3A4560"></div><div class="sample" style="color:#3A4560">Ghost text</div><div class="token">--text-ghost</div><div class="hex">#3A4560</div></div>
+  <div class="item"><div class="dot" style="background:#2E3A50"></div><div class="sample" style="color:#2E3A50">Disabled text</div><div class="token">--text-disabled</div><div class="hex">#2E3A50</div></div>
+  <div class="sep"></div>
+  <div class="item"><div class="dot" style="background:#00FF87;box-shadow:0 0 6px rgba(0,255,135,0.7)"></div><div class="sample" style="color:#00FF87;text-shadow:0 0 8px rgba(0,255,135,0.5)">Neon success</div><div class="token">--color-success</div><div class="hex">#00FF87</div></div>
+  <div class="item"><div class="dot" style="background:#FF2D78;box-shadow:0 0 6px rgba(255,45,120,0.7)"></div><div class="sample" style="color:#FF2D78;text-shadow:0 0 8px rgba(255,45,120,0.5)">Neon error</div><div class="token">--color-error</div><div class="hex">#FF2D78</div></div>
+  <div class="item"><div class="dot" style="background:#FFEA00;box-shadow:0 0 6px rgba(255,234,0,0.7)"></div><div class="sample" style="color:#FFEA00;text-shadow:0 0 8px rgba(255,234,0,0.5)">Neon warning</div><div class="token">--color-warning</div><div class="hex">#FFEA00</div></div>
+  <div class="item"><div class="dot" style="background:#00EAFF;box-shadow:0 0 6px rgba(0,234,255,0.7)"></div><div class="sample" style="color:#00EAFF;text-shadow:0 0 8px rgba(0,234,255,0.5)">Neon info</div><div class="token">--color-info</div><div class="hex">#00EAFF</div></div>
+</div>
+</body></html>

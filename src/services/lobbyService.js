@@ -84,8 +84,7 @@ export function getOwnLobbyPlayer(lobby) {
 
 export function getClaimForRole(lobby, roleId) {
   const normalizedRoleId = normalizeRoleId(roleId);
-  const legacyRoleId = normalizedRoleId === "guaperas" ? "bruto" : null;
-  return lobby?.roleClaims?.[normalizedRoleId] || (legacyRoleId ? lobby?.roleClaims?.[legacyRoleId] : null) || null;
+  return lobby?.roleClaims?.[normalizedRoleId] || null;
 }
 
 export function isRoleClaimedByOther(lobby, roleId) {

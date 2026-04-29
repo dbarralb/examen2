@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; font-family: var(--font-ui); }
+  .panels { display: flex; gap: 14px; }
+  
+  /* Base panel */
+  .panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dim);
+    position: relative;
+    overflow: hidden;
+    clip-path: polygon(14px 0%, 100% 0%, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0% 100%, 0% 14px);
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 200px; height: 100px;
+    background: radial-gradient(ellipse at top left, rgba(0,234,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .panel-header {
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border-dim);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title {
+    font-family: var(--font-ui);
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-secondary);
+  }
+  .panel-badge {
+    font-family: var(--font-mono);
+    font-size: 9px; padding: 2px 6px;
+    background: rgba(0,255,135,0.1); color: var(--neon-green);
+    clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%);
+    letter-spacing: 0.06em;
+  }
+  .panel-body { padding: 12px 14px; }
+  
+  /* Active panel — neon green */
+  .panel-active {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 12px rgba(0,255,135,0.25), inset 0 0 20px rgba(0,255,135,0.03);
+  }
+  .panel-active .panel-header { border-bottom-color: rgba(0,255,135,0.2); }
+  .panel-active .panel-title { color: var(--neon-green); }
+
+  /* Alert panel — magenta */
+  .panel-alert {
+    border-color: var(--neon-magenta);
+    box-shadow: 0 0 12px rgba(255,45,120,0.25);
+  }
+  .panel-alert .panel-title { color: var(--neon-magenta); }
+  .panel-alert .panel-badge { background: rgba(255,45,120,0.1); color: var(--neon-magenta); }
+
+  .panel-text { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+  /* Corner tick decoration */
+  .corner-tl, .corner-br {
+    position: absolute;
+    width: 6px; height: 6px;
+    border: 1px solid var(--neon-green);
+  }
+  .corner-tl { top: 4px; left: 4px; border-right: none; border-bottom: none; }
+  .corner-br { bottom: 4px; right: 4px; border-left: none; border-top: none; }
+</style>
+</head><body>
+<div class="panels">
+  <div class="panel" style="width:180px">
+    <div class="corner-tl"></div>
+    <div class="panel-header">
+      <div class="panel-title">Idle Panel</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-text">Default panel state. Dark surface, dim border.</p>
+    </div>
+  </div>
+  
+  <div class="panel panel-active" style="width:200px">
+    <div class="corner-tl" style="border-color:var(--neon-green)"></div>
+    <div class="corner-br" style="border-color:var(--neon-green)"></div>
+    <div class="panel-header">
+      <div class="panel-title">Active Module</div>
+      <div class="panel-badge">LIVE</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-text">Active state — neon border + corner ticks + glow.</p>
+    </div>
+  </div>
+
+  <div class="panel panel-alert" style="width:180px">
+    <div class="corner-tl" style="border-color:var(--neon-magenta)"></div>
+    <div class="panel-header">
+      <div class="panel-title">Alert</div>
+      <div class="panel-badge" style="background:rgba(255,45,120,0.12);color:#FF2D78">ERR</div>
+    </div>
+    <div class="panel-body">
+      <p class="panel-text">Error or warning state. Magenta accent.</p>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -9,7 +9,7 @@ export const gmSceneEffects = [
   {
     id: "camera_tracking",
     label: "Cámara en seguimiento",
-    description: "La cámara empieza a seguir los movimientos cerca de la vitrina.",
+    description: "La camara empieza a seguir movimientos dentro del almacen.",
     suggestedAlarmLevel: 1,
     targetStates: { camera: "tracking" },
   },
@@ -28,11 +28,11 @@ export const gmSceneEffects = [
     timingModifier: { actionLoadTimeMultiplier: 1.25 },
   },
   {
-    id: "door_temporarily_locked",
-    label: "Bloquear puerta temporalmente",
-    description: "La puerta queda bloqueada por contención hasta que el GM lo retire.",
+    id: "exit_temporarily_locked",
+    label: "Bloquear salida temporalmente",
+    description: "La salida queda bloqueada por contencion hasta que el GM lo retire.",
     suggestedAlarmLevel: 2,
-    targetStates: { armored_door: "blocked_by_alarm" },
+    targetStates: { panel_salida: "blocked_by_alarm" },
   },
   {
     id: "system_interference",
@@ -44,7 +44,7 @@ export const gmSceneEffects = [
   {
     id: "containment_mode",
     label: "Modo contención",
-    description: "La sala pasa a contención total. El objetivo puede mutar a escapar con lo conseguido.",
+    description: "El almacen pasa a contencion total. El objetivo puede mutar a escapar con lo conseguido.",
     suggestedAlarmLevel: 3,
     sceneVariant: "containment",
   },

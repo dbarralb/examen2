@@ -7,7 +7,6 @@ import misticaPanelImage from "../../assets/Lobby/UI/Lobby_panel_mistica.png";
 const panelImagesByRole = {
   empollon: empollonPanelImage,
   guaperas: guaperasPanelImage,
-  bruto: guaperasPanelImage,
   manitas: manitasPanelImage,
   mistica: misticaPanelImage,
 };

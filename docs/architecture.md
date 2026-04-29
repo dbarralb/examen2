@@ -1,225 +1,92 @@
-# Arquitectura técnica — El Examen II
+# Arquitectura tecnica - El Examen II
 
-> Estado: **Blank slate** — sistemas listos, contenido narrativo pendiente.
-
----
+> Estado: React oficial con Nivel 1 (`almacen`) como escenario activo.
 
 ## Stack
 
-| Capa | Tecnología |
+| Capa | Tecnologia |
 |---|---|
 | UI | React (Vite) |
 | Estado compartido | Firebase Realtime Database |
-| Sincronización | Polling 1s (clientes) |
+| Sincronizacion | Polling 1s |
 | Routing | URL search params (`?screen=player&role=empollon`) |
 
----
+## Escenarios y contenido
 
-## Sistemas principales
+`src/data/scenarioData.js` define escenarios y fondos por variante.
 
-### 1. Jugadores y roles
+`src/data/scenarioContent.js` define el contenido jugable:
 
-4 roles fijos. Cada jugador conecta con su código único y entra como uno de los roles.
+- hotspots por escenario/variante
+- items por contenedor
+- feedback inicial por hotspot
+- configuracion de consola de dispositivo
+- resolver inicial de acciones del escenario
 
-| Rol | Archivo | Cartas |
-|---|---|---|
-| El Empollón | `src/data/roles.js` | mirar_bien, consultar_apuntes |
-| La Manitas | `src/data/roles.js` | apanar, puenteo_rapido, desmontar |
-| El Guaperas | `src/data/roles.js` | a_lo_bestia, empujar |
-| La Mística | `src/data/roles.js` | y_si, esto_vibra_raro, ritual_improvisado |
+`src/services/gameRules.js` mantiene la alarma y delega la resolucion narrativa a `resolveScenarioAction()`.
 
-Cartas definidas en `src/data/gameData.js` → `cards[]`.
+## Estado inicial
 
----
+`src/services/remoteState.js` inicializa Firebase con:
 
-### 2. Tablero individual por jugador
+- `sessionState.scenarioId = "almacen"`
+- `playerBoards.empollon.variant = "A"`
+- `playerBoards.guaperas.variant = "A"`
+- `playerBoards.manitas.variant = "B"`
+- `playerBoards.mistica.variant = "B"`
 
-Cada jugador tiene **un tablero único**:
-- Paneable (drag) y zoomeable (rueda)
-- Fondo de imagen distinto según escenario + variante
-- 3 hotspots interactivos: `hotspot_1`, `hotspot_2`, `hotspot_3`
-- La lógica de hotspots es **blank** hasta que se defina el contenido del escenario
+## Firebase
 
-Componentes:
-- `src/screens/PlayerScreen.jsx` — pantalla principal del jugador
-- `src/components/SceneMap.jsx` — canvas paneable/zoomeable
-- `src/data/gameData.js` → `boardHotspots[]`
-
----
-
-### 3. Escenarios y variantes
-
-Un **escenario** es el entorno narrativo (e.g., "Almacén").
-Una **variante** (A, B, C, D) es una realidad paralela del mismo escenario.
-
-El GM asigna qué variante ve cada jugador desde su panel.
-Dos jugadores pueden estar en el "mismo lugar" pero en realidades distintas.
+Las reglas viven en `database.rules.json`. El procedimiento de configuracion y despliegue esta en `docs/firebase-security.md`.
 
 ```
-Escenario: Almacén
-  ├── Variante A → jugadores: Empollón, Guaperas
-  ├── Variante B → jugadores: Manitas, Mística
-  ├── Variante C → (sin asignar)
-  └── Variante D → (sin asignar)
+/session           estado de sesion, codigos y timer
+/sessionState      escenario activo y escenarios completados
+/gameState         alarma, flags, descubrimientos y efectos GM
+/pulseState        estado del pulso actual
+/targetFeedback    feedback por hotspot
+/lobby             jugadores conectados y roleClaims
+/queuedActions     acciones esperando pulso
+/actionLog         historial de acciones
+/chatMessages      chat
+/playerViews       espejo de camara/seleccion para monitores GM
+/playerBoards      escenario y variante por rol
+/playerInventories inventario por rol
+/itemSeenState     items vistos/recogidos
+/cardUsage         usos de cartas por rol
+/pendingItemUsage  item usado durante un pulso
 ```
 
-Definición: `src/data/scenarioData.js`
-Estado por jugador: `playerBoards[roleId].variant`, `playerBoards[roleId].scenarioId`
+## Flujo de turno
 
----
-
-### 4. Hotspots y familias
-
-Cada hotspot tiene una **familia** que define su categoría semántica:
-
-| Familia | Uso típico |
-|---|---|
-| `acceso` | Puertas, entradas, salidas |
-| `contenedor` | Cajas, taquillas, mochilas |
-| `dispositivo` | Terminales, paneles, consolas |
-| `informacion` | Notas, carteles, documentos |
-| `objeto` | Elementos físicos sueltos |
-| `sensor` | Cámaras, detectores |
-
-Definición: `src/data/gameData.js` → `hotspotFamilies`, `boardHotspots[]`
-
----
-
-### 5. Inventario
-
-Cada jugador tiene:
-- **Barra de inventario**: 3 slots activos siempre visibles
-- **Grid de objetos del hotspot**: revelados al buscar en un contenedor
-- Los items se definen por escenario (actualmente vacíos)
-
-Componentes: `PlayerInventoryBar`, `ObjectInventoryGrid`
-Estado: `playerInventories[roleId].slots[]` en Firebase
-
----
-
-### 6. Minijuegos
-
-Las acciones del jugador requieren completar un minijuego de carga antes de entrar en la cola.
-El minijuego actual: `SoftwareLoadMinigame` (secuencia de direcciones con tiempo límite).
-
-Flujo:
-```
-Jugador arrastra carta → hotspot (target)
-→ SoftwareLoadMinigame se lanza en cliente
-→ Al completar: acción entra en queuedActions (Firebase)
-→ Esperando pulso del GM
-```
-
----
-
-### 7. Sistema de pulso
-
-El **pulso** es la ventana de ejecución controlada por el GM.
-
-Estados del pulso:
-```
-idle → charging (10s) → executing → idle
-```
-
-Durante `executing`:
-1. Recoge todas las acciones con `status: "queued"`
-2. Ejecuta cada una secuencialmente (3s/acción)
-3. Llama a `resolveActionWithResult()` por cada acción
-4. Muestra resultado en overlay (5s)
-5. Limpia acciones resueltas
-
-Archivo: `src/services/pulseService.js`
-
-**Arquitectura futura del pulso**: El pulso pasará a ser una ventana de tiempo donde los jugadores pueden ver los tableros de otros jugadores. Implementación pendiente.
-
----
-
-### 8. Sistema de alarma
-
-Alarma compartida (afecta a todos los jugadores simultáneamente):
-
-| Nivel | Estado | Efecto |
-|---|---|---|
-| 0 | Normal | Sin restricciones |
-| 1 | Sospecha | Feedback aumentado, ligero retraso |
-| 2 | Alarma | Objetos bloqueados, cámara activa |
-| 3 | Contención | Salida bloqueada, interferencia |
-
-El nivel se calcula automáticamente por ruido acumulado.
-El GM activa efectos visuales manualmente desde el panel (no son automáticos).
-
-Archivos: `src/services/gameRules.js`, `src/services/gmSceneControl.js`
-
----
-
-### 9. Panel GM
-
-El GM controla:
-- Apertura de lobby y generación de códigos
-- Asignación de variantes por jugador (A/B/C/D)
-- Inicio del pulso
-- Efectos visuales de escena
-- Vista de monitores de todos los jugadores (iframe)
-
-Archivo: `src/screens/GMScreen.jsx`
-
----
-
-## Estructura de Firebase
-
-```
-/session          — estado de sesión (status, códigos, timer)
-/gameState        — alarma, flags, descubrimientos, efectos GM
-/pulseState       — estado del pulso actual
-/targetFeedback   — texto de feedback por hotspot
-/lobby            — jugadores conectados, roleClaims
-/queuedActions    — acciones encoladas esperando pulso
-/actionLog        — historial de acciones (array)
-/chatMessages     — mensajes de chat entre jugadores y GM
-/playerViews      — vista del jugador (cámara, selección) para monitores GM
-/playerBoards     — tablero de cada jugador: variante, estado de hotspots
-/playerInventories — inventario por rol
-/playerZones      — posición de zona por jugador (legacy, pendiente de limpieza)
-/itemSeenState    — qué items ha visto/recogido cada sesión
-/cardUsage        — usos de cartas por rol
-/pendingItemUsage — item en uso durante un pulso
-/sessionState     — escenario activo
-```
-
----
-
-## Flujo de un turno completo
-
-```
-1. GM asigna variantes (A/B/C/D) a cada jugador
-2. Jugadores ven su tablero con fondo de la variante
-3. Jugador hace clic en hotspot → ve tarjeta del elemento
-4. Jugador arrastra carta de acción sobre el hotspot
-5. Minijuego de carga se ejecuta en cliente
-6. Al completar: acción → queuedActions (Firebase, status: "queued")
-7. GM inicia pulso manual
-8. pulseService ejecuta acciones → resolveActionWithResult()
-9. Resultado en overlay (5s por acción)
-10. gameState mutado según lógica del escenario
-11. Jugadores ven cambios en sus tableros
-12. Vuelta al paso 3
-```
-
----
+1. GM abre lobby.
+2. Jugadores reclaman rol.
+3. La partida arranca cuando los roles estan completos.
+4. Cada jugador ve su variante del almacen.
+5. Jugador abre hotspot, arrastra carta/item y completa minijuego.
+6. La accion entra en `queuedActions`.
+7. GM inicia pulso.
+8. `pulseService` ejecuta acciones y llama a `resolveActionWithResult()`.
+9. `gameRules` delega a `scenarioContent`.
+10. Firebase recibe flags, feedback y log.
 
 ## Archivos clave
 
 | Archivo | Responsabilidad |
 |---|---|
-| `src/data/gameData.js` | Hotspots, cartas, familias, utilidades |
-| `src/data/scenarioData.js` | Escenarios y variantes |
-| `src/data/roles.js` | Definición de roles |
-| `src/data/mapData.js` | Capas visuales del tablero (tiles, marks) |
-| `src/services/gameRules.js` | Alarma + resolver de acciones (genérico) |
-| `src/services/pulseService.js` | Ciclo completo del pulso |
-| `src/services/gmSceneControl.js` | Efectos visuales GM |
+| `src/App.jsx` | Router por query params |
+| `src/data/scenarioData.js` | Escenarios y fondos |
+| `src/data/scenarioContent.js` | Contenido jugable por escenario |
+| `src/data/gameData.js` | Cartas, familias y accessors globales |
+| `src/data/roles.js` | Roles activos |
+| `src/screens/PlayerScreen.jsx` | Pantalla del jugador |
+| `src/screens/GMScreen.jsx` | Panel GM |
+| `src/components/SceneMap.jsx` | Tablero paneable/zoomeable |
+| `src/components/DeviceConsole.jsx` | Consola generica de dispositivo |
+| `src/services/pulseService.js` | Ciclo del pulso |
+| `src/services/gameRules.js` | Alarma y dispatch de resolucion |
 | `src/services/remoteState.js` | Estado inicial de Firebase |
-| `src/screens/PlayerScreen.jsx` | Pantalla completa del jugador |
-| `src/screens/GMScreen.jsx` | Panel del GM |
-| `src/components/SceneMap.jsx` | Canvas paneable/zoomeable |
-| `src/components/SoftwareLoadMinigame.jsx` | Minijuego de carga de acción |
+
+## Archivado
+
+Todo lo anterior que no forma parte de la app activa vive en `docs/OLD`.

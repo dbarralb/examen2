@@ -12,9 +12,10 @@ export const actionChipBlueprint = {
     engineering: { label: "Ingenieria", accentClassName: "engineering", chipImage: chipEngineeringImage },
   },
   targetFamilies: {
-    door: { label: "Puerta", icon: "|>", accentClassName: "door" },
+    access: { label: "Acceso", icon: "|>", accentClassName: "door" },
     container: { label: "Contenedor", icon: "[]", accentClassName: "container" },
     device: { label: "Dispositivo", icon: "##", accentClassName: "device" },
+    info: { label: "Informacion", icon: "i", accentClassName: "generic" },
     sensor: { label: "Sensor", icon: "()", accentClassName: "sensor" },
     generic: { label: "Objeto", icon: "<>", accentClassName: "generic" },
   },
@@ -57,20 +58,20 @@ export function getActionChipType(action) {
 }
 
 export function getTargetFamily(targetId) {
-  if (targetId === "door") {
-    return "door";
-  }
-
-  if (targetId === "locker") {
-    return "container";
-  }
-
-  if (["panel", "electrical_box"].includes(targetId)) {
+  if (targetId === "panel_salida") {
     return "device";
   }
 
-  if (targetId === "sensor") {
-    return "sensor";
+  if (["taquillas", "caja"].includes(targetId)) {
+    return "container";
+  }
+
+  if (targetId === "pizarra") {
+    return "info";
+  }
+
+  if (targetId === "salida") {
+    return "access";
   }
 
   return "generic";

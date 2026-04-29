@@ -5,10 +5,11 @@ import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { playerRoles } from "../data/roles.js";
 import { targets } from "../data/gameData.js";
-import { SCENARIO_VARIANTS, getScenario } from "../data/scenarioData.js";
+import { DEFAULT_SCENARIO_ID, SCENARIO_VARIANTS, getScenario } from "../data/scenarioData.js";
+import { getScenarioHotspots } from "../data/scenarioContent.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
-import { forceStartGame, getRemoteState, resetGame, startGame } from "../services/gmService.js";
+import { getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { getAlarmRecommendations } from "../services/gameRules.js";
 import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
 import { startManualPulse } from "../services/pulseService.js";
@@ -49,7 +50,8 @@ export function GMScreen() {
   const pulseState = remoteState?.pulseState || { status: "idle" };
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
-  const activeScenario = getScenario(sessionState.scenarioId || "sandbox");
+  const activeScenario = getScenario(sessionState.scenarioId || DEFAULT_SCENARIO_ID);
+  const coordinateTargets = getScenarioHotspots(activeScenario.id, "A");
   const gameState = remoteState?.gameState || {};
 
   // Firebase strips empty arrays — normalize to safe defaults
@@ -120,21 +122,6 @@ export function GMScreen() {
     }
   }
 
-  async function handleForceStartGame() {
-    setIsBusy(true);
-    setStatusMessage("Forzando inicio (modo debug)...");
-    try {
-      const nextState = await forceStartGame();
-      setRemoteState(nextState);
-      setElapsedSeconds(getGameTimerElapsedSeconds(nextState.session?.gameTimer));
-      setStatusMessage("Partida iniciada directamente. Sin esperar jugadores.");
-    } catch {
-      setStatusMessage("No se pudo forzar el inicio.");
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
   async function handleResetGame() {
     setIsBusy(true);
     setStatusMessage("Reseteando...");
@@ -167,7 +154,7 @@ export function GMScreen() {
   /** Assign a scenario variant (A-D) to a specific player role. */
   async function handleSetVariant(roleId, variant) {
     try {
-      await firebasePatch(`playerBoards/${roleId}`, { variant });
+      await firebasePatch(`playerBoards/${roleId}`, { variant, scenarioId: activeScenario.id });
       setStatusMessage(`${roleId}: variante ${variant}`);
       await refresh();
     } catch {
@@ -242,6 +229,8 @@ export function GMScreen() {
             queuedForPlayer={null}
             overlayActive={false}
             showCoordinates
+            boardTargets={coordinateTargets}
+            scenarioId={activeScenario.id}
           />
         </section>
       )}
@@ -287,9 +276,6 @@ export function GMScreen() {
           <p className="react-status" role="status" aria-live="polite">{statusMessage}</p>
           <div className="button-row">
             <NButton onClick={handleStartGame} disabled={isBusy}>Abrir lobby</NButton>
-            <NButton variant="ghost" onClick={handleForceStartGame} disabled={isBusy} title="Inicia sin esperar jugadores">
-              Debug: iniciar ya
-            </NButton>
             <NButton variant="danger" onClick={handleResetGame} disabled={isBusy}>Resetear</NButton>
             <NButton variant="ghost" onClick={() => setShowCoordinates((v) => !v)}>
               {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; font-family: var(--font-ui); }
+  .list { display: flex; flex-direction: column; gap: 2px; }
+  .item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-dim);
+    cursor: pointer;
+    transition: all 100ms linear;
+    clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
+    position: relative;
+  }
+  .item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--neon-green); transition: width 100ms linear; }
+  .item:hover { background: var(--bg-panel-hi); border-color: var(--border-bright); }
+  .item:hover::before { width: 2px; }
+  .item.active { background: rgba(0,255,135,0.06); border-color: rgba(0,255,135,0.35); }
+  .item.active::before { width: 2px; }
+  .item.active .item-id { color: var(--neon-green); }
+  .item.active .item-name { color: var(--text-primary); }
+  .item.done { opacity: 0.45; }
+  .item.done .item-status { color: var(--text-ghost); }
+
+  .item-id { font-family: var(--font-mono); font-size: 10px; color: var(--text-ghost); width: 56px; flex-shrink: 0; }
+  .item-name { font-size: 12px; font-weight: 500; color: var(--text-secondary); flex: 1; letter-spacing: 0.03em; }
+  .item-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+  .item-status { font-family: var(--font-mono); font-size: 10px; padding: 2px 8px; clip-path: polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%); }
+  .s-open    { background: rgba(0,255,135,0.1); color: var(--neon-green); }
+  .s-running { background: rgba(0,234,255,0.1); color: var(--neon-cyan); }
+  .s-err     { background: rgba(255,45,120,0.1); color: var(--neon-magenta); }
+  .s-done    { background: rgba(255,255,255,0.04); color: var(--text-ghost); }
+</style>
+</head><body>
+<div class="list">
+  <div class="item">
+    <div class="item-id">#EX-001</div>
+    <div class="item-name">Bypass Firewall Layer 1</div>
+    <div class="item-meta">03:12</div>
+    <div class="item-status s-open">OPEN</div>
+  </div>
+  <div class="item active">
+    <div class="item-id">#EX-002</div>
+    <div class="item-name">Extract Node Credentials</div>
+    <div class="item-meta">01:44</div>
+    <div class="item-status s-running">ACTIVE</div>
+  </div>
+  <div class="item">
+    <div class="item-id">#EX-003</div>
+    <div class="item-name">Inject Payload v2.4</div>
+    <div class="item-meta">02:08</div>
+    <div class="item-status s-err">BLOCKED</div>
+  </div>
+  <div class="item done">
+    <div class="item-id">#EX-000</div>
+    <div class="item-name">Initialize Connection</div>
+    <div class="item-meta">00:32</div>
+    <div class="item-status s-done">DONE</div>
+  </div>
+</div>
+</body></html>

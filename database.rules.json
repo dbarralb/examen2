@@ -1,0 +1,57 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": false,
+    "session": {
+      ".write": "auth != null"
+    },
+    "sessionState": {
+      ".write": "auth != null"
+    },
+    "gameState": {
+      ".write": "auth != null"
+    },
+    "pulseState": {
+      ".write": "auth != null"
+    },
+    "targetFeedback": {
+      ".write": "auth != null"
+    },
+    "lobby": {
+      ".write": "auth != null"
+    },
+    "lastRoleActions": {
+      ".write": "auth != null"
+    },
+    "playerViews": {
+      ".write": "auth != null"
+    },
+    "playerBoards": {
+      ".write": "auth != null"
+    },
+    "queuedActions": {
+      ".write": "auth != null"
+    },
+    "actionLog": {
+      ".write": "auth != null"
+    },
+    "chatMessages": {
+      ".write": "auth != null"
+    },
+    "lastRoleDebug": {
+      ".write": "auth != null"
+    },
+    "itemSeenState": {
+      ".write": "auth != null"
+    },
+    "playerInventories": {
+      ".write": "auth != null"
+    },
+    "pendingItemUsage": {
+      ".write": "auth != null"
+    },
+    "cardUsage": {
+      ".write": "auth != null"
+    }
+  }
+}

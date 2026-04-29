@@ -4,8 +4,9 @@ import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
-import { boardHotspots, cards, getCard, getContainerOpenState, getTargetStateLabel, targets } from "../data/gameData.js";
+import { cards, getCard, targets } from "../data/gameData.js";
 import { DEFAULT_SCENARIO_ID, getVariantBackground } from "../data/scenarioData.js";
+import { getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -38,14 +39,14 @@ function getOverlayProgress(pulseState) {
   return ((Date.now() - overlay.startedAt) / (overlay.endsAt - overlay.startedAt)) * 100;
 }
 
-function getTargetStateSignature(targetId, gameState) {
-  const target = targets.find((item) => item.id === targetId);
+function getTargetStateSignature(targetId, gameState, boardTargets = targets) {
+  const target = boardTargets.find((item) => item.id === targetId);
 
   if (!target) {
     return "";
   }
 
-  return getTargetStateLabel(target, gameState);
+  return getScenarioTargetStateLabel(target, gameState);
 }
 
 export function PlayerScreen({ navigation, params }) {
@@ -91,6 +92,7 @@ export function PlayerScreen({ navigation, params }) {
   const playerBoard = remoteState?.playerBoards?.[role.id] || {};
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
+  const boardTargets = useMemo(() => getScenarioHotspots(boardScenarioId, boardVariant), [boardScenarioId, boardVariant]);
   const boardSrc = getVariantBackground(boardScenarioId, boardVariant);
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
@@ -106,7 +108,7 @@ export function PlayerScreen({ navigation, params }) {
   useEffect(() => {
     const prev = prevGameStateRef.current;
     if (!prev) {
-      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, gmSceneState: remoteState?.gmSceneState };
+      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, gmSceneState: gameState.gmSceneState };
       return;
     }
 
@@ -164,7 +166,7 @@ export function PlayerScreen({ navigation, params }) {
     }
 
     // ── gmSceneState — efectos activos ──
-    const gmScene = remoteState?.gmSceneState || {};
+    const gmScene = gameState.gmSceneState || {};
     const prevGmScene = prev.gmSceneState || {};
     const activeEffects = Array.isArray(gmScene.activeEffects) ? gmScene.activeEffects : [];
     const prevEffects = Array.isArray(prevGmScene.activeEffects) ? prevGmScene.activeEffects : [];
@@ -178,18 +180,14 @@ export function PlayerScreen({ navigation, params }) {
       logEvent(`gmScene.variant: ${prevGmScene.activeVariant ?? "normal"} → ${gmScene.activeVariant}`);
     }
 
-    prevGameStateRef.current = { gameState, actionLog, cardUsage, pulseState, gmSceneState: remoteState?.gmSceneState };
+    prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, pulseState, gmSceneState: gameState.gmSceneState };
   }); // intentionally no dep array — runs after every render to diff state
 
   // null = not a container; true = open; false = closed
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const selectedContainerOpen = useMemo(
-    () => (selectedTargetId ? getContainerOpenState(selectedTargetId, gameState) : null),
-    // gameState ref changes every poll but getContainerOpenState only reads specific keys —
-    // the returned boolean is stable unless the actual container state changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedTargetId, gameState.lockerState],
-  );
+  const selectedContainerOpen = selectedTargetId
+    ? getScenarioContainerOpenState(selectedTargetId, gameState, boardScenarioId, boardVariant)
+    : null;
 
   usePollingRefresh({
     intervalMs: 1000,
@@ -220,7 +218,7 @@ export function PlayerScreen({ navigation, params }) {
 
           if (pendingAction) {
             const nextGameState = { ...createInitialGameState(), ...(state?.gameState || {}) };
-            const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState);
+            const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState, boardTargets);
 
             if (pendingAction.targetStateSignature && nextSignature !== pendingAction.targetStateSignature) {
               cancelledRemoteLoad = true;
@@ -327,43 +325,26 @@ export function PlayerScreen({ navigation, params }) {
   }, [selectedTargetId, selectedCardId, pendingAction?.id, pendingAction?.target, pendingAction?.card, pendingAction?.status, pendingAction?.minigame?.status, pendingAction?.minigame?.result]);
 
   async function handleDeviceCommand(targetId, cmd) {
-    logEvent(`cmd: ${targetId} → ${cmd.name}${cmd.arg ? ` [${cmd.arg}]` : ""}`);
+    logEvent(`cmd: ${targetId} -> ${cmd.name}${cmd.arg ? ` [${cmd.arg}]` : ""}`);
 
-    if (targetId === "security_panel" && cmd.name === "seguridad_apagar") {
-      const code = (cmd.arg || "").trim();
-      if (code === "7391") {
-        await firebasePatch("", {
-          "gameState/hotspotStates/security_panel": "code_success",
-          "gameState/hotspotStates/laser_grid": "disabled",
-          "gameState/hotspotStates/showcase": "laser_disabled",
-          "gameState/flags/resolvedByMainPath": true,
-        });
-        logEvent("AUTH OK: láser desactivado, vitrina desbloqueada");
-        setDeviceCommandResult({
-          id: Date.now(),
-          lines: ["Clave correcta.", "Sistema láser: DESACTIVADO.", "Vitrina: desbloqueada."],
-          type: "system",
-        });
-      } else {
-        const failedAttempts = (gameState.failedAttempts || 0) + 1;
-        const alarmNoise = ((gameState.alarmState || {}).noise || 0) + 1;
-        const alarmTriggers = Array.isArray(gameState.alarmState?.triggers) ? [...gameState.alarmState.triggers] : [];
-        alarmTriggers.push("wrong_security_code");
-        await firebasePatch("", {
-          "gameState/hotspotStates/security_panel": "code_error",
-          "gameState/failedAttempts": failedAttempts,
-          "gameState/alarmState/noise": alarmNoise,
-          "gameState/alarmState/triggers": alarmTriggers,
-        });
-        logEvent(`AUTH FAIL: código incorrecto (intento ${failedAttempts})`);
-        setDeviceCommandResult({
-          id: Date.now(),
-          lines: [`Clave incorrecta. Intento ${failedAttempts} registrado.`, "¿Desea volver a intentarlo? Y/N"],
-          type: "error",
-          nextFlow: "seguridad_retry",
-        });
-      }
+    const result = resolveScenarioDeviceCommand({
+      targetId,
+      command: cmd,
+      gameState,
+      scenarioId: boardScenarioId,
+      variant: boardVariant,
+    });
+
+    if (result?.patch) {
+      await firebasePatch("", result.patch);
     }
+
+    setDeviceCommandResult({
+      id: Date.now(),
+      lines: result?.lines || ["Comando ejecutado."],
+      type: result?.type || "system",
+      nextFlow: result?.nextFlow,
+    });
   }
 
   function startLoad(cardId, targetId) {
@@ -376,7 +357,7 @@ export function PlayerScreen({ navigation, params }) {
     const minigame = createSoftwareLoadMinigame(createSoftwareLoadSequence());
     setPendingAction({
       ...createPendingAction({ card, targetId, roleId: role.id, minigame }),
-      targetStateSignature: getTargetStateSignature(targetId, gameState),
+      targetStateSignature: getTargetStateSignature(targetId, gameState, boardTargets),
     });
     setSelectedTargetId(targetId);
   }
@@ -459,7 +440,7 @@ export function PlayerScreen({ navigation, params }) {
 
       return {
         ...current,
-        minigame: createSoftwareLoadMinigame(current.minigame.sequence),
+      minigame: createSoftwareLoadMinigame(current.minigame.sequence),
       };
     });
   }
@@ -535,7 +516,7 @@ export function PlayerScreen({ navigation, params }) {
   const hasRedLight = gmActiveEffects.includes("red_light_overlay");
   const hasSystemInterference = gmActiveEffects.includes("system_interference");
   const hasCameraTracking = gmActiveEffects.includes("camera_tracking");
-  const hasDoorLocked = gmActiveEffects.includes("door_temporarily_locked");
+  const hasExitLocked = gmActiveEffects.includes("exit_temporarily_locked");
   const isContainment = gmVariant === "containment" || gmActiveEffects.includes("containment_mode");
 
   return (
@@ -553,7 +534,7 @@ export function PlayerScreen({ navigation, params }) {
             REC ●
           </div>
         )}
-        {hasDoorLocked && (
+        {hasExitLocked && (
           <div className="gm-door-locked-badge" aria-label="Salida bloqueada">
             SALIDA BLOQUEADA
           </div>
@@ -595,8 +576,10 @@ export function PlayerScreen({ navigation, params }) {
           onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
           onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
-          boardTargets={boardHotspots}
-          backgroundSrc={isGmMonitorView ? null : boardSrc}
+          boardTargets={boardTargets}
+          backgroundSrc={boardSrc}
+          scenarioId={boardScenarioId}
+          variant={boardVariant}
           onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}
           deviceCommandResult={isGmMonitorView ? null : deviceCommandResult}
         />
@@ -643,6 +626,7 @@ export function PlayerScreen({ navigation, params }) {
             onSlotDragStart={() => setIsDraggingItem(true)}
             onSlotDrop={handleInventorySlotDrop}
             isDraggingItem={isDraggingItem}
+            getItemById={(itemId) => getScenarioItem(itemId, boardScenarioId, boardVariant)}
           />
         )}
         <ItemModal item={openedItem} onClose={() => setOpenedItem(null)} />
@@ -651,9 +635,9 @@ export function PlayerScreen({ navigation, params }) {
             <strong>{role.label}</strong>
             <span>
               {isMirrorFresh && mirroredView?.selectedTargetId
-                ? `Viendo ${targets.find((target) => target.id === mirroredView.selectedTargetId)?.label || mirroredView.selectedTargetId}`
+                ? `Viendo ${boardTargets.find((target) => target.id === mirroredView.selectedTargetId)?.label || mirroredView.selectedTargetId}`
                 : lastRoleAction
-                  ? `${formatCardLabel(lastRoleAction)} -> ${targets.find((target) => target.id === lastRoleAction.target)?.label || lastRoleAction.target}`
+                  ? `${formatCardLabel(lastRoleAction)} -> ${boardTargets.find((target) => target.id === lastRoleAction.target)?.label || lastRoleAction.target}`
                   : "Sin accion registrada."}
             </span>
           </aside>

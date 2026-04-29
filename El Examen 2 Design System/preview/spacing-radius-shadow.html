@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 20px 16px; font-family: var(--font-mono); }
+  .row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 9px; color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .box { width: 56px; height: 36px; background: var(--bg-panel); border: 1px solid var(--border-mid); }
+  .cut-sm   { clip-path: polygon(10px 0%, 100% 0%, 100% 100%, 0% 100%, 0% 10px); }
+  .cut-md   { clip-path: polygon(14px 0%, 100% 0%, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0% 100%, 0% 14px); }
+  .cut-lg   { clip-path: polygon(20px 0%, 100% 0%, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px); }
+  .cut-slash { clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+  .cut-none { border-radius: 0; }
+  .desc { font-size: 9px; color: var(--text-disabled); line-height: 1.4; max-width: 52px; }
+  .divider { width: 1px; background: var(--border-dim); align-self: stretch; }
+  .glow-row { display: flex; gap: 14px; align-items: center; }
+  .glow-box { width: 48px; height: 30px; background: var(--bg-panel); }
+  .glow-label { font-size: 9px; color: var(--text-ghost); margin-top: 3px; }
+</style>
+</head><body>
+<div class="row">
+  <div class="group">
+    <div class="label">Clip Paths</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div><div class="box cut-none" style="border:1px solid #2A3855"></div><div class="desc" style="margin-top:3px">none</div></div>
+      <div><div class="box cut-sm" style="border:1px solid #00FF87;box-shadow:0 0 8px rgba(0,255,135,0.3)"></div><div class="desc" style="margin-top:3px">sm 10px</div></div>
+      <div><div class="box cut-md" style="border:1px solid #00FF87;box-shadow:0 0 8px rgba(0,255,135,0.3)"></div><div class="desc" style="margin-top:3px">md 14px</div></div>
+      <div><div class="box cut-lg" style="border:1px solid #9B00FF;box-shadow:0 0 8px rgba(155,0,255,0.3)"></div><div class="desc" style="margin-top:3px">lg 20px</div></div>
+      <div><div class="box cut-slash" style="border:1px solid #FF2D78;box-shadow:0 0 8px rgba(255,45,120,0.3)"></div><div class="desc" style="margin-top:3px">slash</div></div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="group">
+    <div class="label">Glow Elevation</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div><div class="box cut-sm" style="background:#161D2E;border:1px solid #1E2A3F"></div><div class="glow-label">flat</div></div>
+      <div><div class="box cut-sm" style="background:#161D2E;border:1px solid #00FF87;box-shadow:0 0 6px rgba(0,255,135,0.55)"></div><div class="glow-label">glow-sm</div></div>
+      <div><div class="box cut-sm" style="background:#161D2E;border:1px solid #00FF87;box-shadow:0 0 14px rgba(0,255,135,0.55),0 0 30px rgba(0,255,135,0.2)"></div><div class="glow-label">glow-md</div></div>
+      <div><div class="box cut-sm" style="background:#161D2E;border:1px solid #FF2D78;box-shadow:0 0 14px rgba(255,45,120,0.6),0 0 40px rgba(255,45,120,0.25)"></div><div class="glow-label">error</div></div>
+    </div>
+  </div>
+</div>
+</body></html>

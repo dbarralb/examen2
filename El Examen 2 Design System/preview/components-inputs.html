@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 20px 16px; font-family: var(--font-ui); }
+  .inputs { display: flex; flex-direction: column; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-ghost); }
+  .field-wrap { position: relative; }
+  .input {
+    width: 100%; box-sizing: border-box;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-mid);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: all 120ms linear;
+    caret-color: var(--neon-green);
+  }
+  .input::placeholder { color: var(--text-ghost); }
+  .input:focus { border-color: var(--neon-green); background: rgba(0,255,135,0.04); box-shadow: 0 0 10px rgba(0,255,135,0.2); }
+  .input-err { border-color: var(--neon-magenta); background: rgba(255,45,120,0.04); box-shadow: 0 0 10px rgba(255,45,120,0.2); }
+  .input-ok  { border-color: var(--neon-green); background: rgba(0,255,135,0.04); }
+
+  .field-hint { font-family: var(--font-mono); font-size: 10px; }
+  .hint-err  { color: var(--neon-magenta); }
+  .hint-ok   { color: var(--neon-green); }
+
+  .row2 { display: flex; gap: 10px; }
+</style>
+</head><body>
+<div class="inputs">
+  <div class="row2">
+    <div class="field" style="flex:1">
+      <div class="field-label">Access Token</div>
+      <div class="field-wrap">
+        <input class="input" placeholder="enter token..." value="">
+      </div>
+    </div>
+    <div class="field" style="flex:1">
+      <div class="field-label">Node ID</div>
+      <div class="field-wrap">
+        <input class="input input-ok" value="NODE-7F3A">
+      </div>
+      <div class="field-hint hint-ok">▸ node verified</div>
+    </div>
+  </div>
+  <div class="field">
+    <div class="field-label">Passphrase</div>
+    <div class="field-wrap">
+      <input class="input input-err" type="password" value="wrongpass">
+    </div>
+    <div class="field-hint hint-err">✕ auth failed — 2 attempts remaining</div>
+  </div>
+  <div class="field">
+    <div class="field-label">Command</div>
+    <div class="field-wrap">
+      <input class="input" placeholder="// enter exploit command..." style="font-family:var(--font-mono)">
+    </div>
+  </div>
+</div>
+</body></html>

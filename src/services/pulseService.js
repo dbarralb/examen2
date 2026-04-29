@@ -100,7 +100,7 @@ export async function startManualPulse({ onStatus } = {}) {
       actionLog,
       lastRoleDebug,
       metricsDelta: {},
-      salaId: sessionState.salaId || "sandbox",
+      sessionState,
     };
 
     pulseState = {

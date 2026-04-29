@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instituto Newton — Mapa Interactivo</title>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: #0F1918;
+  font-family: 'League Spartan', 'Arial Narrow', sans-serif;
+  overflow: hidden;
+}
+
+/* ── MAP CONTAINER ───────────────────────────────── */
+#app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+
+#topbar {
+  flex-shrink: 0;
+  background: rgba(1,46,85,0.97);
+  border-bottom: 1px solid #2A3F3C;
+  padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo-row { display: flex; align-items: center; gap: 10px; }
+.logo-shield {
+  width: 36px; height: 41px;
+  background: #C2F779;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%);
+  display: flex; align-items: center; justify-content: center;
+}
+.logo-shield-inner {
+  width: 30px; height: 34px;
+  background: #182625;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.logo-n { font-size: 14px; font-weight: 900; color: #D97D0D; line-height: 1; }
+.logo-atom { font-size: 6px; color: #E2D6AF; }
+.logo-text .inst { font-size: 6px; font-weight: 700; letter-spacing: 0.2em; color: #E2D6AF; text-transform: uppercase; display: block; }
+.logo-text .name { font-size: 13px; font-weight: 900; color: #D97D0D; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; display: block; }
+.logo-text .since { font-size: 6px; font-weight: 700; letter-spacing: 0.15em; color: #7A7363; text-transform: uppercase; }
+
+.topbar-title { font-size: 13px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; }
+.topbar-sub   { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7363; }
+
+.legend { display: flex; gap: 16px; align-items: center; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #A89F88; }
+.leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── MAP AREA ─────────────────────────────────────── */
+#map-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+#map-wrap.dragging { cursor: grabbing; }
+
+#map-inner {
+  position: absolute;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+#map-inner img {
+  display: block;
+  width: 1536px; /* display at half resolution */
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+#map-inner svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 1536px;
+  height: 1024px;
+}
+
+/* ── ROOM HOTSPOTS ────────────────────────────────── */
+.room-hot {
+  fill: transparent;
+  stroke: rgba(2, 118, 214, 0);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: fill 0.15s, stroke 0.15s;
+}
+.room-hot:hover {
+  fill: rgba(2, 118, 214, 0.2);
+  stroke: rgba(2, 118, 214, 0.7);
+}
+.room-hot.status-active { stroke: rgba(194,247,121,0.15); stroke-width: 2; }
+.room-hot.status-active:hover { fill: rgba(194,247,121,0.18); stroke: #C2F779; }
+.room-hot.status-locked { cursor: not-allowed; }
+.room-hot.status-locked:hover { fill: rgba(90,122,153,0.15); stroke: rgba(90,122,153,0.5); }
+.room-hot.status-completed:hover { fill: rgba(194,247,121,0.15); stroke: rgba(46,204,113,0.6); }
+.room-hot.status-active.selected,
+.room-hot.selected { fill: rgba(194,247,121,0.2); stroke: #C2F779; }
+.room-hot.status-completed.selected { fill: rgba(194,247,121,0.2); stroke: #C2F779; }
+.room-hot.status-locked.selected   { fill: rgba(90,122,153,0.2); stroke: #7A7363; }
+
+/* room number labels */
+.room-label {
+  font-family: 'League Spartan', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  fill: rgba(255,255,255,0.5);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.05em;
+}
+
+/* ── DETAIL PANEL ─────────────────────────────────── */
+#detail {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 320px;
+  background: rgba(1,46,85,0.97);
+  border-left: 1px solid #2A3F3C;
+  backdrop-filter: blur(12px);
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.25,0.1,0.25,1);
+  display: flex; flex-direction: column;
+  z-index: 10;
+  padding-top: 60px; /* below topbar */
+}
+#detail.open { transform: translateX(0); }
+
+#detail-header {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid #2A3F3C;
+}
+.detail-num {
+  font-size: 48px; font-weight: 900; color: #C2F779;
+  line-height: 1; margin-bottom: 4px;
+}
+.detail-num.completed { color: #C2F779; }
+.detail-num.locked    { color: #524D40; }
+.detail-name {
+  font-size: 20px; font-weight: 900; text-transform: uppercase;
+  letter-spacing: -0.01em; color: #fff; line-height: 1.15;
+  margin-bottom: 10px;
+}
+#detail-body { padding: 20px 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.detail-desc { font-size: 13px; color: #C8BC95; line-height: 1.7; }
+.detail-section-label { font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #2A3F3C; margin-bottom: 8px; }
+.detail-clue {
+  background: rgba(194,247,121,0.07);
+  border: 1px solid #2A3F3C;
+  border-radius: 4px; padding: 12px 14px;
+  font-size: 12px; color: #A89F88; line-height: 1.6;
+  font-style: italic;
+}
+.detail-objects { display: flex; flex-direction: column; gap: 6px; }
+.detail-object {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  background: #0F1918; border: 1px solid #2A3F3C; border-radius: 4px;
+  font-size: 12px; font-weight: 600; color: #E2D6AF;
+}
+.detail-object .dot { width: 7px; height: 7px; background: #C2F779; flex-shrink: 0; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 4px;
+}
+.badge-info     { background: rgba(194,247,121,0.12);  color: #C2F779; }
+.badge-success  { background: rgba(194,247,121,0.12); color: #C2F779; }
+.badge-warning  { background: rgba(217,125,13,0.12);  color: #D97D0D; }
+.badge-muted    { background: rgba(255,255,255,0.05);color: #7A7363; }
+.badge-danger   { background: rgba(166,18,18,0.12);  color: #A61212; }
+
+#close-btn {
+  position: absolute; top: 72px; right: 16px;
+  background: none; border: none; color: #7A7363; cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 4px 8px;
+  transition: color 0.15s;
+}
+#close-btn:hover { color: #fff; }
+
+/* ── ZOOM CONTROLS ────────────────────────────────── */
+#zoom-controls {
+  position: fixed; bottom: 24px; right: 340px;
+  display: flex; flex-direction: column; gap: 4px;
+  z-index: 10;
+  transition: right 0.25s cubic-bezier(0.25,0.1,0.25,1);
+}
+#zoom-controls.shifted { right: 20px; }
+.zoom-btn {
+  width: 36px; height: 36px;
+  background: rgba(1,46,85,0.95); border: 1px solid #2A3F3C;
+  color: #E2D6AF; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.zoom-btn:hover { background: #1E3230; }
+
+#hint {
+  position: fixed; bottom: 24px; left: 24px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: #1E3230;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div class="logo-row">
+      <img src="../../assets/logo.png" alt="Instituto Newton" style="height:44px;width:auto;">
+    </div>
+    <div style="text-align:center;">
+      <div class="topbar-title">Plano del Instituto</div>
+      <div class="topbar-sub">Planta Baja — 16 zonas</div>
+    </div>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#C2F779;"></div>Activo</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#C2F779;"></div>Completado</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#524D40;"></div>Bloqueado</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#E2D6AF;opacity:0.4;"></div>Accesible</div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map-wrap">
+    <div id="map-inner">
+      <img src="../../assets/map_floor_plan.png" alt="Plano Instituto Newton" draggable="false">
+      <svg id="map-svg" viewBox="0 0 1536 1024" xmlns="http://www.w3.org/2000/svg">
+        <!-- Rooms defined as id, x%, y%, w%, h%, number, status -->
+        <!-- Coords in px within 1536×1024 display space -->
+
+        <!-- 1 GIMNASIO -->
+        <rect class="room-hot status-completed" data-id="1" x="264" y="38" width="264" height="490" rx="0"/>
+        <text class="room-label" x="396" y="283">01</text>
+
+        <!-- 2 VESTUARIOS -->
+        <rect class="room-hot status-completed" data-id="2" x="530" y="38" width="122" height="196" rx="0"/>
+        <text class="room-label" x="591" y="136">02</text>
+
+        <!-- 3 PISCINA -->
+        <rect class="room-hot status-active" data-id="3" x="264" y="552" width="264" height="380" rx="0"/>
+        <text class="room-label" x="396" y="742">03</text>
+
+        <!-- 4 AULAS (group — treat as single clickable zone) -->
+        <rect class="room-hot status-completed" data-id="4" x="654" y="38" width="426" height="422" rx="0"/>
+        <text class="room-label" x="867" y="229">04</text>
+
+        <!-- 5 LAB CIENCIAS -->
+        <rect class="room-hot status-active" data-id="5" x="1082" y="38" width="162" height="256" rx="0"/>
+        <text class="room-label" x="1163" y="166">05</text>
+
+        <!-- 6 BIBLIOTECA -->
+        <rect class="room-hot status-active" data-id="6" x="1082" y="296" width="176" height="374" rx="0"/>
+        <text class="room-label" x="1170" y="483">06</text>
+
+        <!-- 7 SALA INFORMÁTICA -->
+        <rect class="room-hot status-locked" data-id="7" x="1246" y="38" width="194" height="256" rx="0"/>
+        <text class="room-label" x="1343" y="166">07</text>
+
+        <!-- 8 COMEDOR -->
+        <rect class="room-hot status-completed" data-id="8" x="264" y="574" width="264" height="324" rx="0"/>
+        <!-- shares space with piscina visually so skip label -->
+
+        <!-- 9 COCINA -->
+        <rect class="room-hot status-completed" data-id="9" x="530" y="582" width="162" height="316" rx="0"/>
+        <text class="room-label" x="611" y="740">09</text>
+
+        <!-- 10 SALA PROFESORES -->
+        <rect class="room-hot status-active" data-id="10" x="694" y="582" width="216" height="244" rx="0"/>
+        <text class="room-label" x="802" y="704">10</text>
+
+        <!-- 11 DIRECCIÓN -->
+        <rect class="room-hot status-locked" data-id="11" x="912" y="582" width="176" height="244" rx="0"/>
+        <text class="room-label" x="1000" y="704">11</text>
+
+        <!-- 12 SALA CONSEJO -->
+        <rect class="room-hot status-locked" data-id="12" x="1090" y="582" width="176" height="244" rx="0"/>
+        <text class="room-label" x="1178" y="704">12</text>
+
+        <!-- 13 ENFERMERÍA -->
+        <rect class="room-hot status-completed" data-id="13" x="694" y="828" width="216" height="164" rx="0"/>
+        <text class="room-label" x="802" y="910">13</text>
+
+        <!-- 14 AUDITORIO -->
+        <rect class="room-hot status-active" data-id="14" x="1090" y="828" width="270" height="164" rx="0"/>
+        <text class="room-label" x="1225" y="910">14</text>
+
+        <!-- 15 PATIO INTERIOR -->
+        <rect class="room-hot status-completed" data-id="15" x="530" y="236" width="550" height="344" rx="0"/>
+        <text class="room-label" x="805" y="408">15</text>
+
+        <!-- 16 APARCAMIENTO -->
+        <rect class="room-hot status-muted" data-id="16" x="1268" y="456" width="230" height="480" rx="0"/>
+        <text class="room-label" x="1383" y="696">16</text>
+
+        <!-- RECEPCIÓN (unlisted but visible) -->
+        <rect class="room-hot status-completed" data-id="17" x="912" y="828" width="176" height="164" rx="0"/>
+        <text class="room-label" x="1000" y="910">R</text>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="detail">
+  <button id="close-btn" onclick="closeDetail()">✕</button>
+  <div id="detail-header">
+    <div id="d-num" class="detail-num">01</div>
+    <div id="d-name" class="detail-name">Gimnasio</div>
+    <div id="d-badge"></div>
+  </div>
+  <div id="detail-body">
+    <div id="d-desc" class="detail-desc"></div>
+    <div id="d-clue-wrap" style="display:none">
+      <div class="detail-section-label">Pista</div>
+      <div id="d-clue" class="detail-clue"></div>
+    </div>
+    <div id="d-objects-wrap" style="display:none">
+      <div class="detail-section-label">Objetos encontrados</div>
+      <div id="d-objects" class="detail-objects"></div>
+    </div>
+    <div id="d-action" style="margin-top:auto;padding-top:16px;"></div>
+  </div>
+</div>
+
+<!-- ZOOM -->
+<div id="zoom-controls" class="shifted">
+  <button class="zoom-btn" onclick="zoom(1.2)">+</button>
+  <button class="zoom-btn" onclick="zoom(1/1.2)">−</button>
+  <button class="zoom-btn" onclick="resetZoom()" style="font-size:12px;font-weight:700;letter-spacing:0.05em;">FIT</button>
+</div>
+
+<div id="hint">Arrastra para mover · Rueda para zoom · Clic en sala para detalles</div>
+
+<script>
+// ── ROOM DATA ─────────────────────────────────────────────────
+const ROOMS = {
+  1:  { name: 'Gimnasio', status: 'completed', desc: 'El gimnasio es el corazón deportivo del instituto. Las pistas de baloncesto guardan más de una historia sobre los estudiantes de élite que pasaron por aquí.', clue: 'Alguien dejó un número escrito en la pared norte del vestuario. No parece vandalism ordinario.', objects: ['Silbato de entrenador', 'Taquilla abierta #7', 'Nota arrugada'] },
+  2:  { name: 'Vestuarios', status: 'completed', desc: 'Vestuarios compartidos entre alumnos y personal. Siempre hay algo que no cuadra en los casilleros del fondo.', clue: null, objects: ['Código: A4-B9'] },
+  3:  { name: 'Piscina', status: 'active', desc: 'La piscina olímpica del instituto lleva semanas cerrada por "mantenimiento". Nadie sabe exactamente por qué.', clue: '¿Por qué está la piscina cerrada si el sistema de filtrado funciona perfectamente? Alguien no quiere que nadie entre.', objects: [] },
+  4:  { name: 'Aulas', status: 'completed', desc: 'Las aulas numeradas del 4A al 4F albergan las clases ordinarias. Pero no hay nada de ordinario en las notas que algunos alumnos han dejado en sus pupitres.', clue: null, objects: ['Examen con anotaciones', 'Llave sin identificar', 'Manual de Química subrayado'] },
+  5:  { name: 'Laboratorio de Ciencias', status: 'active', desc: 'El laboratorio más avanzado del instituto. Equipado con tecnología de última generación. La profesora Anne pasa más horas aquí de lo que debería.', clue: '"El archivador rojo está cerca del escritorio norte. Busca bajo la segunda carpeta — la etiquetada SECTOR_7."', objects: [] },
+  6:  { name: 'Biblioteca', status: 'active', desc: 'Más de 40.000 volúmenes. Pero algunos estantes tienen libros que no aparecen en el catálogo oficial. Busca en la sección de "Historia Local".', clue: 'El libro que buscas está en el estante 7, sección Historia, tercera fila desde abajo. Tiene una marca en el lomo.', objects: [] },
+  7:  { name: 'Sala de Informática', status: 'locked', desc: 'Acceso restringido. Se requiere credencial de Nivel A o superior. Los servidores aquí guardan registros que el director preferiría mantener en secreto.', clue: null, objects: [] },
+  8:  { name: 'Comedor', status: 'completed', desc: 'El comedor da servicio a 400 alumnos diariamente. Las conversaciones en la mesa del fondo siempre son las más interesantes.', clue: null, objects: ['Servilleta con coordenadas', 'Tarjeta de acceso usada'] },
+  9:  { name: 'Cocina', status: 'completed', desc: 'Solo el personal de cocina tiene acceso. Aunque uno de los cocineros guarda algo más que recetas en su taquilla.', clue: null, objects: ['Llave de almacén'] },
+  10: { name: 'Sala de Profesores', status: 'active', desc: 'La sala donde los profesores coordinan el sistema de "pruebas especiales". Hay archivadores que llevan años sin que nadie los abra... oficialmente.', clue: '"El director tiene costumbre de esconder la llave bajo la maceta del pasillo norte. Pero hay cámaras."', objects: [] },
+  11: { name: 'Dirección', status: 'locked', desc: 'Acceso restringido. La oficina del director contiene los documentos que lo explican todo. Necesitas la llave maestra del pasillo norte.', clue: null, objects: [] },
+  12: { name: 'Sala de Consejo', status: 'locked', desc: 'Sala de reuniones del consejo directivo. Solo accessible con credencial de Nivel S. Las reuniones se celebran los jueves a las 22:00.', clue: null, objects: [] },
+  13: { name: 'Enfermería', status: 'completed', desc: 'La enfermera del instituto atiende más de lo que aparece en los registros. Algunos alumnos entran por "mareo" y salen con información.', clue: null, objects: ['Botiquín forzado', 'Carpeta médica anónima'] },
+  14: { name: 'Auditorio', status: 'active', desc: 'El auditorio acoge los actos oficiales del instituto. El próximo acto está programado esta tarde — momento perfecto para acceder sin ser visto.', clue: 'El proyector tiene un archivo oculto en la unidad USB. El técnico siempre la deja conectada.', objects: [] },
+  15: { name: 'Patio Interior', status: 'completed', desc: 'El centro neurálgico del instituto. Todos pasan por aquí. Los bancos del lado sur son punto de encuentro habitual para intercambiar información.', clue: null, objects: ['Mensaje dejado en banco #3'] },
+  16: { name: 'Aparcamiento', status: 'accessible', desc: 'Zona de aparcamiento exterior. Un coche lleva tres días aparcado sin mover. La matrícula no figura en los registros del instituto.', clue: null, objects: [] },
+  17: { name: 'Recepción', status: 'completed', desc: 'La recepcionista controla los accesos y tiene copia de todas las llaves. Es muy observadora... y muy discreta.', clue: null, objects: ['Registro de visitas (copia)'] },
+};
+
+const STATUS_LABELS = {
+  active: ['info', 'Misión activa'],
+  completed: ['success', 'Completado'],
+  locked: ['muted', 'Bloqueado'],
+  accessible: ['muted', 'Accesible'],
+  muted: ['muted', 'Sin misión'],
+};
+
+const BTN_STYLES = {
+  active:    'background:#C2F779;color:#fff;border:none;',
+  completed: 'background:transparent;color:#C2F779;border:1px solid #C2F779;',
+  locked:    'background:#1E3230;color:#524D40;border:none;cursor:not-allowed;',
+  accessible:'background:transparent;color:#7A7363;border:1px solid #2A3F3C;',
+  muted:     'background:transparent;color:#7A7363;border:1px solid #2A3F3C;',
+};
+
+let selected = null;
+
+function openDetail(id) {
+  const r = ROOMS[id];
+  if (!r) return;
+  if (selected) {
+    document.querySelector(`.room-hot[data-id="${selected}"]`)?.classList.remove('selected');
+  }
+  selected = id;
+  document.querySelector(`.room-hot[data-id="${id}"]`)?.classList.add('selected');
+
+  const [badgeClass, badgeLabel] = STATUS_LABELS[r.status] || STATUS_LABELS.accessible;
+  document.getElementById('d-num').textContent = String(id).padStart(2, '0');
+  document.getElementById('d-num').className = 'detail-num ' + (r.status === 'completed' ? 'completed' : r.status === 'locked' ? 'locked' : '');
+  document.getElementById('d-name').textContent = r.name;
+  document.getElementById('d-badge').innerHTML = `<span class="badge badge-${badgeClass}">${badgeLabel}</span>`;
+  document.getElementById('d-desc').textContent = r.desc;
+
+  const clueWrap = document.getElementById('d-clue-wrap');
+  if (r.clue && r.status !== 'locked') {
+    clueWrap.style.display = 'block';
+    document.getElementById('d-clue').textContent = r.clue;
+  } else {
+    clueWrap.style.display = 'none';
+  }
+
+  const objWrap = document.getElementById('d-objects-wrap');
+  if (r.objects && r.objects.length > 0) {
+    objWrap.style.display = 'block';
+    document.getElementById('d-objects').innerHTML = r.objects.map(o =>
+      `<div class="detail-object"><div class="dot"></div>${o}</div>`
+    ).join('');
+  } else {
+    objWrap.style.display = 'none';
+  }
+
+  const actionLabel = r.status === 'active' ? 'Entrar a la sala →' : r.status === 'locked' ? '🔒 Acceso denegado' : r.status === 'completed' ? '✓ Revisar sala' : 'Explorar';
+  document.getElementById('d-action').innerHTML = `
+    <button onclick="handleAction(${id})" style="
+      font-family:'League Spartan',sans-serif; font-weight:700; font-size:13px;
+      letter-spacing:0.1em; text-transform:uppercase; padding:12px 20px;
+      width:100%; cursor:pointer; transition:all 150ms; border-radius:0;
+      ${BTN_STYLES[r.status] || BTN_STYLES.accessible}
+    ">${actionLabel}</button>`;
+
+  document.getElementById('detail').classList.add('open');
+  document.getElementById('zoom-controls').classList.remove('shifted');
+}
+
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+  document.getElementById('zoom-controls').classList.add('shifted');
+  if (selected) {
+    document.querySelector(`.room-hot[data-id="${selected}"]`)?.classList.remove('selected');
+    selected = null;
+  }
+}
+
+function handleAction(id) {
+  const r = ROOMS[id];
+  if (r.status === 'locked') {
+    alert('Acceso denegado. Necesitas credenciales de nivel superior.');
+  } else {
+    alert(`Entrando en: ${r.name}\n(Aquí se conectaría con el motor del juego)`);
+  }
+}
+
+// ── CLICK HANDLERS ────────────────────────────────────────────
+document.querySelectorAll('.room-hot').forEach(el => {
+  el.addEventListener('click', () => openDetail(parseInt(el.dataset.id)));
+});
+
+// ── PAN + ZOOM ────────────────────────────────────────────────
+const wrap = document.getElementById('map-wrap');
+const inner = document.getElementById('map-inner');
+
+let scale = 1, tx = 0, ty = 0;
+let dragging = false, startX, startY, startTx, startTy;
+
+function applyTransform() {
+  inner.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+}
+
+function clampTransform() {
+  const iw = 1536 * scale, ih = 1024 * scale;
+  const ww = wrap.clientWidth, wh = wrap.clientHeight;
+  const minTx = Math.min(0, ww - iw);
+  const minTy = Math.min(0, wh - ih);
+  tx = Math.min(Math.max(minTx, tx), iw > ww ? 0 : (ww - iw) / 2);
+  ty = Math.min(Math.max(minTy, ty), ih > wh ? 0 : (wh - ih) / 2);
+}
+
+function resetZoom() {
+  const ww = wrap.clientWidth, wh = wrap.clientHeight;
+  scale = Math.min(ww / 1536, wh / 1024);
+  tx = (ww - 1536 * scale) / 2;
+  ty = (wh - 1024 * scale) / 2;
+  applyTransform();
+}
+
+function zoom(factor, cx, cy) {
+  const ww = wrap.clientWidth, wh = wrap.clientHeight;
+  cx = cx ?? ww / 2; cy = cy ?? wh / 2;
+  const newScale = Math.max(0.4, Math.min(4, scale * factor));
+  tx = cx - (cx - tx) * (newScale / scale);
+  ty = cy - (cy - ty) * (newScale / scale);
+  scale = newScale;
+  clampTransform();
+  applyTransform();
+}
+
+wrap.addEventListener('mousedown', e => {
+  if (e.target.classList.contains('room-hot')) return;
+  dragging = true; wrap.classList.add('dragging');
+  startX = e.clientX; startY = e.clientY;
+  startTx = tx; startTy = ty;
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx = startTx + (e.clientX - startX);
+  ty = startTy + (e.clientY - startY);
+  clampTransform();
+  applyTransform();
+});
+window.addEventListener('mouseup', () => { dragging = false; wrap.classList.remove('dragging'); });
+
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX, e.clientY);
+}, { passive: false });
+
+// touch support
+let lastDist = null;
+wrap.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    dragging = true;
+    startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    startTx = tx; startTy = ty;
+  } else if (e.touches.length === 2) {
+    lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  }
+}, { passive: true });
+wrap.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && dragging) {
+    tx = startTx + (e.touches[0].clientX - startX);
+    ty = startTy + (e.touches[0].clientY - startY);
+    clampTransform(); applyTransform();
+  } else if (e.touches.length === 2 && lastDist) {
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    zoom(d / lastDist, cx, cy);
+    lastDist = d;
+  }
+}, { passive: true });
+wrap.addEventListener('touchend', () => { dragging = false; lastDist = null; });
+
+// init
+window.addEventListener('load', () => {
+  setTimeout(resetZoom, 50);
+  const saved = localStorage.getItem('newton_map_selected');
+  if (saved) openDetail(parseInt(saved));
+});
+</script>
+</body>
+</html>

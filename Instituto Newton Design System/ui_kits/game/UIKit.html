@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instituto Newton — UI Kit Completo</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+@font-face {
+  font-family: 'League Spartan';
+  src: url('../../fonts/LeagueSpartan-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900; font-display: swap;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: #0A1210; }
+body { font-family: 'League Spartan', 'Arial Narrow', sans-serif; color: #E2D6AF; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; background: #0F1918; }
+::-webkit-scrollbar-thumb { background: #2A3F3C; }
+
+/* ── LAYOUT ── */
+.page { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── TOP NAV ── */
+.topnav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(15,25,24,0.96); border-bottom: 1px solid #2A3F3C;
+  backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; height: 56px;
+}
+.topnav-logo { display: flex; align-items: center; gap: 12px; }
+.topnav-logo img { height: 36px; width: auto; }
+.topnav-title { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #7A7363; }
+.topnav-tabs { display: flex; gap: 0; }
+.topnav-tab {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 0 18px; height: 56px; display: flex; align-items: center;
+  color: #7A7363; border-bottom: 2px solid transparent; cursor: pointer;
+  background: none; border-left: none; border-right: none; border-top: none;
+  font-family: 'League Spartan', sans-serif;
+  transition: color 150ms, border-color 150ms;
+}
+.topnav-tab:hover { color: #E2D6AF; }
+.topnav-tab.active { color: #C2F779; border-bottom-color: #C2F779; }
+.topnav-badge { font-size: 9px; background: rgba(194,247,121,0.12); color: #C2F779; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+
+/* ── CONTENT ── */
+.content { flex: 1; padding: 48px 32px; max-width: 1200px; margin: 0 auto; width: 100%; }
+.section { margin-bottom: 64px; }
+.section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 28px; padding-bottom: 12px; border-bottom: 1px solid #1E3230; }
+.section-title { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; color: #fff; }
+.section-sub { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #524D40; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.flex-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.flex-col { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── TOKEN LABEL ── */
+.tok-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #524D40; margin-bottom: 8px; }
+
+/* ── COLOR SWATCHES ── */
+.swatch-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { display: flex; flex-direction: column; gap: 4px; width: 80px; }
+.swatch-block { height: 56px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); }
+.swatch-name { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #7A7363; }
+.swatch-hex  { font-size: 10px; color: #524D40; font-family: 'Courier New', monospace; }
+.swatch-divider { width: 1px; background: #1E3230; margin: 0 4px; align-self: stretch; }
+
+/* ── TYPE SAMPLES ── */
+.type-row { display: flex; align-items: baseline; gap: 16px; padding: 10px 0; border-bottom: 1px solid #1A2422; }
+.type-meta { width: 130px; flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #524D40; font-family: 'Courier New', monospace; }
+.type-sample { color: #E2D6AF; }
+
+/* ── COMPONENT BLOCK ── */
+.comp-block { background: #182625; border: 1px solid #2A3F3C; border-radius: 8px; padding: 24px; }
+.comp-block.dark { background: #0F1918; }
+.comp-block.surface { background: #1E3230; }
+
+/* ── BADGE STRIP ── */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; font-family: 'League Spartan', sans-serif; }
+.badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ── BUTTON ── */
+.btn { font-family: 'League Spartan', sans-serif; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; border: none; cursor: pointer; transition: all 150ms; display: inline-flex; align-items: center; gap: 8px; }
+.btn-md { padding: 12px 24px; font-size: 13px; }
+.btn-sm { padding: 8px 16px; font-size: 11px; }
+.btn-lg { padding: 16px 32px; font-size: 15px; }
+.btn-primary { background: #C2F779; color: #182625; border-radius: 0; }
+.btn-primary:hover { background: #D4FF8A; }
+.btn-secondary { background: transparent; color: #C2F779; border: 1px solid #C2F779; border-radius: 0; }
+.btn-secondary:hover { background: rgba(194,247,121,0.08); }
+.btn-ghost { background: transparent; color: #E2D6AF; border: 1px solid #2A3F3C; border-radius: 0; }
+.btn-ghost:hover { border-color: #E2D6AF; }
+.btn-amber { background: #D97D0D; color: #182625; border-radius: 0; }
+.btn-amber:hover { background: #F08D1A; }
+.btn-danger { background: #A61212; color: #fff; border-radius: 0; }
+.btn-danger:hover { background: #C01515; }
+.btn-disabled { background: #1E3230; color: #524D40; border-radius: 0; cursor: not-allowed; }
+.btn-slate { background: #384173; color: #E2D6AF; border-radius: 0; border: none; }
+.btn-slate:hover { background: #4A5B8C; }
+
+/* ── INPUTS ── */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7A7363; }
+.field input, .field select, .field textarea {
+  font-family: 'League Spartan', sans-serif; font-size: 14px;
+  background: #0F1918; border: 1px solid #2A3F3C; color: #E2D6AF;
+  padding: 10px 14px; outline: none; width: 100%; border-radius: 0;
+  transition: border-color 150ms;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #C2F779; box-shadow: 0 0 0 2px rgba(194,247,121,0.12); }
+.field input::placeholder, .field textarea::placeholder { color: #524D40; }
+.field-error input { border-color: #A61212; }
+.field-error .err { font-size: 11px; color: #A61212; font-weight: 600; }
+.field-success input { border-color: #C2F779; }
+.field-helper { font-size: 11px; color: #524D40; }
+
+/* ── CARD ── */
+.card { background: #1E3230; border: 1px solid #2A3F3C; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(10,16,15,0.5); }
+.card.glow { border-color: #C2F779; box-shadow: 0 0 20px rgba(194,247,121,0.15); }
+.card.amber { border-color: #D97D0D; box-shadow: 0 0 16px rgba(217,125,13,0.15); }
+.card.slate { background: #2B3159; border-color: #384173; }
+.card-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #fff; margin-bottom: 8px; }
+.card-body  { font-size: 13px; color: #A89F88; line-height: 1.6; }
+.card-num   { font-size: 36px; font-weight: 900; color: #C2F779; line-height: 1; margin-bottom: 6px; }
+
+/* ── PROGRESS ── */
+.progress-wrap { display: flex; flex-direction: column; gap: 6px; }
+.progress-top { display: flex; justify-content: space-between; }
+.progress-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #7A7363; }
+.progress-val   { font-size: 10px; color: #524D40; font-family: 'Courier New', monospace; }
+.progress-track { background: #0F1918; height: 6px; border-radius: 0; overflow: hidden; }
+.progress-fill  { height: 100%; transition: width 300ms; }
+
+/* ── TIMER ── */
+.timer { font-family: 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 0.05em; }
+.timer.ok     { color: #C2F779; text-shadow: 0 0 12px rgba(194,247,121,0.3); }
+.timer.urgent { color: #A61212; text-shadow: 0 0 12px rgba(166,18,18,0.4); animation: pulse 1s step-end infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── MODAL ── */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15,25,24,0.88); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: #1E3230; border: 1px solid #C2F779; border-radius: 8px; padding: 32px; width: 460px; box-shadow: 0 0 24px rgba(194,247,121,0.15); }
+.modal-title { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em; color: #fff; margin-bottom: 16px; }
+
+/* ── TOAST ── */
+.toast { display: flex; align-items: flex-start; gap: 12px; background: #1E3230; border-radius: 6px; padding: 14px 16px; box-shadow: 0 4px 16px rgba(10,16,15,0.6); min-width: 280px; }
+.toast-icon { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; margin-top: 1px; }
+.toast-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+.toast-body  { font-size: 12px; color: #7A7363; line-height: 1.4; }
+
+/* ── CODE ── */
+.code-block { font-family: 'Courier New', monospace; font-size: 13px; background: #0A1210; border: 1px solid #2A3F3C; border-radius: 4px; padding: 14px 16px; color: #C2F779; line-height: 1.8; }
+.code-comment { color: #2A3F3C; }
+.code-key { color: #D97D0D; }
+
+/* ── DIVIDER ── */
+.ndivider { border: none; border-top: 1px solid #2A3F3C; margin: 12px 0; }
+
+/* ── TOOLTIP mock ── */
+.tooltip-wrap { position: relative; display: inline-flex; }
+.tooltip-box {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #1E3230; border: 1px solid #2A3F3C; border-radius: 4px;
+  padding: 6px 10px; white-space: nowrap;
+  font-size: 11px; font-weight: 600; color: #E2D6AF;
+  pointer-events: none;
+}
+.tooltip-box::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#2A3F3C; }
+
+/* ── KEYPAD ── */
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 180px; }
+.key { background: #1E3230; border: 1px solid #2A3F3C; border-radius: 4px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #E2D6AF; cursor: pointer; transition: all 100ms; font-family: 'Courier New', monospace; }
+.key:hover { background: #2A3F3C; border-color: #C2F779; color: #C2F779; }
+.key.wide { grid-column: span 2; }
+.key.action { background: #C2F779; color: #182625; border-color: #C2F779; }
+
+/* ── HUD STRIP ── */
+.hud-strip { background: rgba(15,25,24,0.97); border: 1px solid #2A3F3C; border-radius: 6px; padding: 12px 20px; display: flex; align-items: center; gap: 24px; }
+.hud-item { display: flex; flex-direction: column; gap: 2px; }
+.hud-key  { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #524D40; }
+.hud-val  { font-size: 16px; font-weight: 800; color: #fff; }
+.hud-sep  { width: 1px; height: 32px; background: #2A3F3C; }
+
+/* ── RADIO / CHECKBOX ── */
+.check-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.check-box { width: 18px; height: 18px; border: 1px solid #2A3F3C; border-radius: 0; background: #0F1918; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.check-box.checked { background: #C2F779; border-color: #C2F779; }
+.check-box.checked::after { content: ''; width: 10px; height: 6px; border-bottom: 2px solid #182625; border-left: 2px solid #182625; transform: rotate(-45deg) translateY(-2px); display: block; }
+.radio-box { width: 18px; height: 18px; border: 1px solid #2A3F3C; border-radius: 50%; background: #0F1918; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.radio-box.checked { border-color: #C2F779; }
+.radio-box.checked::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #C2F779; display: block; }
+.check-label { font-size: 13px; color: #C8BC95; }
+
+/* ── INVENTORY SLOT ── */
+.inv-grid { display: grid; grid-template-columns: repeat(5, 52px); gap: 6px; }
+.inv-slot { width: 52px; height: 52px; background: #0F1918; border: 1px solid #2A3F3C; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; transition: border-color 150ms; }
+.inv-slot:hover { border-color: #C2F779; }
+.inv-slot.active { border-color: #C2F779; box-shadow: 0 0 12px rgba(194,247,121,0.2); }
+.inv-slot.empty { opacity: 0.3; }
+
+/* ── NPC DIALOG ── */
+.dialog-box { background: #182625; border: 1px solid #2A3F3C; border-radius: 8px; padding: 20px; }
+.dialog-npc { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.dialog-avatar { width: 40px; height: 40px; border-radius: 50%; background: #384173; border: 2px solid #4A5B8C; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.dialog-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #C2F779; }
+.dialog-role { font-size: 10px; color: #7A7363; letter-spacing: 0.05em; }
+.dialog-text { font-size: 14px; color: #C8BC95; line-height: 1.7; font-style: italic; border-left: 2px solid #D97D0D; padding-left: 14px; }
+.dialog-options { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.dialog-opt { background: #0F1918; border: 1px solid #2A3F3C; border-radius: 4px; padding: 10px 14px; font-size: 12px; color: #E2D6AF; cursor: pointer; transition: all 150ms; text-align: left; font-family: 'League Spartan', sans-serif; }
+.dialog-opt:hover { border-color: #C2F779; color: #C2F779; background: rgba(194,247,121,0.05); }
+
+/* ── MISSION STATUS ── */
+.mission-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1A2422; }
+.mission-num { font-size: 22px; font-weight: 900; line-height: 1; flex-shrink: 0; width: 32px; }
+.mission-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.mission-desc  { font-size: 11px; color: #7A7363; line-height: 1.5; }
+
+/* ── LOG ENTRY ── */
+.log-entry { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #1A2422; }
+.log-time { font-size: 10px; font-family: 'Courier New', monospace; color: #524D40; flex-shrink: 0; margin-top: 2px; width: 44px; }
+.log-msg  { font-size: 12px; color: #7A7363; line-height: 1.4; }
+.log-msg.highlight { color: #C2F779; }
+</style>
+</head>
+<body>
+<div class="page" id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+const TABS = ['Colores', 'Tipografía', 'Botones', 'Formularios', 'Tarjetas', 'Feedback', 'Juego'];
+
+function Swatch({ color, name, hex, light }) {
+  return (
+    <div className="swatch">
+      <div className="swatch-block" style={{ background: color, border: light ? '1px solid #2A3F3C' : undefined }}></div>
+      <div className="swatch-name">{name}</div>
+      <div className="swatch-hex">{hex}</div>
+    </div>
+  );
+}
+
+function SectionHeader({ title, sub }) {
+  return (
+    <div className="section-header">
+      <div className="section-title">{title}</div>
+      {sub && <div className="section-sub">{sub}</div>}
+    </div>
+  );
+}
+
+function Badge({ color, bg, dot, children }) {
+  return (
+    <span className="badge" style={{ background: bg, color }}>
+      {dot && <span className="badge-dot" style={{ background: color }}></span>}
+      {children}
+    </span>
+  );
+}
+
+function CheckBox({ checked, label }) {
+  const [on, setOn] = useState(checked);
+  return (
+    <div className="check-row" onClick={() => setOn(!on)}>
+      <div className={`check-box ${on ? 'checked' : ''}`}></div>
+      <span className="check-label">{label}</span>
+    </div>
+  );
+}
+
+function RadioBox({ checked, label }) {
+  const [on, setOn] = useState(checked);
+  return (
+    <div className="check-row" onClick={() => setOn(!on)}>
+      <div className={`radio-box ${on ? 'checked' : ''}`}></div>
+      <span className="check-label">{label}</span>
+    </div>
+  );
+}
+
+function ProgressBar({ label, value, color = '#C2F779' }) {
+  return (
+    <div className="progress-wrap">
+      <div className="progress-top">
+        <span className="progress-label">{label}</span>
+        <span className="progress-val">{value}%</span>
+      </div>
+      <div className="progress-track">
+        <div className="progress-fill" style={{ width: `${value}%`, background: color }}></div>
+      </div>
+    </div>
+  );
+}
+
+function ColoresTab() {
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Fondos Oscuros" sub="Dark backgrounds" />
+        <div className="swatch-grid">
+          <Swatch color="#182625" name="Teal Deep" hex="#182625" />
+          <Swatch color="#1E3230" name="Teal Mid" hex="#1E3230" />
+          <Swatch color="#0F1918" name="Teal Dark" hex="#0F1918" />
+          <Swatch color="#0A1210" name="Near Black" hex="#0A1210" />
+          <div className="swatch-divider"></div>
+          <Swatch color="#384173" name="Slate" hex="#384173" />
+          <Swatch color="#4A5B8C" name="Slate Light" hex="#4A5B8C" />
+          <Swatch color="#2B3159" name="Slate Dim" hex="#2B3159" />
+          <div className="swatch-divider"></div>
+          <Swatch color="#495925" name="Olive" hex="#495925" />
+          <Swatch color="#403C27" name="Brown" hex="#403C27" />
+          <Swatch color="#402C2A" name="Maroon" hex="#402C2A" />
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Acentos Primarios" sub="Interactive & accent" />
+        <div className="swatch-grid">
+          <Swatch color="#C2F779" name="Lime" hex="#C2F779" light />
+          <Swatch color="#D4FF8A" name="Lime Hover" hex="#D4FF8A" light />
+          <Swatch color="#A8E055" name="Lime Press" hex="#A8E055" light />
+          <div className="swatch-divider"></div>
+          <Swatch color="#D97D0D" name="Amber" hex="#D97D0D" />
+          <Swatch color="#F08D1A" name="Amber Hover" hex="#F08D1A" />
+          <div className="swatch-divider"></div>
+          <Swatch color="#A61212" name="Crimson" hex="#A61212" />
+          <Swatch color="#C01515" name="Crimson Hover" hex="#C01515" />
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Texto & Neutrales" sub="Foreground & warm grays" />
+        <div className="swatch-grid">
+          <Swatch color="#E2D6AF" name="Cream" hex="#E2D6AF" light />
+          <Swatch color="#C8BC95" name="Cream Dim" hex="#C8BC95" light />
+          <Swatch color="#A89F88" name="Gray 200" hex="#A89F88" light />
+          <Swatch color="#7A7363" name="Gray 300" hex="#7A7363" light />
+          <Swatch color="#524D40" name="Gray 400" hex="#524D40" light />
+          <Swatch color="#332E24" name="Gray 500" hex="#332E24" />
+          <div className="swatch-divider"></div>
+          <Swatch color="#2A3F3C" name="Border" hex="#2A3F3C" />
+          <Swatch color="#FFFFFF" name="White" hex="#FFFFFF" light />
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Semánticos" sub="Status colors" />
+        <div className="swatch-grid">
+          <Swatch color="#C2F779" name="Success" hex="#C2F779" light />
+          <Swatch color="#D97D0D" name="Warning" hex="#D97D0D" />
+          <Swatch color="#A61212" name="Danger" hex="#A61212" />
+          <Swatch color="#4A5B8C" name="Info" hex="#4A5B8C" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TipografiaTab() {
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Escala Tipográfica" sub="League Spartan — 12 a 96px" />
+        <div style={{ background: '#182625', border: '1px solid #2A3F3C', borderRadius: 8, padding: '24px 28px' }}>
+          {[
+            { label: '96px / 900', s: 96, w: 900, ls: '-0.02em', text: 'Aa', upper: true },
+            { label: '64px / 900', s: 64, w: 900, ls: '-0.02em', text: 'Instituto', upper: true },
+            { label: '48px / 700', s: 48, w: 700, ls: '-0.01em', text: 'Newton', upper: true },
+            { label: '32px / 700', s: 32, w: 700, ls: '-0.01em', text: 'Misión Principal', upper: false },
+            { label: '24px / 600', s: 24, w: 600, ls: '0em', text: 'Sala de Profesores', upper: false },
+            { label: '20px / 500', s: 20, w: 500, ls: '0em', text: 'Encuentra la llave maestra', upper: false, c: '#C8BC95' },
+            { label: '16px / 400', s: 16, w: 400, ls: '0em', text: 'El Instituto Newton no presume de secretos. Pero tampoco los niega.', upper: false, c: '#C8BC95' },
+            { label: '14px / 400', s: 14, w: 400, ls: '0em', text: 'Anne, Profesora de Química — Sala 10', upper: false, c: '#A89F88' },
+            { label: '12px / 700 CAPS', s: 12, w: 700, ls: '0.18em', text: 'CARGANDO... · CONTINUAR · SALIR', upper: true, c: '#7A7363' },
+          ].map(({ label, s, w, ls, text, upper, c }) => (
+            <div className="type-row" key={label}>
+              <div className="type-meta">{label}</div>
+              <div className="type-sample" style={{ fontSize: s, fontWeight: w, letterSpacing: ls, textTransform: upper ? 'uppercase' : 'none', color: c || '#E2D6AF', lineHeight: 1.15 }}>{text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Specimens" sub="Uso en contexto" />
+        <div className="grid-2">
+          <div className="comp-block">
+            <div className="tok-label">Mono / Technical</div>
+            <div className="code-block">
+              <span className="code-comment">// CÓDIGO DE ACCESO</span><br />
+              <span className="code-key">SECTOR_7</span> → A4-B9<br />
+              LAT: 40.4168 N<br />
+              LON: 003.7038 W<br />
+              <span className="code-comment">// VERIFICANDO...</span>
+            </div>
+          </div>
+          <div className="comp-block">
+            <div className="tok-label">Lore / Quote</div>
+            <div style={{ fontSize: 18, fontWeight: 300, fontStyle: 'italic', color: '#C8BC95', lineHeight: 1.6, borderLeft: '2px solid #D97D0D', paddingLeft: 16 }}>
+              "El Instituto Newton no presume de secretos. Pero tampoco los niega."
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#D97D0D', marginTop: 10, fontStyle: 'normal', letterSpacing: '0.06em', textTransform: 'uppercase' }}>— Anne, Profesora de Química</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BotonesTab() {
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Variantes" sub="Variant — all sizes" />
+        <div className="comp-block flex-col">
+          <div className="tok-label">Primary — Lima</div>
+          <div className="flex-row">
+            <button className="btn btn-primary btn-sm">Continuar</button>
+            <button className="btn btn-primary btn-md">Continuar</button>
+            <button className="btn btn-primary btn-lg">Iniciar Misión</button>
+          </div>
+          <hr className="ndivider" />
+          <div className="tok-label">Secondary — Outline</div>
+          <div className="flex-row">
+            <button className="btn btn-secondary btn-sm">Cancelar</button>
+            <button className="btn btn-secondary btn-md">Cancelar</button>
+            <button className="btn btn-ghost btn-md">Ver Mapa</button>
+          </div>
+          <hr className="ndivider" />
+          <div className="tok-label">Accent</div>
+          <div className="flex-row">
+            <button className="btn btn-amber btn-md">Pista Especial</button>
+            <button className="btn btn-danger btn-md">Abandonar</button>
+            <button className="btn btn-slate btn-md">Inventario</button>
+            <button className="btn btn-disabled btn-md" disabled>Bloqueado</button>
+          </div>
+          <hr className="ndivider" />
+          <div className="tok-label">Con Icono</div>
+          <div className="flex-row">
+            <button className="btn btn-primary btn-md">
+              <svg width="16" height="16" fill="none" stroke="#182625" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Siguiente Sala
+            </button>
+            <button className="btn btn-secondary btn-md">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Ver Pista
+            </button>
+            <button className="btn btn-ghost btn-md">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="3,11 22,2 13,21 11,13 3,11"/></svg>
+              Mapa
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Badges & Tags" sub="Status, level, room" />
+        <div className="comp-block flex-col">
+          <div className="tok-label">Status</div>
+          <div className="flex-row">
+            <Badge color="#C2F779" bg="rgba(194,247,121,0.12)" dot>En Curso</Badge>
+            <Badge color="#C2F779" bg="rgba(194,247,121,0.12)" dot>Completado</Badge>
+            <Badge color="#D97D0D" bg="rgba(217,125,13,0.12)" dot>Urgente</Badge>
+            <Badge color="#A61212" bg="rgba(166,18,18,0.12)" dot>Fallido</Badge>
+            <Badge color="#7A7363" bg="rgba(255,255,255,0.05)" dot>Bloqueado</Badge>
+          </div>
+          <hr className="ndivider" />
+          <div className="tok-label">Nivel / Tier</div>
+          <div className="flex-row">
+            <Badge color="#182625" bg="#C2F779">★ Élite</Badge>
+            <Badge color="#E2D6AF" bg="#384173">Nivel A</Badge>
+            <Badge color="#E2D6AF" bg="#495925">Nivel B</Badge>
+            <Badge color="#7A7363" bg="#1E3230">Bloqueado</Badge>
+          </div>
+          <hr className="ndivider" />
+          <div className="tok-label">Salas</div>
+          <div className="flex-row">
+            {['Laboratorio', 'Biblioteca', 'Dirección', 'Enfermería', 'Auditorio'].map(r => (
+              <Badge key={r} color="#A89F88" bg="rgba(42,63,60,0.5)">{r}</Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FormulariosTab() {
+  const [val, setVal] = useState('');
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Inputs de Texto" sub="Default, error, success" />
+        <div className="grid-2">
+          <div className="comp-block flex-col">
+            <div className="field">
+              <div className="field-label">Código de Acceso</div>
+              <input type="text" placeholder="Introduce el código..." value={val} onChange={e => setVal(e.target.value)} />
+              <div className="field-helper">6 caracteres alfanuméricos</div>
+            </div>
+            <div className="field field-error">
+              <div className="field-label">Contraseña</div>
+              <input type="password" defaultValue="error123" />
+              <div className="err">Código incorrecto. Inténtalo de nuevo.</div>
+            </div>
+            <div className="field field-success">
+              <div className="field-label">Usuario</div>
+              <input type="text" defaultValue="newton_player_01" />
+            </div>
+          </div>
+          <div className="comp-block flex-col">
+            <div className="field">
+              <div className="field-label">Sala Destino</div>
+              <select>
+                <option>Selecciona una sala...</option>
+                <option>Laboratorio de Ciencias</option>
+                <option>Biblioteca</option>
+                <option>Sala de Profesores</option>
+                <option>Dirección</option>
+              </select>
+            </div>
+            <div className="field">
+              <div className="field-label">Notas del Jugador</div>
+              <textarea rows="4" placeholder="Escribe tus pistas aquí..."></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Controles" sub="Checkboxes, radios" />
+        <div className="comp-block">
+          <div className="grid-2">
+            <div className="flex-col">
+              <div className="tok-label">Checkbox</div>
+              <CheckBox checked={true} label="Guardar progreso automáticamente" />
+              <CheckBox checked={false} label="Mostrar subtítulos" />
+              <CheckBox checked={true} label="Modo daltónico" />
+            </div>
+            <div className="flex-col">
+              <div className="tok-label">Radio</div>
+              <RadioBox checked={true} label="Dificultad: Normal" />
+              <RadioBox checked={false} label="Dificultad: Difícil" />
+              <RadioBox checked={false} label="Dificultad: Experto" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Teclado de Código" sub="Puzzle keypad" />
+        <div className="comp-block" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+          <div>
+            <div className="tok-label" style={{ marginBottom: 12 }}>Keypad</div>
+            <div style={{ background: '#0A1210', border: '1px solid #2A3F3C', borderRadius: 8, padding: 20, display: 'inline-block' }}>
+              <div style={{ fontFamily: 'Courier New', fontSize: 24, fontWeight: 700, color: '#C2F779', letterSpacing: '0.25em', textAlign: 'center', marginBottom: 16, background: '#0F1918', border: '1px solid #2A3F3C', borderRadius: 4, padding: '8px 16px' }}>_ _ _ _</div>
+              <div className="keypad">
+                {['1','2','3','4','5','6','7','8','9'].map(k => <div className="key" key={k}>{k}</div>)}
+                <div className="key">⌫</div>
+                <div className="key">0</div>
+                <div className="key action">↵</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="tok-label" style={{ marginBottom: 12 }}>Estados del puzzle</div>
+            <div className="flex-col">
+              <div style={{ background: '#0F1918', border: '1px solid #2A3F3C', borderRadius: 4, padding: '10px 16px', fontFamily: 'Courier New', fontSize: 20, color: '#7A7363', letterSpacing: '0.2em' }}>_ _ _ _</div>
+              <div style={{ background: '#0F1918', border: '1px solid #2A3F3C', borderRadius: 4, padding: '10px 16px', fontFamily: 'Courier New', fontSize: 20, color: '#E2D6AF', letterSpacing: '0.2em' }}>7 4 _ _</div>
+              <div style={{ background: 'rgba(194,247,121,0.07)', border: '1px solid #C2F779', borderRadius: 4, padding: '10px 16px', fontFamily: 'Courier New', fontSize: 20, color: '#C2F779', letterSpacing: '0.2em' }}>7 4 2 1 ✓</div>
+              <div style={{ background: 'rgba(166,18,18,0.1)', border: '1px solid #A61212', borderRadius: 4, padding: '10px 16px', fontFamily: 'Courier New', fontSize: 20, color: '#A61212', letterSpacing: '0.2em' }}>9 9 9 9 ✗</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TarjetasTab() {
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Tarjetas" sub="Card variants" />
+        <div className="grid-3">
+          <div className="card">
+            <div className="card-title">Misión Activa</div>
+            <div className="card-body">Encuentra el código en la sala del director.</div>
+            <div style={{ marginTop: 12 }}>
+              <Badge color="#C2F779" bg="rgba(194,247,121,0.12)" dot>En Curso</Badge>
+            </div>
+          </div>
+          <div className="card glow">
+            <div className="card-title">Pista Desbloqueada</div>
+            <div className="card-body">El archivador rojo está cerca del escritorio norte.</div>
+            <div style={{ marginTop: 12 }}>
+              <Badge color="#C2F779" bg="rgba(194,247,121,0.12)" dot>Nueva</Badge>
+            </div>
+          </div>
+          <div className="card amber">
+            <div className="card-num">07</div>
+            <div style={{ fontSize: 11, color: '#7A7363', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Sala de Informática</div>
+            <hr className="ndivider" />
+            <div className="card-body" style={{ fontSize: 12 }}>Acceso restringido. Se requiere tarjeta Nivel B.</div>
+          </div>
+          <div className="card slate">
+            <div className="card-title">Perfil NPC</div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#4A5B8C', border: '2px solid #384173', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>👩</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>Anne</div>
+                <div style={{ fontSize: 11, color: '#7A7363' }}>Profesora de Química</div>
+              </div>
+            </div>
+            <div className="card-body" style={{ fontSize: 12 }}>"Hay cosas que es mejor no saber. O que no te vean sabiendo."</div>
+          </div>
+          <div className="card" style={{ opacity: 0.45 }}>
+            <div className="card-title">Sala Bloqueada</div>
+            <div className="card-body">Aún no tienes acceso a esta área.</div>
+            <div style={{ marginTop: 12 }}>
+              <Badge color="#7A7363" bg="rgba(255,255,255,0.05)" dot>Bloqueado</Badge>
+            </div>
+          </div>
+          <div className="card" style={{ borderColor: '#A61212', boxShadow: '0 0 16px rgba(166,18,18,0.2)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#A61212', marginBottom: 6 }}>⚠ Alerta</div>
+            <div className="card-title">Tiempo Agotándose</div>
+            <div className="card-body">Quedan menos de 5 minutos para completar la misión.</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="HUD Strip" sub="In-game heads-up display" />
+        <div className="hud-strip">
+          <div className="hud-item">
+            <div className="hud-key">Tiempo</div>
+            <div className="timer ok" style={{ fontSize: 24 }}>58:42</div>
+          </div>
+          <div className="hud-sep"></div>
+          <div className="hud-item">
+            <div className="hud-key">Misión</div>
+            <div className="hud-val">Sala de Profesores</div>
+          </div>
+          <div className="hud-sep"></div>
+          <div className="hud-item">
+            <div className="hud-key">Progreso</div>
+            <div style={{ width: 140, marginTop: 4 }}>
+              <ProgressBar label="" value={62} />
+            </div>
+          </div>
+          <div className="hud-sep"></div>
+          <div className="hud-item">
+            <div className="hud-key">Pistas</div>
+            <div className="hud-val" style={{ color: '#D97D0D' }}>2 / 5</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Progress Bars" sub="Loading, mission, stats" />
+        <div className="comp-block flex-col">
+          <ProgressBar label="Cargando..." value={78} color="#C2F779" />
+          <ProgressBar label="Misión completada" value={45} color="#D97D0D" />
+          <ProgressBar label="Tiempo restante" value={20} color="#A61212" />
+          <ProgressBar label="Pistas usadas" value={60} color="#4A5B8C" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function FeedbackTab() {
+  const [modal, setModal] = useState(false);
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Toasts & Notificaciones" sub="Transient alerts" />
+        <div className="comp-block flex-col">
+          {[
+            { icon: '✓', bg: 'rgba(194,247,121,0.15)', ic: '#182625', title: 'Código correcto', body: 'Acceso concedido. Puerta norte desbloqueada.', border: '#C2F779' },
+            { icon: '⚠', bg: 'rgba(217,125,13,0.15)', ic: '#D97D0D', title: 'Tiempo limitado', body: 'Quedan menos de 5 minutos para completar la misión.', border: '#D97D0D' },
+            { icon: '✗', bg: 'rgba(166,18,18,0.15)', ic: '#fff', title: 'Código incorrecto', body: 'Inténtalo de nuevo. Te quedan 2 intentos.', border: '#A61212' },
+            { icon: 'i', bg: 'rgba(74,91,140,0.2)', ic: '#8A9DC0', title: 'Pista disponible', body: 'Encontraste una pista nueva. Revisa tu cuaderno.', border: '#4A5B8C' },
+          ].map((t, i) => (
+            <div className="toast" key={i} style={{ borderLeft: `3px solid ${t.border}` }}>
+              <div className="toast-icon" style={{ background: t.border, color: t.ic }}>{t.icon}</div>
+              <div>
+                <div className="toast-title">{t.title}</div>
+                <div className="toast-body">{t.body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Modal" sub="Overlays & dialogs" />
+        <div className="comp-block">
+          <button className="btn btn-primary btn-md" onClick={() => setModal(true)}>Abrir Modal</button>
+          {modal && (
+            <div className="modal-backdrop" onClick={() => setModal(false)}>
+              <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">Pista Desbloqueada</div>
+                <p style={{ fontSize: 14, color: '#A89F88', lineHeight: 1.7, marginBottom: 20 }}>
+                  El archivador rojo está cerca del escritorio norte. Busca bajo la segunda carpeta — la etiquetada{' '}
+                  <code style={{ background: 'rgba(194,247,121,0.08)', color: '#C2F779', padding: '1px 6px', borderRadius: 4, fontFamily: 'Courier New' }}>SECTOR_7</code>.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setModal(false)}>Cerrar</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => setModal(false)}>Entendido</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Timer" sub="Countdown display states" />
+        <div className="comp-block">
+          <div className="flex-row" style={{ alignItems: 'center', gap: 40 }}>
+            <div>
+              <div className="tok-label">Normal</div>
+              <div className="timer ok">58:42</div>
+            </div>
+            <div>
+              <div className="tok-label">Urgente</div>
+              <div className="timer urgent">04:31</div>
+            </div>
+            <div>
+              <div className="tok-label">Agotado</div>
+              <div className="timer" style={{ color: '#524D40' }}>00:00</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Tooltip" sub="Contextual hints" />
+        <div className="comp-block" style={{ paddingTop: 48 }}>
+          <div className="flex-row" style={{ justifyContent: 'center' }}>
+            <div className="tooltip-wrap">
+              <button className="btn btn-ghost btn-md">Hover aquí</button>
+              <div className="tooltip-box">Acceso restringido — Nivel A requerido</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function JuegoTab() {
+  return (
+    <>
+      <div className="section">
+        <SectionHeader title="Diálogo NPC" sub="Character conversation" />
+        <div style={{ maxWidth: 480 }}>
+          <div className="dialog-box">
+            <div className="dialog-npc">
+              <div className="dialog-avatar">👩‍🔬</div>
+              <div>
+                <div className="dialog-name">Anne</div>
+                <div className="dialog-role">Profesora de Química · Sala 5</div>
+              </div>
+            </div>
+            <div className="dialog-text">
+              "Hay cosas que es mejor no saber. O que no te vean sabiendo. El director tiene la llave del archivador norte, pero suele dejarla en la maceta del pasillo."
+            </div>
+            <div className="dialog-options">
+              <button className="dialog-opt">¿Dónde está exactamente la maceta?</button>
+              <button className="dialog-opt">¿Qué hay en el archivador?</button>
+              <button className="dialog-opt">¿Por qué me estás diciendo esto?</button>
+              <button className="dialog-opt" style={{ color: '#524D40', borderColor: '#1A2422' }}>No, gracias. Me voy.</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Lista de Misiones" sub="Mission tracker" />
+        <div className="comp-block">
+          {[
+            { n: '01', title: 'Acceder al pasillo norte', desc: 'Pasa por el comedor sin ser visto.', status: 'success', color: '#C2F779' },
+            { n: '02', title: 'Encontrar la llave del archivador', desc: 'Busca en la maceta del pasillo norte.', status: 'active', color: '#C2F779' },
+            { n: '03', title: 'Fotografiar los documentos', desc: 'Usa el teléfono para capturar las pruebas.', status: 'pending', color: '#D97D0D' },
+            { n: '04', title: 'Salir sin ser detectado', desc: 'Las cámaras se resetean a las 18:00.', status: 'locked', color: '#524D40' },
+          ].map(m => (
+            <div className="mission-row" key={m.n} style={{ opacity: m.status === 'locked' ? 0.4 : 1 }}>
+              <div className="mission-num" style={{ color: m.status === 'success' ? '#C2F779' : m.status === 'active' ? '#C2F779' : m.color }}>{m.n}</div>
+              <div style={{ flex: 1 }}>
+                <div className="mission-title" style={{ textDecoration: m.status === 'success' ? 'line-through' : 'none', color: m.status === 'success' ? '#7A7363' : '#fff' }}>{m.title}</div>
+                <div className="mission-desc">{m.desc}</div>
+              </div>
+              <Badge color={m.color} bg={`rgba(0,0,0,0.2)`} dot>
+                {m.status === 'success' ? 'Hecho' : m.status === 'active' ? 'Activo' : m.status === 'locked' ? 'Bloqueado' : 'Pendiente'}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Inventario" sub="Item slots" />
+        <div className="comp-block" style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+          <div>
+            <div className="tok-label" style={{ marginBottom: 10 }}>Grid 5×2</div>
+            <div className="inv-grid">
+              {['🗝️','📋','💳','🔦','','','','','',''].map((item, i) => (
+                <div key={i} className={`inv-slot ${item ? (i === 0 ? 'active' : '') : 'empty'}`}>{item || '+'}</div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="tok-label" style={{ marginBottom: 10 }}>Detalle del ítem</div>
+            <div className="card" style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div style={{ width: 48, height: 48, background: '#0F1918', border: '1px solid #C2F779', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🗝️</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 4 }}>Llave Maestra #4</div>
+                <div style={{ fontSize: 12, color: '#7A7363', lineHeight: 1.5, marginBottom: 10 }}>Abre las puertas de nivel B en el ala norte. Encontrada en el comedor.</div>
+                <div className="flex-row">
+                  <button className="btn btn-primary btn-sm">Usar</button>
+                  <button className="btn btn-ghost btn-sm">Examinar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section">
+        <SectionHeader title="Registro de Eventos" sub="Game log" />
+        <div className="comp-block dark" style={{ maxHeight: 200, overflowY: 'auto' }}>
+          {[
+            { time: '58:42', msg: 'Encontraste el archivo rojo en la sala 4.', hl: true },
+            { time: '55:10', msg: 'Accediste al pasillo norte.' },
+            { time: '51:33', msg: 'Anne te dio una pista sobre la maceta.' },
+            { time: '48:02', msg: 'Tarjeta Nivel B obtenida en cocina.' },
+            { time: '45:17', msg: 'Intentaste abrir la Sala 11. Acceso denegado.', err: true },
+            { time: '42:50', msg: 'Llave Maestra #4 encontrada.' },
+          ].map((e, i) => (
+            <div className="log-entry" key={i}>
+              <div className="log-time">{e.time}</div>
+              <div className={`log-msg ${e.hl ? 'highlight' : ''}`} style={e.err ? { color: '#A61212' } : {}}>{e.msg}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+const TAB_COMPONENTS = {
+  'Colores': ColoresTab,
+  'Tipografía': TipografiaTab,
+  'Botones': BotonesTab,
+  'Formularios': FormulariosTab,
+  'Tarjetas': TarjetasTab,
+  'Feedback': FeedbackTab,
+  'Juego': JuegoTab,
+};
+
+function App() {
+  const [tab, setTab] = useState(() => localStorage.getItem('newton_kit_tab') || 'Colores');
+  const go = t => { localStorage.setItem('newton_kit_tab', t); setTab(t); };
+  const TabComp = TAB_COMPONENTS[tab] || ColoresTab;
+
+  return (
+    <div className="page">
+      <nav className="topnav">
+        <div className="topnav-logo">
+          <img src="../../assets/logo.png" alt="Instituto Newton" />
+          <span className="topnav-title">UI Kit</span>
+        </div>
+        <div className="topnav-tabs">
+          {TABS.map(t => (
+            <button key={t} className={`topnav-tab ${tab === t ? 'active' : ''}`} onClick={() => go(t)}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div style={{ width: 180 }}></div>
+      </nav>
+      <div className="content">
+        <TabComp />
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,44 +1,40 @@
-# Estado del Proyecto — El Examen II
+# Estado del Proyecto - El Examen II
 
-**Fecha de última actualización:** 2026-04-28
-**Rama activa:** `react-oficial`
-**Rama de archivo:** `legacy`
+**Fecha de ultima actualizacion:** 2026-04-28  
+**Rama activa:** `react-oficial`  
+**Historico:** `docs/OLD`
 
 ---
 
 ## Estado actual
 
-**Blank slate activo.** Los sistemas del juego están limpios y listos para recibir contenido narrativo.
+**Nivel 1 activo: Almacen.** La app React ya apunta al primer escenario real. `sandbox` queda solo como fallback tecnico.
 
-### Qué está listo
+### Que esta listo
 
-- [x] Tablero único por jugador (paneable, zoomeable, 3 hotspots)
-- [x] Sistema de variantes A/B/C/D por escenario
-- [x] Panel GM con asignación de variantes por jugador
-- [x] Inventario (barra de 3 slots + grid de objetos por hotspot)
-- [x] Sistema de pulso (manual, GM-driven)
-- [x] Minijuego de carga de acción
-- [x] Sistema de alarma (niveles 0-3, efectos GM)
+- [x] Tablero unico por jugador, paneable y zoomeable
+- [x] Sistema de escenarios y variantes A/B/C/D
+- [x] Escenario `almacen` con realidades A/B repartidas 2+2
+- [x] Hotspots base del almacen: pizarra, taquillas, caja, balones, panel de salida
+- [x] Contenido inicial por escenario en `src/data/scenarioContent.js`
+- [x] Resolver inicial por escenario conectado a `gameRules.js`
+- [x] Panel GM con asignacion de variantes por jugador
+- [x] Inventario: barra de 3 slots + grid de objetos por contenedor
+- [x] Sistema de pulso manual controlado por GM
+- [x] Minijuego de carga de accion
+- [x] Sistema de alarma y efectos GM desacoplados del puzzle antiguo
 - [x] Monitores de jugadores en panel GM
 - [x] Chat entre jugadores y GM
-- [x] Fondos placeholder por rol/variante (SVG de color)
+- [x] HTML legacy archivado en `docs/OLD/html-legacy`
+- [x] Prototipos de minijuegos archivados en `docs/OLD/assets-legacy/minigames`
 
 ### Pendiente
 
-- [ ] Contenido narrativo del primer escenario
-- [ ] Arte de fondos por variante
-- [ ] Lógica de resolución de acciones (resolver de puzzle)
-- [ ] Tarjetas de elemento por hotspot
-- [ ] Arquitectura del pulso como ventana de visibilidad entre jugadores
-
----
-
-## Ramas
-
-| Rama | Contenido |
-|---|---|
-| `react-oficial` | Código actual — blank slate |
-| `legacy` | Código histórico con Sala 1 (examen), script de test, sistema de narrativa Protocolo Eco |
+- [ ] Arte final de fondos por variante
+- [ ] Balancear y testear el puzzle completo del almacen
+- [ ] Convertir el pulso en ventana de visibilidad entre jugadores
+- [ ] Refinar textos finales de tarjetas, feedback y consola
+- [ ] Reset/semilla de Firebase para pruebas repetibles
 
 ---
 
@@ -46,8 +42,11 @@
 
 | Archivo | Para editar |
 |---|---|
-| `src/data/scenarioData.js` | Añadir escenarios y variantes |
-| `src/data/gameData.js` | Definir hotspots, familias, cartas |
-| `src/services/gameRules.js` | Implementar lógica de resolución de acciones |
-| `docs/game_design.md` | Diseño narrativo y mecánicas |
-| `docs/architecture.md` | Referencia técnica del sistema |
+| `src/data/scenarioData.js` | Alta de escenarios y fondos por variante |
+| `src/data/scenarioContent.js` | Hotspots, items, feedback, consola y resolver inicial por escenario |
+| `src/data/gameData.js` | Familias y cartas globales |
+| `src/services/gameRules.js` | Alarma + delegacion al resolver de escenario |
+| `src/services/pulseService.js` | Ciclo completo del pulso |
+| `src/services/remoteState.js` | Estado inicial de Firebase |
+| `docs/game_design.md` | Diseno narrativo y mecanicas |
+| `docs/architecture.md` | Referencia tecnica del sistema |

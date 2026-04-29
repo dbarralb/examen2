@@ -15,8 +15,11 @@
 //
 // What does NOT live here:
 //   - Puzzle-specific flags or hotspot content — those are defined per scenario
-//   - Sandbox / Sala 1 legacy state — fully removed
+//   - Puzzle-specific state from retired prototypes
 // ---------------------------------------------------------------------------
+
+import { createScenarioTargetFeedback } from "../data/scenarioContent.js";
+import { DEFAULT_SCENARIO_ID } from "../data/scenarioData.js";
 
 export function createInitialGameTimer() {
   return {
@@ -73,11 +76,7 @@ export function createInitialGameState() {
  * Starts empty; populated by resolveActionWithResult during pulse execution.
  */
 export function createInitialTargetFeedback() {
-  return {
-    hotspot_1: "Sin contenido. Escenario pendiente.",
-    hotspot_2: "Sin contenido. Escenario pendiente.",
-    hotspot_3: "Sin contenido. Escenario pendiente.",
-  };
+  return createScenarioTargetFeedback(DEFAULT_SCENARIO_ID);
 }
 
 /** Per-player inventory, item tracking, card usage. */
@@ -95,7 +94,7 @@ export function createInitialInventoryState() {
  */
 export function createInitialSessionState() {
   return {
-    scenarioId: "sandbox",
+    scenarioId: DEFAULT_SCENARIO_ID,
     completedScenarios: [],
   };
 }
@@ -107,10 +106,10 @@ export function createInitialSessionState() {
  */
 function createInitialPlayerBoards() {
   return {
-    empollon: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "A", scenarioId: "sandbox" },
-    manitas:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "B", scenarioId: "sandbox" },
-    guaperas: { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "C", scenarioId: "sandbox" },
-    mistica:  { hotspot_1: "idle", hotspot_2: "idle", hotspot_3: "idle", variant: "D", scenarioId: "sandbox" },
+    empollon: { variant: "A", scenarioId: DEFAULT_SCENARIO_ID },
+    guaperas: { variant: "A", scenarioId: DEFAULT_SCENARIO_ID },
+    manitas:  { variant: "B", scenarioId: DEFAULT_SCENARIO_ID },
+    mistica:  { variant: "B", scenarioId: DEFAULT_SCENARIO_ID },
   };
 }
 
@@ -138,7 +137,6 @@ export function buildInitialRemoteState(status = "role_select") {
     },
     lastRoleActions: {},
     playerViews: {},
-    playerZones: {},
     playerBoards: createInitialPlayerBoards(),
     queuedActions: null,
     actionLog: ["Sistema listo. Esperando inicio de partida."],
@@ -182,15 +180,4 @@ export function getGameTimerElapsedSeconds(gameTimer = createInitialGameTimer())
 }
 
 // ---------------------------------------------------------------------------
-// Deprecated stubs — kept for pulseService.js compatibility
 // ---------------------------------------------------------------------------
-
-/** @deprecated Use createInitialGameState() */
-export function createInitialGameStateForSala() {
-  return createInitialGameState();
-}
-
-/** @deprecated Use createInitialTargetFeedback() */
-export function createInitialTargetFeedbackForSala() {
-  return createInitialTargetFeedback();
-}

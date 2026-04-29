@@ -11,6 +11,8 @@
 // the adventure content is written.
 // ---------------------------------------------------------------------------
 
+import { resolveScenarioAction } from "../data/scenarioContent.js";
+
 // ---------------------------------------------------------------------------
 // 1. Alarm system
 // ---------------------------------------------------------------------------
@@ -88,7 +90,7 @@ export function getAlarmRecommendations(gameState) {
       id: "suggest_lock",
       label: "Bloquear elemento temporalmente",
       reason: "Contención parcial",
-      possibleSceneEffects: ["door_temporarily_locked"],
+      possibleSceneEffects: ["exit_temporarily_locked"],
     });
   }
 
@@ -139,7 +141,12 @@ export function checkPuzzleCompletion() {
 export function resolveActionWithResult(context, action) {
   if (!context.metricsDelta) context.metricsDelta = {};
 
-  // Default generic result — no puzzle logic yet
+  const scenarioResult = resolveScenarioAction(context, action);
+  if (scenarioResult) {
+    return scenarioResult;
+  }
+
+  // Default generic result when a scenario has no resolver yet.
   const message = `${action.role} usa ${action.card} sobre ${action.target}. Sin efecto de puzzle definido.`;
   const feedback = "Acción registrada. Sin efecto de puzzle.";
 

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-surface); padding: 16px; position: relative; overflow: hidden; }
+  .scanlines { position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px); pointer-events: none; }
+  .line { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; white-space: pre; }
+  .g { color: #00FF87; } .m { color: #FF2D78; } .c { color: #00EAFF; } .y { color: #FFEA00; } .dim { color: #3A4560; } .sec { color: #6B7A96; }
+  .cursor { display: inline-block; width: 8px; height: 13px; background: #00FF87; animation: blink 1s steps(1) infinite; vertical-align: text-bottom; margin-left: 1px; }
+  @keyframes blink { 0%,50%{opacity:1}51%,100%{opacity:0} }
+</style>
+</head><body>
+<div class="scanlines"></div>
+<div class="line"><span class="dim">[2026-04-29 03:14:22]</span> <span class="g">▸ connecting to target node...</span></div>
+<div class="line"><span class="dim">[03:14:23]</span> <span class="sec">handshake initiated — awaiting response</span></div>
+<div class="line"><span class="dim">[03:14:24]</span> <span class="m">✕ auth failed — 2 attempts remaining</span></div>
+<div class="line"><span class="dim">[03:14:25]</span> <span class="y">⚠ anomaly detected in sector 7F</span></div>
+<div class="line"><span class="dim">[03:14:26]</span> <span class="c">// running exploit module v2.4.1</span></div>
+<div class="line"><span class="g">▸ <span class="cursor"></span></span></div>
+</body></html>

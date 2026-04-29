@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; }
+  .stack { display: flex; flex-direction: column; gap: 7px; }
+  .row { display: flex; align-items: baseline; gap: 12px; }
+  .meta { font-family: var(--font-mono); font-size: 9px; color: var(--text-ghost); flex-shrink: 0; min-width: 160px; }
+  .divider { height: 1px; background: var(--border-dim); margin: 2px 0; }
+</style>
+</head><body>
+<div class="stack">
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:22px;font-weight:700;color:#fff;letter-spacing:0.05em;text-transform:uppercase">SECTION HEADER</span><div class="meta">22px / 700 / +0.05em</div></div>
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:17px;font-weight:600;color:#fff">Panel Title</span><div class="meta">17px / 600 / normal</div></div>
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:14px;font-weight:500;color:#A8B4CC">UI body text — readable at small sizes</span><div class="meta">14px / 500 / secondary</div></div>
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:12px;font-weight:400;color:#A8B4CC">Supporting description text for labels and hints</span><div class="meta">12px / 400 / secondary</div></div>
+  <div class="divider"></div>
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#6B7A96">STATUS LABEL</span><div class="meta">11px / 500 / +0.12em label</div></div>
+  <div class="row"><span style="font-family:'Space Grotesk';font-size:10px;font-weight:400;letter-spacing:0.12em;text-transform:uppercase;color:#3A4560">GHOST LABEL / DISABLED</span><div class="meta">10px / ghost</div></div>
+</div>
+</body></html>

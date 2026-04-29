@@ -1,4 +1,4 @@
-import { firebaseGet, firebasePatch, firebasePut, firebaseGetWithEtag, firebasePutIfMatch } from "./firebaseClient.js";
+import { firebaseGet, firebasePatch, firebasePut } from "./firebaseClient.js";
 import { generateSessionAccessCode, getOrCreateClientId } from "./clientIdentity.js";
 import { buildInitialRemoteState } from "./remoteState.js";
 import { storeSessionCode } from "./sessionAccess.js";
@@ -11,7 +11,7 @@ export async function getRemoteState() {
   }
 
   const initialState = buildInitialRemoteState("role_select");
-  await firebasePut("", initialState);
+  await firebasePatch("", initialState);
   return initialState;
 }
 
@@ -55,25 +55,6 @@ export async function startGame() {
   return getRemoteState();
 }
 
-// Bypass lobby — for debugging with fewer than 4 players.
-export async function forceStartGame() {
-  const { data: session, etag } = await firebaseGetWithEtag("session");
-
-  if (session?.status === "in_game") {
-    return getRemoteState();
-  }
-
-  const now = Date.now();
-  await firebasePutIfMatch("session", {
-    ...(session || {}),
-    status: "in_game",
-    gameTimer: { status: "running", startedAt: now, elapsedBeforeStartMs: 0 },
-    updatedAt: now,
-  }, etag);
-
-  return getRemoteState();
-}
-
 export async function resetGame() {
   const initialState = buildInitialRemoteState("role_select");
   initialState.actionLog = [
@@ -81,7 +62,7 @@ export async function resetGame() {
     "Sistema listo. Selecciona carta y target para encolar una accion.",
   ];
 
-  await firebasePut("", initialState);
+  await firebasePatch("", initialState);
   return initialState;
 }
 

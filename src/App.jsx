@@ -4,7 +4,6 @@ import { RoleSelectScreen } from "./screens/RoleSelectScreen.jsx";
 import { WaitingScreen } from "./screens/WaitingScreen.jsx";
 import { PlayerScreen } from "./screens/PlayerScreen.jsx";
 import { GMScreen } from "./screens/GMScreen.jsx";
-import { MinigamesLabScreen } from "./screens/MinigamesLabScreen.jsx";
 
 const routes = {
   access: AccessScreen,
@@ -12,7 +11,6 @@ const routes = {
   waiting: WaitingScreen,
   player: PlayerScreen,
   gm: GMScreen,
-  minigames: MinigamesLabScreen,
 };
 
 function getInitialRoute() {

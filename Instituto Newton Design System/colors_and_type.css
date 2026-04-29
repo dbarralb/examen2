@@ -1,6 +1,6 @@
 /* ============================================================
    INSTITUTO NEWTON — Design System Tokens
-   colors_and_type.css
+   colors_and_type.css  ·  v2 — Dark Academic Palette
    ============================================================ */
 
 @font-face {
@@ -15,81 +15,102 @@
    COLOR TOKENS — Base Palette
    ============================================================ */
 :root {
-  /* Primary */
-  --color-navy:          #013E70;   /* Primary background, institutional base */
-  --color-navy-deep:     #012E55;   /* Cards, elevated surfaces */
-  --color-navy-darker:   #050F1A;   /* Near-black, overlays, deepest shadow */
-  --color-blue:          #0276D6;   /* Interactive primary, blueprint highlights */
-  --color-blue-light:    #1A8FEF;   /* Hover state for blue */
-  --color-blue-mid:      #1A5FA8;   /* Blueprint lines, dividers, borders */
+  /* ── Dark Backgrounds ───────────────────────────────────── */
+  --color-teal-deep:     #182625;   /* Deepest background — primary app base */
+  --color-teal-darker:   #0F1918;   /* Surface below base — deepest shadows */
+  --color-teal-mid:      #1E3230;   /* Card / elevated surface */
+  --color-teal-border:   #2A3F3C;   /* Dividers, subtle borders */
 
-  /* Accent */
-  --color-cream:         #E2D6AF;   /* Body text, warm contrast */
-  --color-cream-light:   #F0EDD8;   /* Light cream for highlights */
-  --color-gold:          #F5B800;   /* Logo shield only; high-priority callouts */
-  --color-gold-dark:     #C9960A;   /* Gold pressed/hover */
+  --color-slate:         #384173;   /* Blue-purple dark — secondary surfaces */
+  --color-slate-light:   #4A5B8C;   /* Muted slate blue — secondary interactive */
+  --color-slate-dim:     #2B3159;   /* Darker slate — hover on slate surfaces */
 
-  /* Neutrals */
+  --color-olive:         #495925;   /* Dark olive green — tertiary surface */
+  --color-olive-dim:     #333F19;   /* Darker olive */
+  --color-brown:         #403C27;   /* Warm dark brown — accent surface */
+  --color-maroon:        #402C2A;   /* Dark maroon-brown — danger surface */
+
+  /* ── Accent / Interactive ───────────────────────────────── */
+  --color-lime:          #C2F779;   /* Primary interactive — bright lime */
+  --color-lime-hover:    #D4FF8A;   /* Lime hover */
+  --color-lime-press:    #A8E055;   /* Lime pressed */
+  --color-lime-dim:      rgba(194, 247, 121, 0.12); /* Lime bg tint */
+
+  --color-amber:         #D97D0D;   /* Secondary accent — warm amber */
+  --color-amber-hover:   #F08D1A;   /* Amber hover */
+  --color-amber-dim:     rgba(217, 125, 13, 0.12);
+
+  --color-crimson:       #A61212;   /* Danger / alert — deep red */
+  --color-crimson-hover: #C01515;
+  --color-crimson-dim:   rgba(166, 18, 18, 0.12);
+
+  /* ── Neutrals / Text ────────────────────────────────────── */
+  --color-cream:         #E2D6AF;   /* Primary body text — warm parchment */
+  --color-cream-light:   #F0EDD8;   /* Light cream highlight */
+  --color-cream-dim:     #C8BC95;   /* Secondary text */
   --color-white:         #FFFFFF;
-  --color-gray-100:      #E8EEF5;
-  --color-gray-200:      #C5D3E0;
-  --color-gray-300:      #8FA8C0;
-  --color-gray-400:      #5A7A99;
-  --color-gray-500:      #3A5A78;
-  --color-gray-600:      #1E3A55;
-  --color-gray-700:      #102840;
+  --color-gray-100:      #D4CEB8;
+  --color-gray-200:      #A89F88;
+  --color-gray-300:      #7A7363;
+  --color-gray-400:      #524D40;
+  --color-gray-500:      #332E24;
+  --color-near-black:    #0A100F;
 
-  /* Semantic */
-  --color-success:       #2ECC71;
-  --color-success-bg:    rgba(46, 204, 113, 0.12);
-  --color-warning:       #F5B800;
-  --color-warning-bg:    rgba(245, 184, 0, 0.12);
-  --color-danger:        #E74C3C;
-  --color-danger-bg:     rgba(231, 76, 60, 0.12);
-  --color-info:          #0276D6;
-  --color-info-bg:       rgba(2, 118, 214, 0.12);
+  /* ── Semantic ────────────────────────────────────────────── */
+  --color-success:       #C2F779;   /* Reuses lime */
+  --color-success-bg:    rgba(194, 247, 121, 0.1);
+  --color-warning:       #D97D0D;   /* Amber */
+  --color-warning-bg:    rgba(217, 125, 13, 0.12);
+  --color-danger:        #A61212;   /* Crimson */
+  --color-danger-bg:     rgba(166, 18, 18, 0.12);
+  --color-info:          #4A5B8C;   /* Slate blue */
+  --color-info-bg:       rgba(74, 91, 140, 0.15);
 
   /* ============================================================
-     SEMANTIC UI COLOR ASSIGNMENTS
+     SEMANTIC UI ASSIGNMENTS
      ============================================================ */
 
   /* Backgrounds */
-  --bg-base:             var(--color-navy);
-  --bg-surface:          var(--color-navy-deep);
-  --bg-overlay:          rgba(1, 62, 112, 0.85);
-  --bg-blueprint:        var(--color-navy); /* + grid texture */
+  --bg-base:             var(--color-teal-deep);
+  --bg-surface:          var(--color-teal-mid);
+  --bg-deep:             var(--color-teal-darker);
+  --bg-overlay:          rgba(15, 25, 24, 0.88);
 
   /* Foregrounds */
-  --fg-primary:          var(--color-white);
-  --fg-secondary:        var(--color-cream);
-  --fg-muted:            var(--color-gray-300);
-  --fg-inverse:          var(--color-navy);
+  --fg-primary:          var(--color-cream);
+  --fg-secondary:        var(--color-cream-dim);
+  --fg-muted:            var(--color-gray-200);
+  --fg-inverse:          var(--color-teal-deep);  /* text on lime bg */
+  --fg-accent:           var(--color-lime);
 
   /* Borders */
-  --border-subtle:       var(--color-blue-mid);   /* 1px */
-  --border-active:       var(--color-blue);        /* 2px, focus */
-  --border-gold:         var(--color-gold);        /* special callout */
+  --border-subtle:       var(--color-teal-border);   /* 1px */
+  --border-active:       var(--color-lime);           /* focus/active */
+  --border-amber:        var(--color-amber);
+  --border-slate:        var(--color-slate-light);
 
   /* Interactive */
-  --interactive-primary:       var(--color-blue);
-  --interactive-primary-hover: var(--color-blue-light);
-  --interactive-primary-press: #0260B0;
+  --interactive-primary:       var(--color-lime);
+  --interactive-primary-hover: var(--color-lime-hover);
+  --interactive-primary-press: var(--color-lime-press);
+  --interactive-on-primary:    var(--color-teal-deep);  /* text ON lime */
 
-  /* Shadow */
-  --shadow-card:    0 2px 8px rgba(1, 62, 112, 0.4);
-  --shadow-glow:    0 0 24px rgba(2, 118, 214, 0.3);
-  --shadow-deep:    0 8px 32px rgba(5, 15, 26, 0.6);
+  /* Shadows */
+  --shadow-card:    0 2px 8px rgba(10, 16, 15, 0.5);
+  --shadow-raised:  0 4px 16px rgba(10, 16, 15, 0.6);
+  --shadow-deep:    0 8px 32px rgba(10, 16, 15, 0.8);
+  --glow-lime:      0 0 20px rgba(194, 247, 121, 0.25);
+  --glow-amber:     0 0 20px rgba(217, 125, 13, 0.3);
+  --glow-crimson:   0 0 20px rgba(166, 18, 18, 0.3);
 
   /* ============================================================
      TYPOGRAPHY TOKENS
      ============================================================ */
 
-  /* Font families */
   --font-display:   'League Spartan', 'Arial Narrow', sans-serif;
   --font-body:      'League Spartan', 'Arial Narrow', sans-serif;
   --font-mono:      'Courier New', 'Courier', monospace;
 
-  /* Font weights */
   --fw-light:       300;
   --fw-regular:     400;
   --fw-medium:      500;
@@ -98,7 +119,6 @@
   --fw-extrabold:   800;
   --fw-black:       900;
 
-  /* Type scale (px) */
   --text-xs:    12px;
   --text-sm:    14px;
   --text-base:  16px;
@@ -109,14 +129,12 @@
   --text-3xl:   64px;
   --text-4xl:   96px;
 
-  /* Line heights */
   --lh-tight:    1.1;
   --lh-heading:  1.2;
   --lh-snug:     1.4;
   --lh-body:     1.6;
   --lh-relaxed:  1.8;
 
-  /* Letter spacing */
   --ls-tight:    -0.02em;
   --ls-normal:    0em;
   --ls-wide:      0.05em;
@@ -126,7 +144,6 @@
   /* ============================================================
      SPACING TOKENS
      ============================================================ */
-
   --space-1:   4px;
   --space-2:   8px;
   --space-3:  12px;
@@ -141,23 +158,20 @@
   --space-24: 96px;
 
   /* ============================================================
-     BORDER RADIUS TOKENS
+     BORDER RADIUS
      ============================================================ */
-
   --radius-none:   0px;
-  --radius-sm:     4px;    /* badges, chips */
-  --radius-md:     8px;    /* cards, tooltips */
-  --radius-full:   9999px; /* pills */
-  --radius-circle: 50%;    /* avatars */
+  --radius-sm:     4px;
+  --radius-md:     8px;
+  --radius-full:   9999px;
+  --radius-circle: 50%;
 
   /* ============================================================
-     ANIMATION TOKENS
+     ANIMATION
      ============================================================ */
-
   --ease-standard:  cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-in:        cubic-bezier(0.4, 0, 1, 1);
   --ease-out:       cubic-bezier(0, 0, 0.2, 1);
-
   --dur-micro:      150ms;
   --dur-standard:   300ms;
   --dur-scene:      600ms;
@@ -176,7 +190,6 @@ h1, .h1 {
   color: var(--fg-primary);
   text-transform: uppercase;
 }
-
 h2, .h2 {
   font-family: var(--font-display);
   font-size: var(--text-2xl);
@@ -186,16 +199,13 @@ h2, .h2 {
   color: var(--fg-primary);
   text-transform: uppercase;
 }
-
 h3, .h3 {
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--fw-bold);
   line-height: var(--lh-heading);
-  letter-spacing: var(--ls-normal);
   color: var(--fg-primary);
 }
-
 h4, .h4 {
   font-family: var(--font-display);
   font-size: var(--text-lg);
@@ -203,15 +213,6 @@ h4, .h4 {
   line-height: var(--lh-snug);
   color: var(--fg-primary);
 }
-
-h5, .h5 {
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-snug);
-  color: var(--fg-secondary);
-}
-
 p, .body {
   font-family: var(--font-body);
   font-size: var(--text-base);
@@ -219,34 +220,28 @@ p, .body {
   line-height: var(--lh-body);
   color: var(--fg-secondary);
 }
-
 .body-sm {
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  font-weight: var(--fw-regular);
   line-height: var(--lh-body);
   color: var(--fg-secondary);
 }
-
 .caption {
   font-family: var(--font-body);
   font-size: var(--text-xs);
   font-weight: var(--fw-medium);
-  line-height: var(--lh-snug);
   letter-spacing: var(--ls-wide);
   color: var(--fg-muted);
   text-transform: uppercase;
 }
-
 code, .mono {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  color: var(--color-blue-light);
-  background: rgba(2, 118, 214, 0.1);
+  color: var(--color-lime);
+  background: rgba(194, 247, 121, 0.08);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
-
 .label {
   font-family: var(--font-body);
   font-size: var(--text-xs);
@@ -256,21 +251,11 @@ code, .mono {
   color: var(--fg-muted);
 }
 
-.display {
-  font-family: var(--font-display);
-  font-size: var(--text-4xl);
-  font-weight: var(--fw-black);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--ls-tight);
-  text-transform: uppercase;
-  color: var(--fg-primary);
-}
-
-/* Blueprint grid utility */
+/* Blueprint / dark grid utility */
 .blueprint-bg {
-  background-color: var(--color-navy);
+  background-color: var(--color-teal-deep);
   background-image:
-    linear-gradient(rgba(2, 118, 214, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(2, 118, 214, 0.08) 1px, transparent 1px);
+    linear-gradient(rgba(194, 247, 121, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(194, 247, 121, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }

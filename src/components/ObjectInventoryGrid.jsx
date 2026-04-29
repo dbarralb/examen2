@@ -1,6 +1,10 @@
 const TOTAL_SLOTS = 6;
 
 export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, onItemDragStart, revealedSlots = [], containerOpen = null }) {
+  if (containerOpen === null && items.length === 0) {
+    return null;
+  }
+
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => items[i] || null);
 
   // Closed container: show mystery "?" for occupied slots, empty for the rest

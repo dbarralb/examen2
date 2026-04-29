@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Diseño — Paleta aclarada</title>
+  <style>
+    :root {
+      /* Base / Fondos — aclarados ligeramente */
+      --bg-base: #223332;
+      --color-teal-deep: #223332;
+      --bg-surface: #2A3E3B;
+      --color-teal-mid: #2A3E3B;
+      --bg-deep: #172321;
+      --color-teal-darker: #172321;
+      --color-teal-border: #3A514E;
+
+      /* Tonos de apoyo — + luminosidad, misma familia */
+      --color-slate: #465185;
+      --color-slate-light: #5C6EA3;
+      --color-olive: #5B6D32;
+      --color-brown: #554F36;
+      --color-maroon: #563A36;
+
+      /* Accent / Interactivo */
+      --color-lime: #CFFF8A;
+      --color-lime-hover: #DDFFA3;
+      --color-lime-press: #B8EA64;
+      --color-amber: #E58E24;
+      --color-amber-hover: #F6A13A;
+      --color-crimson: #BD2525;
+      --color-crimson-hover: #D23232;
+
+      /* Texto / Neutros */
+      --fg-primary: #EEE4C2;
+      --color-cream: #EEE4C2;
+      --fg-secondary: #D6CAA4;
+      --color-cream-dim: #D6CAA4;
+      --fg-muted: #B9B097;
+      --color-gray-200: #B9B097;
+      --fg-inverse: #223332;
+      --color-gray-100: #E2DCC6;
+      --color-gray-300: #8B8472;
+      --color-gray-400: #625C4D;
+      --color-near-black: #101918;
+
+      /* Semánticos */
+      --color-success: var(--color-lime);
+      --color-warning: var(--color-amber);
+      --color-danger: var(--color-crimson);
+      --color-info: var(--color-slate-light);
+
+      /* Glows / Sombras — algo más suaves al aclarar la UI */
+      --glow-lime: 0 0 20px rgba(207, 255, 138, 0.25);
+      --glow-amber: 0 0 20px rgba(229, 142, 36, 0.28);
+      --glow-crimson: 0 0 20px rgba(189, 37, 37, 0.28);
+      --shadow-card: 0 2px 8px rgba(16, 25, 24, 0.42);
+      --shadow-raised: 0 4px 16px rgba(16, 25, 24, 0.5);
+      --shadow-deep: 0 8px 32px rgba(16, 25, 24, 0.68);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 22px;
+      --transition-fast: 150ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--fg-primary);
+      background:
+        radial-gradient(circle at top left, rgba(207, 255, 138, 0.08), transparent 32rem),
+        radial-gradient(circle at 90% 10%, rgba(92, 110, 163, 0.16), transparent 28rem),
+        linear-gradient(135deg, var(--bg-deep), var(--bg-base));
+      line-height: 1.5;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 64px;
+    }
+
+    header {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 36px;
+    }
+
+    .eyebrow {
+      width: fit-content;
+      padding: 6px 12px;
+      border: 1px solid var(--color-teal-border);
+      border-radius: 999px;
+      color: var(--color-lime);
+      background: rgba(42, 62, 59, 0.72);
+      box-shadow: var(--glow-lime);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(36px, 5vw, 68px);
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 22px;
+      letter-spacing: -0.025em;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--fg-secondary);
+    }
+
+    .intro {
+      max-width: 760px;
+      font-size: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card {
+      border: 1px solid var(--color-teal-border);
+      border-radius: var(--radius-lg);
+      background: rgba(42, 62, 59, 0.78);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .panel {
+      padding: 22px;
+    }
+
+    .span-4 { grid-column: span 4; }
+    .span-5 { grid-column: span 5; }
+    .span-6 { grid-column: span 6; }
+    .span-7 { grid-column: span 7; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .swatch {
+      min-height: 116px;
+      border: 1px solid rgba(226, 220, 198, 0.14);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .swatch strong {
+      display: block;
+      color: var(--fg-primary);
+      font-size: 13px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .swatch code {
+      color: var(--color-gray-100);
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .components {
+      display: grid;
+      gap: 18px;
+    }
+
+    .button-row,
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button,
+    .button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+      transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    button:hover,
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      background: var(--color-lime);
+      color: var(--fg-inverse);
+      box-shadow: var(--glow-lime);
+    }
+
+    .primary:hover { background: var(--color-lime-hover); }
+    .primary:active { background: var(--color-lime-press); transform: translateY(0); }
+
+    .secondary {
+      border: 1px solid var(--color-teal-border);
+      background: var(--bg-surface);
+      color: var(--fg-primary);
+    }
+
+    .warning {
+      background: var(--color-amber);
+      color: var(--color-near-black);
+      box-shadow: var(--glow-amber);
+    }
+
+    .danger {
+      background: var(--color-crimson);
+      color: var(--fg-primary);
+      box-shadow: var(--glow-crimson);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--color-teal-border);
+      color: var(--fg-secondary);
+      background: rgba(23, 35, 33, 0.7);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--color-lime);
+      box-shadow: var(--glow-lime);
+    }
+
+    .alert {
+      display: grid;
+      gap: 6px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-teal-border);
+      background: var(--bg-deep);
+    }
+
+    .alert strong {
+      color: var(--fg-primary);
+    }
+
+    .alert.success { border-color: rgba(207, 255, 138, 0.42); }
+    .alert.warning { border-color: rgba(229, 142, 36, 0.46); }
+    .alert.danger { border-color: rgba(189, 37, 37, 0.52); }
+
+    .input {
+      width: 100%;
+      border: 1px solid var(--color-teal-border);
+      border-radius: var(--radius-md);
+      padding: 13px 14px;
+      color: var(--fg-primary);
+      background: var(--bg-deep);
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: var(--color-lime);
+      box-shadow: var(--glow-lime);
+    }
+
+    .sample-card {
+      display: grid;
+      gap: 16px;
+      padding: 24px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-teal-border);
+      background:
+        linear-gradient(145deg, rgba(58, 81, 78, 0.42), rgba(23, 35, 33, 0.9)),
+        var(--bg-surface);
+      box-shadow: var(--shadow-raised);
+    }
+
+    .meter {
+      width: 100%;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--bg-deep);
+      border: 1px solid var(--color-teal-border);
+    }
+
+    .meter > span {
+      display: block;
+      width: 64%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-lime-press), var(--color-lime-hover));
+      box-shadow: var(--glow-lime);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--color-teal-border);
+      text-align: left;
+    }
+
+    th {
+      color: var(--fg-primary);
+      background: var(--bg-deep);
+    }
+
+    td {
+      color: var(--fg-secondary);
+      background: rgba(42, 62, 59, 0.48);
+    }
+
+    .token-value {
+      color: var(--color-lime);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    @media (max-width: 860px) {
+      .span-4,
+      .span-5,
+      .span-6,
+      .span-7,
+      .span-8,
+      .span-12 {
+        grid-column: span 12;
+      }
+
+      .page {
+        padding-top: 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div class="eyebrow">Paleta aclarada · v2</div>
+      <h1>Sistema de diseño oscuro, pero menos hundido.</h1>
+      <p class="intro">La identidad sigue siendo teal nocturna, con acentos lima y señales ámbar/crimson. La corrección principal sube la luminosidad de fondos, bordes y texto para mejorar lectura, profundidad y separación visual sin convertirlo en una interfaz clara.</p>
+    </header>
+
+    <section class="grid">
+      <article class="card panel span-12">
+        <h2>Base / Fondos</h2>
+        <div class="swatches">
+          <div class="swatch" style="background: var(--bg-base)"><strong>--bg-base / --color-teal-deep</strong><code>#223332</code></div>
+          <div class="swatch" style="background: var(--bg-surface)"><strong>--bg-surface / --color-teal-mid</strong><code>#2A3E3B</code></div>
+          <div class="swatch" style="background: var(--bg-deep)"><strong>--bg-deep / --color-teal-darker</strong><code>#172321</code></div>
+          <div class="swatch" style="background: var(--color-teal-border)"><strong>--color-teal-border</strong><code>#3A514E</code></div>
+          <div class="swatch" style="background: var(--color-slate)"><strong>--color-slate</strong><code>#465185</code></div>
+          <div class="swatch" style="background: var(--color-slate-light)"><strong>--color-slate-light</strong><code>#5C6EA3</code></div>
+          <div class="swatch" style="background: var(--color-olive)"><strong>--color-olive</strong><code>#5B6D32</code></div>
+          <div class="swatch" style="background: var(--color-brown)"><strong>--color-brown</strong><code>#554F36</code></div>
+          <div class="swatch" style="background: var(--color-maroon)"><strong>--color-maroon</strong><code>#563A36</code></div>
+        </div>
+      </article>
+
+      <article class="card panel span-6">
+        <h2>Accent / Interactivo</h2>
+        <div class="swatches">
+          <div class="swatch" style="background: var(--color-lime); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--color-lime</strong><code style="color: var(--fg-inverse)">#CFFF8A</code></div>
+          <div class="swatch" style="background: var(--color-lime-hover); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--color-lime-hover</strong><code style="color: var(--fg-inverse)">#DDFFA3</code></div>
+          <div class="swatch" style="background: var(--color-lime-press); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--color-lime-press</strong><code style="color: var(--fg-inverse)">#B8EA64</code></div>
+          <div class="swatch" style="background: var(--color-amber)"><strong>--color-amber</strong><code>#E58E24</code></div>
+          <div class="swatch" style="background: var(--color-crimson)"><strong>--color-crimson</strong><code>#BD2525</code></div>
+        </div>
+      </article>
+
+      <article class="card panel span-6">
+        <h2>Texto / Neutros</h2>
+        <div class="swatches">
+          <div class="swatch" style="background: var(--fg-primary); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--fg-primary</strong><code style="color: var(--fg-inverse)">#EEE4C2</code></div>
+          <div class="swatch" style="background: var(--fg-secondary); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--fg-secondary</strong><code style="color: var(--fg-inverse)">#D6CAA4</code></div>
+          <div class="swatch" style="background: var(--fg-muted); color: var(--fg-inverse)"><strong style="color: var(--fg-inverse); text-shadow: none">--fg-muted</strong><code style="color: var(--fg-inverse)">#B9B097</code></div>
+          <div class="swatch" style="background: var(--color-gray-300)"><strong>--color-gray-300</strong><code>#8B8472</code></div>
+          <div class="swatch" style="background: var(--color-gray-400)"><strong>--color-gray-400</strong><code>#625C4D</code></div>
+          <div class="swatch" style="background: var(--color-near-black)"><strong>--color-near-black</strong><code>#101918</code></div>
+        </div>
+      </article>
+
+      <article class="card panel span-7 components">
+        <div>
+          <h2>Componentes</h2>
+          <p>Prueba rápida de jerarquía, interacción y contraste sobre la nueva base.</p>
+        </div>
+
+        <div class="button-row">
+          <button class="primary">Acción primaria</button>
+          <button class="secondary">Secundaria</button>
+          <button class="warning">Advertencia</button>
+          <button class="danger">Peligro</button>
+        </div>
+
+        <div class="badge-row">
+          <span class="badge"><span class="dot"></span> Sistema estable</span>
+          <span class="badge"><span class="dot" style="background: var(--color-amber); box-shadow: var(--glow-amber)"></span> Pendiente</span>
+          <span class="badge"><span class="dot" style="background: var(--color-crimson); box-shadow: var(--glow-crimson)"></span> Riesgo</span>
+        </div>
+
+        <input class="input" value="Campo de entrada con foco visual lima" />
+
+        <div class="alert success">
+          <strong>Success</strong>
+          <p>El lima gana presencia sobre los fondos aclarados sin quemar demasiado la interfaz.</p>
+        </div>
+        <div class="alert warning">
+          <strong>Warning</strong>
+          <p>El ámbar mantiene sensación operativa y mejora visibilidad frente al teal.</p>
+        </div>
+        <div class="alert danger">
+          <strong>Danger</strong>
+          <p>El crimson sube lo justo para ser legible sin volverse rojo puro.</p>
+        </div>
+      </article>
+
+      <article class="span-5 sample-card">
+        <div>
+          <span class="badge"><span class="dot"></span> Módulo UI</span>
+        </div>
+        <div>
+          <h2>Panel de estado</h2>
+          <p>Este bloque simula una card real del producto: fondo elevado, borde teal, texto cálido y acento lima.</p>
+        </div>
+        <div class="meter"><span></span></div>
+        <div class="button-row">
+          <a class="button primary">Continuar</a>
+          <a class="button secondary">Detalles</a>
+        </div>
+      </article>
+
+      <article class="card panel span-12">
+        <h2>Tokens corregidos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Antes</th>
+              <th>Ahora</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>--bg-base / --color-teal-deep</td><td>#182625</td><td class="token-value">#223332</td></tr>
+            <tr><td>--bg-surface / --color-teal-mid</td><td>#1E3230</td><td class="token-value">#2A3E3B</td></tr>
+            <tr><td>--bg-deep / --color-teal-darker</td><td>#0F1918</td><td class="token-value">#172321</td></tr>
+            <tr><td>--color-teal-border</td><td>#2A3F3C</td><td class="token-value">#3A514E</td></tr>
+            <tr><td>--color-slate</td><td>#384173</td><td class="token-value">#465185</td></tr>
+            <tr><td>--color-slate-light</td><td>#4A5B8C</td><td class="token-value">#5C6EA3</td></tr>
+            <tr><td>--color-olive</td><td>#495925</td><td class="token-value">#5B6D32</td></tr>
+            <tr><td>--color-brown</td><td>#403C27</td><td class="token-value">#554F36</td></tr>
+            <tr><td>--color-maroon</td><td>#402C2A</td><td class="token-value">#563A36</td></tr>
+            <tr><td>--color-lime</td><td>#C2F779</td><td class="token-value">#CFFF8A</td></tr>
+            <tr><td>--color-amber</td><td>#D97D0D</td><td class="token-value">#E58E24</td></tr>
+            <tr><td>--color-crimson</td><td>#A61212</td><td class="token-value">#BD2525</td></tr>
+            <tr><td>--fg-primary / --color-cream</td><td>#E2D6AF</td><td class="token-value">#EEE4C2</td></tr>
+            <tr><td>--fg-secondary / --color-cream-dim</td><td>#C8BC95</td><td class="token-value">#D6CAA4</td></tr>
+            <tr><td>--fg-muted / --color-gray-200</td><td>#A89F88</td><td class="token-value">#B9B097</td></tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

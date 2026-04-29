@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-void); padding: 16px; font-family: var(--font-mono); }
+  .grid { display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .bar-wrap { flex: 1; height: 14px; background: var(--bg-panel); display: flex; align-items: center; }
+  .bar { height: 6px; background: var(--neon-green); opacity: 0.7; }
+  .token { font-size: 10px; color: var(--text-tertiary); width: 80px; }
+  .val { font-size: 10px; color: var(--text-ghost); width: 36px; text-align: right; }
+  .section { font-size: 9px; color: var(--text-ghost); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 2px; margin-top: 4px; }
+</style>
+</head><body>
+<div class="grid">
+  <div class="section">Spacing Scale</div>
+  <div class="row"><div class="token">--space-1</div><div class="bar-wrap"><div class="bar" style="width:4px"></div></div><div class="val">4px</div></div>
+  <div class="row"><div class="token">--space-2</div><div class="bar-wrap"><div class="bar" style="width:8px"></div></div><div class="val">8px</div></div>
+  <div class="row"><div class="token">--space-3</div><div class="bar-wrap"><div class="bar" style="width:12px"></div></div><div class="val">12px</div></div>
+  <div class="row"><div class="token">--space-4</div><div class="bar-wrap"><div class="bar" style="width:16px"></div></div><div class="val">16px</div></div>
+  <div class="row"><div class="token">--space-6</div><div class="bar-wrap"><div class="bar" style="width:24px"></div></div><div class="val">24px</div></div>
+  <div class="row"><div class="token">--space-8</div><div class="bar-wrap"><div class="bar" style="width:32px"></div></div><div class="val">32px</div></div>
+  <div class="row"><div class="token">--space-12</div><div class="bar-wrap"><div class="bar" style="width:48px"></div></div><div class="val">48px</div></div>
+  <div class="row"><div class="token">--space-16</div><div class="bar-wrap"><div class="bar" style="width:64px"></div></div><div class="val">64px</div></div>
+</div>
+</body></html>

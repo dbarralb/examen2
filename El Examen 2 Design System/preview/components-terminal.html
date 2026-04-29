@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  body { margin: 0; background: var(--bg-surface); padding: 0; font-family: var(--font-mono); position: relative; overflow: hidden; }
+  .scanlines { position: absolute; inset: 0; background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.055) 2px, rgba(0,0,0,0.055) 4px); pointer-events: none; z-index: 10; }
+  .terminal {
+    background: var(--bg-surface);
+    height: 180px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .term-header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid rgba(0,255,135,0.2);
+    padding: 7px 14px;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .term-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .term-title { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neon-green); margin-left: 4px; }
+  .term-id { font-size: 10px; color: var(--text-ghost); margin-left: auto; }
+  .term-body { flex: 1; padding: 10px 14px; overflow: hidden; }
+  .line { font-size: 12px; line-height: 1.65; white-space: pre; }
+  .g { color: #00FF87; } .m { color: #FF2D78; } .c { color: #00EAFF; } .y { color: #FFEA00; } .p { color: #9B00FF; }
+  .dim { color: #3A4560; } .sec { color: #6B7A96; }
+  .cursor { display: inline-block; width: 7px; height: 12px; background: #00FF87; box-shadow: 0 0 6px rgba(0,255,135,0.7); animation: blink 1s steps(1) infinite; vertical-align: text-bottom; margin-left: 1px; }
+  @keyframes blink { 0%,50%{opacity:1}51%,100%{opacity:0} }
+  .term-footer { padding: 6px 14px; border-top: 1px solid var(--border-dim); display: flex; align-items: center; gap: 8px; background: var(--bg-panel); }
+  .term-input { background: transparent; border: none; outline: none; color: var(--neon-green); font-family: var(--font-mono); font-size: 12px; flex: 1; }
+  .prompt { color: var(--neon-green); font-size: 12px; }
+</style>
+</head><body>
+<div class="scanlines"></div>
+<div class="terminal">
+  <div class="term-header">
+    <div class="term-dot" style="background:#00FF87;box-shadow:0 0 5px rgba(0,255,135,0.7)"></div>
+    <div class="term-dot" style="background:#FFEA00;box-shadow:0 0 5px rgba(255,234,0,0.5)"></div>
+    <div class="term-dot" style="background:#FF2D78;box-shadow:0 0 5px rgba(255,45,120,0.5)"></div>
+    <div class="term-title">TERMINAL // NODE-7F3A</div>
+    <div class="term-id">ID#9C2F</div>
+  </div>
+  <div class="term-body">
+    <div class="line"><span class="dim">[03:14:22]</span> <span class="g">▸ session opened — user: root</span></div>
+    <div class="line"><span class="dim">[03:14:23]</span> <span class="sec">running exploit module v2.4.1...</span></div>
+    <div class="line"><span class="dim">[03:14:24]</span> <span class="y">⚠ anomaly in sector 0x7F — bypassing</span></div>
+    <div class="line"><span class="dim">[03:14:25]</span> <span class="c">// injecting payload — standby</span></div>
+    <div class="line"><span class="dim">[03:14:26]</span> <span class="m">✕ FIREWALL RESPONSE — countermeasure active</span></div>
+    <div class="line"><span class="g">▸ <span class="cursor"></span></span></div>
+  </div>
+  <div class="term-footer">
+    <span class="prompt">▸</span>
+    <input class="term-input" placeholder="enter command..." readonly>
+  </div>
+</div>
+</body></html>
