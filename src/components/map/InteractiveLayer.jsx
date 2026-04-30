@@ -5,9 +5,36 @@ export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, o
   const targets = visibleTargets || allTargets;
   const visibleMarks = markDefinitions.filter((mark) => mark.visibleWhen(gameState));
 
+  const rectTargets = targets.filter((t) => !t.points?.length);
+  const polyTargets = targets.filter((t) => t.points?.length >= 3);
+
   return (
     <div className="map-layer map-layer-interactive">
-      {targets.map((target) => (
+      {/* Polygon hotspots rendered as SVG with viewBox 0-100 matching % coordinate system */}
+      {polyTargets.length > 0 && (
+        <svg
+          className="map-hotspot-svg"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="false"
+        >
+          {polyTargets.map((target) => (
+            <polygon
+              key={target.id}
+              className={`scene-map-hotspot-poly ${selectedTargetId === target.id ? "selected" : ""}`}
+              points={target.points.map((p) => `${p.x},${p.y}`).join(" ")}
+              onClick={(event) => {
+                if (!isMonitorView) onHotspotClick(event, target);
+              }}
+            >
+              <title>{target.label}</title>
+            </polygon>
+          ))}
+        </svg>
+      )}
+
+      {/* Rectangle hotspots as positioned buttons */}
+      {rectTargets.map((target) => (
         <button
           key={target.id}
           className={`scene-map-hotspot ${selectedTargetId === target.id ? "selected" : ""}`}

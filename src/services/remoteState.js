@@ -138,6 +138,7 @@ export function buildInitialRemoteState(status = "role_select") {
     lastRoleActions: {},
     playerViews: {},
     playerBoards: createInitialPlayerBoards(),
+    hotspotOverrides: {},
     queuedActions: null,
     actionLog: ["Sistema listo. Esperando inicio de partida."],
     chatMessages: [

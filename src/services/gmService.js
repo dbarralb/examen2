@@ -88,7 +88,9 @@ export async function forceStartGameWithReadyPlayers() {
 }
 
 export async function resetGame() {
+  const remoteState = await getRemoteState();
   const initialState = buildInitialRemoteState("role_select");
+  initialState.hotspotOverrides = remoteState?.hotspotOverrides || {};
   initialState.actionLog = [
     `GM resetea la partida. Volvemos a seleccion de rol. ${new Date().toLocaleTimeString()}`,
     "Sistema listo. Selecciona carta y target para encolar una accion.",

@@ -170,6 +170,15 @@ export function getScenarioHotspots(scenarioId = "almacen", variant = "A") {
   return content.hotspotsByVariant?.[variant] || content.hotspotsByVariant?.A || sandboxHotspots;
 }
 
+export function getScenarioHotspotOverrideKey(scenarioId = "almacen", variant = "A") {
+  return `${scenarioId}_${variant}`;
+}
+
+export function applyScenarioHotspotOverrides(targets = [], hotspotOverrides = {}, scenarioId = "almacen", variant = "A") {
+  const saved = hotspotOverrides?.[getScenarioHotspotOverrideKey(scenarioId, variant)] || {};
+  return targets.map((target) => saved[target.id] ? { ...target, ...saved[target.id] } : target);
+}
+
 export function getScenarioTarget(targetId, scenarioId = "almacen", variant = "A") {
   return getScenarioHotspots(scenarioId, variant).find((target) => target.id === targetId) || null;
 }

@@ -713,15 +713,349 @@ a {
   margin: 0 auto 24px;
 }
 
+/* ── Coordinate Tool ───────────────────────────────────────────────────── */
+
+.coord-tool {
+  padding: 0 0 4px;
+}
+
+.coord-tool__variants {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 8px;
+}
+
+.coord-tool__variant-btn {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--fg-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms, color 150ms;
+}
+
+.coord-tool__variant-btn.active {
+  background: var(--color-lime);
+  border-color: var(--color-lime);
+  color: var(--color-near-black);
+}
+
+.coord-tool__variant-btn:not(.active):hover {
+  border-color: var(--color-lime);
+  color: var(--fg-primary);
+}
+
+.coord-tool__no-img {
+  font-weight: 400;
+  opacity: 0.6;
+}
+
 .react-gm-coordinate-map {
   position: relative;
   width: 100%;
-  height: 500px;
-  margin: 0 auto 24px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  overflow: hidden;
+  height: 600px;
   background: var(--bg-deep);
+}
+
+.coord-tool__editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.coord-tool__editor-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.coord-tool__label {
+  color: var(--fg-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.coord-tool__select {
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--fg-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.coord-tool__inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.coord-tool__input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--fg-secondary);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.coord-tool__input {
+  width: 72px;
+  padding: 5px 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--fg-primary);
+  font-size: 13px;
+  font-family: var(--font-mono, monospace);
+}
+
+.coord-tool__input:focus {
+  outline: none;
+  border-color: var(--color-lime);
+}
+
+.coord-tool__result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.coord-tool__result-code {
+  flex: 1;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--color-lime);
+  letter-spacing: 0.03em;
+  min-width: 200px;
+}
+
+.coord-tool__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.coord-tool__save-btn,
+.coord-tool__reset-btn,
+.coord-tool__copy-btn {
+  padding: 4px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+  white-space: nowrap;
+}
+
+.coord-tool__save-btn {
+  background: var(--color-lime);
+  border: 1px solid var(--color-lime);
+  color: var(--color-near-black);
+}
+
+.coord-tool__save-btn.saved {
+  background: transparent;
+  color: var(--color-lime);
+}
+
+.coord-tool__save-btn:hover {
+  opacity: 0.85;
+}
+
+.coord-tool__reset-btn {
+  background: transparent;
+  border: 1px solid var(--color-danger, #f87171);
+  color: var(--color-danger, #f87171);
+}
+
+.coord-tool__reset-btn:hover {
+  background: var(--color-danger, #f87171);
+  color: #fff;
+}
+
+.coord-tool__copy-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--fg-secondary);
+}
+
+.coord-tool__copy-btn:hover {
+  border-color: var(--fg-secondary);
+  color: var(--fg-primary);
+}
+
+/* Draw mode toggles */
+.coord-tool__mode-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.coord-tool__mode-btn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--fg-secondary);
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.coord-tool__mode-btn.active {
+  background: var(--color-lime);
+  color: #000;
+  border-color: var(--color-lime);
+}
+
+.coord-tool__mode-btn:not(.active):hover {
+  border-color: var(--color-lime);
+  color: var(--fg-primary);
+}
+
+/* Click-capture point buttons */
+.coord-tool__click-points {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.coord-tool__click-btn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--fg-secondary);
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.coord-tool__click-btn:hover {
+  border-color: var(--color-lime);
+  color: var(--fg-primary);
+}
+
+.coord-tool__click-btn.capturing {
+  background: var(--color-lime-dim);
+  border-color: var(--color-lime);
+  color: var(--color-lime);
+  animation: coord-capture-pulse 1.2s ease-in-out infinite;
+}
+
+.coord-tool__click-btn--danger {
+  border-color: var(--color-danger, #f87171);
+  color: var(--color-danger, #f87171);
+}
+
+.coord-tool__click-btn--danger:hover {
+  background: var(--color-danger, #f87171);
+  border-color: var(--color-danger, #f87171);
+  color: #fff;
+}
+
+@keyframes coord-capture-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+/* Polygon hotspot SVG overlay (InteractiveLayer) */
+.map-hotspot-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.scene-map-hotspot-poly {
+  fill: var(--color-lime-dim);
+  stroke: var(--color-lime);
+  stroke-width: 0.4;
+  cursor: pointer;
+  pointer-events: all;
+  transition: fill 120ms, stroke 120ms;
+}
+
+.scene-map-hotspot-poly.selected,
+.scene-map-hotspot-poly:hover {
+  fill: var(--color-amber-dim);
+  stroke: var(--color-amber);
+}
+
+/* SVG drawing preview */
+.draw-preview-rect {
+  fill: rgba(207, 255, 138, 0.12);
+  stroke: var(--color-lime);
+  stroke-width: 0.3;
+  stroke-dasharray: 1.5 1;
+}
+
+.draw-preview-dot {
+  fill: var(--color-lime);
+}
+
+.draw-preview-dot--p1,
+.draw-preview-dot--p2 {
+  fill: #fff;
+  stroke: var(--color-lime);
+  stroke-width: 0.25;
+}
+
+.draw-preview-polyline {
+  fill: none;
+  stroke: var(--color-lime);
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+}
+
+.draw-preview-cursor-line {
+  stroke: var(--color-lime);
+  stroke-width: 0.25;
+  stroke-dasharray: 1 0.8;
+  opacity: 0.7;
+}
+
+.draw-preview-close-line {
+  stroke: var(--color-amber);
+  stroke-width: 0.25;
+  stroke-dasharray: 1 0.8;
+  opacity: 0.5;
+}
+
+/* Crosshair cursor when capture is active */
+.react-gm-coordinate-map.is-capturing,
+.react-gm-coordinate-map.is-capturing * {
+  cursor: crosshair !important;
+}
+
+.map-coordinate-badge__hint {
+  font-size: 11px;
+  opacity: 0.75;
+  font-style: italic;
 }
 
 .react-gm-monitor {

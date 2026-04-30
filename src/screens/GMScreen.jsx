@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { E2Logo, NBadge, NButton, NCard, NTimer } from "../components/e2";
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { playerRoles } from "../data/roles.js";
 import { targets } from "../data/gameData.js";
-import { DEFAULT_SCENARIO_ID, SCENARIO_VARIANTS, getScenario } from "../data/scenarioData.js";
-import { getScenarioHotspots } from "../data/scenarioContent.js";
+import { DEFAULT_SCENARIO_ID, SCENARIO_VARIANTS, getScenario, getVariantBackground, getVariantImageAspect } from "../data/scenarioData.js";
+import { applyScenarioHotspotOverrides, getScenarioHotspotOverrideKey, getScenarioHotspots } from "../data/scenarioContent.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
@@ -42,6 +42,21 @@ export function GMScreen() {
   const [isBusy, setIsBusy] = useState(false);
   const [isPulseBusy, setIsPulseBusy] = useState(false);
   const [showCoordinates, setShowCoordinates] = useState(false);
+  const [coordinateVariant, setCoordinateVariant] = useState("A");
+  const [selectedHotspotId, setSelectedHotspotId] = useState("");
+  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon"
+  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon"
+  const [capturedPoints, setCapturedPoints] = useState({ p1: null, p2: null });
+  const [polygonPoints, setPolygonPoints] = useState([]);
+  const [cursorPos, setCursorPos] = useState(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState(false);
+  const copyTimerRef = useRef(null);
+  const saveTimerRef = useRef(null);
+  const [hotspotOverrides, setHotspotOverrides] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("el_examen_hotspot_overrides") || "{}"); }
+    catch { return {}; }
+  });
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
   const [sceneControlExpanded, setSceneControlExpanded] = useState(false);
 
@@ -51,7 +66,23 @@ export function GMScreen() {
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
   const activeScenario = getScenario(sessionState.scenarioId || DEFAULT_SCENARIO_ID);
-  const coordinateTargets = getScenarioHotspots(activeScenario.id, "A");
+  const coordinateTargets = getScenarioHotspots(activeScenario.id, coordinateVariant);
+  const coordinateBg = getVariantBackground(activeScenario.id, coordinateVariant);
+  const coordinateAspect = getVariantImageAspect(activeScenario.id, coordinateVariant);
+  const overrideKey = getScenarioHotspotOverrideKey(activeScenario.id, coordinateVariant);
+  const remoteHotspotOverrides = remoteState?.hotspotOverrides || {};
+  const effectiveHotspotOverrides = useMemo(() => {
+    const merged = { ...remoteHotspotOverrides };
+    for (const [key, value] of Object.entries(hotspotOverrides)) {
+      merged[key] = { ...(merged[key] || {}), ...(value || {}) };
+    }
+    return merged;
+  }, [remoteHotspotOverrides, hotspotOverrides]);
+
+  // Base targets with saved overrides applied
+  const savedCoordinateTargets = useMemo(() => {
+    return applyScenarioHotspotOverrides(coordinateTargets, effectiveHotspotOverrides, activeScenario.id, coordinateVariant);
+  }, [coordinateTargets, effectiveHotspotOverrides, activeScenario.id, coordinateVariant]);
   const gameState = remoteState?.gameState || {};
   const readyPlayerCount = Object.values(remoteState?.lobby?.roleClaims || {}).filter(Boolean).length;
 
@@ -74,6 +105,197 @@ export function GMScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [alarmState.level, alarmState.noise],
   );
+
+  // Reset drawing state when switching hotspot or variant
+  useEffect(() => {
+    setClickCapture(null);
+    setCapturedPoints({ p1: null, p2: null });
+    setPolygonPoints([]);
+    setCursorPos(null);
+    if (!selectedHotspotId) return;
+    // Prefill p1/p2 from saved override or base data
+    const hs = savedCoordinateTargets.find((t) => t.id === selectedHotspotId);
+    if (hs && !hs.points) {
+      setCapturedPoints({
+        p1: { x: hs.x, y: hs.y },
+        p2: { x: +(hs.x + hs.w).toFixed(2), y: +(hs.y + hs.h).toFixed(2) },
+      });
+    } else if (hs?.points?.length) {
+      setPolygonPoints(hs.points);
+      setDrawMode("polygon");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedHotspotId]);
+
+  useEffect(() => {
+    setSelectedHotspotId("");
+    setClickCapture(null);
+    setCapturedPoints({ p1: null, p2: null });
+    setPolygonPoints([]);
+    setCursorPos(null);
+  }, [coordinateVariant]);
+
+  // Handle map click in drawing mode
+  function handleMapCoordClick({ x, y }) {
+    setCursorPos({ x, y });
+    if (drawMode === "rect") {
+      if (clickCapture === "p1") {
+        setCapturedPoints((prev) => ({ ...prev, p1: { x, y } }));
+        setClickCapture("p2"); // auto-advance
+      } else if (clickCapture === "p2") {
+        setCapturedPoints((prev) => ({ ...prev, p2: { x, y } }));
+        setClickCapture(null); // done
+      }
+    } else if (drawMode === "polygon" && clickCapture === "polygon") {
+      setPolygonPoints((prev) => [...prev, { x, y }]);
+    }
+  }
+
+  // Live targets with current drawing applied
+  const liveCoordinateTargets = useMemo(() => {
+    if (!selectedHotspotId) return savedCoordinateTargets;
+    const { p1, p2 } = capturedPoints;
+    if (drawMode === "rect" && p1 && p2) {
+      const x = Math.min(p1.x, p2.x);
+      const y = Math.min(p1.y, p2.y);
+      const w = +(Math.abs(p2.x - p1.x)).toFixed(2);
+      const h = +(Math.abs(p2.y - p1.y)).toFixed(2);
+      return savedCoordinateTargets.map((t) =>
+        t.id === selectedHotspotId ? { ...t, x, y, w, h, points: undefined } : t,
+      );
+    }
+    if (drawMode === "polygon" && polygonPoints.length >= 3) {
+      const xs = polygonPoints.map((p) => p.x);
+      const ys = polygonPoints.map((p) => p.y);
+      const bbox = {
+        x: +Math.min(...xs).toFixed(2),
+        y: +Math.min(...ys).toFixed(2),
+        w: +(Math.max(...xs) - Math.min(...xs)).toFixed(2),
+        h: +(Math.max(...ys) - Math.min(...ys)).toFixed(2),
+      };
+      return savedCoordinateTargets.map((t) =>
+        t.id === selectedHotspotId ? { ...t, ...bbox, points: polygonPoints } : t,
+      );
+    }
+    return savedCoordinateTargets;
+  }, [savedCoordinateTargets, selectedHotspotId, capturedPoints, polygonPoints, drawMode]);
+
+  // Computed result data
+  const editedHotspotData = useMemo(() => {
+    if (drawMode === "rect") {
+      const { p1, p2 } = capturedPoints;
+      if (!p1 || !p2) return null;
+      const x = +Math.min(p1.x, p2.x).toFixed(2);
+      const y = +Math.min(p1.y, p2.y).toFixed(2);
+      const w = +(Math.abs(p2.x - p1.x)).toFixed(2);
+      const h = +(Math.abs(p2.y - p1.y)).toFixed(2);
+      return { x, y, w, h };
+    }
+    if (drawMode === "polygon" && polygonPoints.length >= 3) {
+      const xs = polygonPoints.map((p) => p.x);
+      const ys = polygonPoints.map((p) => p.y);
+      return {
+        x: +Math.min(...xs).toFixed(2),
+        y: +Math.min(...ys).toFixed(2),
+        w: +(Math.max(...xs) - Math.min(...xs)).toFixed(2),
+        h: +(Math.max(...ys) - Math.min(...ys)).toFixed(2),
+        points: polygonPoints,
+      };
+    }
+    return null;
+  }, [drawMode, capturedPoints, polygonPoints]);
+
+  // Drawing state passed to SceneMap for SVG preview
+  const drawingState = useMemo(() => {
+    if (!selectedHotspotId || clickCapture === null && drawMode === "rect" && !capturedPoints.p1) return null;
+    const hint = clickCapture === "p1" ? "P1 — esquina superior izq."
+      : clickCapture === "p2" ? "P2 — esquina inferior der."
+      : clickCapture === "polygon" ? "Clic para añadir vértice"
+      : null;
+    return {
+      mode: drawMode,
+      p1: capturedPoints.p1,
+      p2: capturedPoints.p2,
+      polygonPoints,
+      cursorPos,
+      captureHint: hint,
+    };
+  }, [selectedHotspotId, clickCapture, drawMode, capturedPoints, polygonPoints, cursorPos]);
+
+  const isCapturing = !!clickCapture;
+
+  const currentHotspotIsSaved = useMemo(() => {
+    if (!selectedHotspotId || !editedHotspotData) return false;
+    const saved = effectiveHotspotOverrides[overrideKey]?.[selectedHotspotId];
+    if (!saved) return false;
+    if (drawMode === "polygon") {
+      return JSON.stringify(saved.points) === JSON.stringify(editedHotspotData.points);
+    }
+    return saved.x === editedHotspotData.x && saved.y === editedHotspotData.y &&
+      saved.w === editedHotspotData.w && saved.h === editedHotspotData.h;
+  }, [selectedHotspotId, editedHotspotData, effectiveHotspotOverrides, overrideKey, drawMode]);
+
+  async function persistOverride(data) {
+    const next = {
+      ...hotspotOverrides,
+      [overrideKey]: { ...(hotspotOverrides[overrideKey] || {}), [selectedHotspotId]: data },
+    };
+    setHotspotOverrides(next);
+    localStorage.setItem("el_examen_hotspot_overrides", JSON.stringify(next));
+    await firebasePatch(`hotspotOverrides/${overrideKey}`, { [selectedHotspotId]: data });
+  }
+
+  async function handleSaveHotspot() {
+    if (!editedHotspotData || !selectedHotspotId) return;
+    try {
+      await persistOverride(editedHotspotData);
+      setStatusMessage(`Hotspot guardado para ${activeScenario.label} ${coordinateVariant}.`);
+      setSaveFeedback(true);
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = window.setTimeout(() => setSaveFeedback(false), 1800);
+      await refresh();
+    } catch {
+      setStatusMessage("No se pudo publicar el hotspot.");
+    }
+  }
+
+  async function handleResetHotspot() {
+    if (!selectedHotspotId) return;
+    const next = { ...hotspotOverrides };
+    if (next[overrideKey]) {
+      delete next[overrideKey][selectedHotspotId];
+      if (Object.keys(next[overrideKey]).length === 0) delete next[overrideKey];
+    }
+    setHotspotOverrides(next);
+    localStorage.setItem("el_examen_hotspot_overrides", JSON.stringify(next));
+    try {
+      await firebasePatch(`hotspotOverrides/${overrideKey}`, { [selectedHotspotId]: null });
+      setStatusMessage(`Hotspot reseteado para ${activeScenario.label} ${coordinateVariant}.`);
+      await refresh();
+    } catch {
+      setStatusMessage("No se pudo resetear el hotspot remoto.");
+    }
+    const base = coordinateTargets.find((t) => t.id === selectedHotspotId);
+    if (base) {
+      setCapturedPoints({ p1: { x: base.x, y: base.y }, p2: { x: +(base.x + base.w).toFixed(2), y: +(base.y + base.h).toFixed(2) } });
+      setPolygonPoints([]);
+      setDrawMode("rect");
+    }
+  }
+
+  function handleCopyCoords() {
+    if (!editedHotspotData || !selectedHotspotId) return;
+    const { x, y, w, h } = editedHotspotData;
+    navigator.clipboard.writeText(`x: ${x}, y: ${y}, w: ${w}, h: ${h}`);
+    setCopyFeedback(true);
+    window.clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
+  }
+
+  function handleClosePolygon() {
+    if (polygonPoints.length < 3) return;
+    setClickCapture(null);
+  }
 
   async function refresh() {
     const nextState = await getRemoteState();
@@ -235,21 +457,207 @@ export function GMScreen() {
         )}
       </div>
 
-      {showCoordinates && (
-        <section className="react-gm-coordinate-map" aria-label="Mapa de coordenadas">
-          <SceneMap
-            gameState={remoteState?.gameState || {}}
-            targetFeedback={remoteState?.targetFeedback || {}}
-            selectedTargetId={null}
-            pendingAction={null}
-            queuedForPlayer={null}
-            overlayActive={false}
-            showCoordinates
-            boardTargets={coordinateTargets}
-            scenarioId={activeScenario.id}
-          />
-        </section>
-      )}
+      {/* ---- Mapa de coordenadas ---- */}
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${showCoordinates ? "expanded" : ""}`}
+          onClick={() => setShowCoordinates((v) => !v)}
+          aria-expanded={showCoordinates}
+        >
+          <span>Mapa de coordenadas — {activeScenario.label} {coordinateVariant}</span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{showCoordinates ? "▲" : "▼"}</span>
+        </button>
+        {showCoordinates && (
+          <div className="coord-tool">
+            {/* Variant selector */}
+            <div className="coord-tool__variants">
+              {["A", "B"].map((v) => {
+                const hasBg = !!getVariantBackground(activeScenario.id, v);
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`coord-tool__variant-btn ${coordinateVariant === v ? "active" : ""}`}
+                    onClick={() => setCoordinateVariant(v)}
+                  >
+                    {activeScenario.label} {v}
+                    {!hasBg && <span className="coord-tool__no-img"> (sin imagen)</span>}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Map */}
+            <section className={`react-gm-coordinate-map${isCapturing ? " is-capturing" : ""}`} aria-label="Mapa de coordenadas">
+              <SceneMap
+                gameState={remoteState?.gameState || {}}
+                targetFeedback={remoteState?.targetFeedback || {}}
+                selectedTargetId={selectedHotspotId || null}
+                pendingAction={null}
+                queuedForPlayer={null}
+                overlayActive={false}
+                showCoordinates
+                disablePan={isCapturing}
+                onCoordClick={isCapturing ? handleMapCoordClick : null}
+                onCursorMove={isCapturing ? setCursorPos : null}
+                drawingState={drawingState}
+                boardTargets={liveCoordinateTargets}
+                backgroundSrc={coordinateBg}
+                imageAspect={coordinateAspect}
+                scenarioId={activeScenario.id}
+              />
+            </section>
+
+            {/* Hotspot editor */}
+            <div className="coord-tool__editor">
+              {/* Hotspot selector */}
+              <div className="coord-tool__editor-row">
+                <label className="coord-tool__label" htmlFor="coord-hs-select">Hotspot</label>
+                <select
+                  id="coord-hs-select"
+                  className="coord-tool__select"
+                  value={selectedHotspotId}
+                  onChange={(e) => setSelectedHotspotId(e.target.value)}
+                >
+                  <option value="">— seleccionar —</option>
+                  {coordinateTargets.map((t) => {
+                    const hasOverride = !!effectiveHotspotOverrides[overrideKey]?.[t.id];
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {hasOverride ? "● " : ""}{t.label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {selectedHotspotId && (
+                <>
+                  {/* Draw mode toggle */}
+                  <div className="coord-tool__editor-row">
+                    <span className="coord-tool__label">Modo</span>
+                    <div className="coord-tool__mode-btns">
+                      <button
+                        type="button"
+                        className={`coord-tool__mode-btn ${drawMode === "rect" ? "active" : ""}`}
+                        onClick={() => { setDrawMode("rect"); setClickCapture(null); setPolygonPoints([]); }}
+                      >
+                        ▣ Rectángulo
+                      </button>
+                      <button
+                        type="button"
+                        className={`coord-tool__mode-btn ${drawMode === "polygon" ? "active" : ""}`}
+                        onClick={() => { setDrawMode("polygon"); setClickCapture(null); setCapturedPoints({ p1: null, p2: null }); }}
+                      >
+                        ⬡ Polígono
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Rectangle controls */}
+                  {drawMode === "rect" && (
+                    <div className="coord-tool__editor-row">
+                      <span className="coord-tool__label">Puntos</span>
+                      <div className="coord-tool__click-points">
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "p1" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "p1" ? null : "p1")}
+                        >
+                          {clickCapture === "p1" ? "● Capturando P1…" : capturedPoints.p1 ? `P1 (${capturedPoints.p1.x.toFixed(1)}, ${capturedPoints.p1.y.toFixed(1)})` : "Clic P1 — sup. izq."}
+                        </button>
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "p2" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "p2" ? null : "p2")}
+                        >
+                          {clickCapture === "p2" ? "● Capturando P2…" : capturedPoints.p2 ? `P2 (${capturedPoints.p2.x.toFixed(1)}, ${capturedPoints.p2.y.toFixed(1)})` : "Clic P2 — inf. der."}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Polygon controls */}
+                  {drawMode === "polygon" && (
+                    <div className="coord-tool__editor-row">
+                      <span className="coord-tool__label">Vértices</span>
+                      <div className="coord-tool__click-points">
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "polygon" ? "capturing" : ""}`}
+                          onClick={() => {
+                            if (clickCapture === "polygon") {
+                              setClickCapture(null);
+                            } else {
+                              setPolygonPoints([]);
+                              setClickCapture("polygon");
+                            }
+                          }}
+                        >
+                          {clickCapture === "polygon" ? `● Trazando… (${polygonPoints.length} pts)` : "Iniciar trazado"}
+                        </button>
+                        {polygonPoints.length >= 3 && (
+                          <button
+                            type="button"
+                            className="coord-tool__click-btn"
+                            onClick={handleClosePolygon}
+                          >
+                            Cerrar polígono ({polygonPoints.length} pts)
+                          </button>
+                        )}
+                        {polygonPoints.length > 0 && (
+                          <button
+                            type="button"
+                            className="coord-tool__click-btn coord-tool__click-btn--danger"
+                            onClick={() => { setPolygonPoints([]); setClickCapture(null); }}
+                          >
+                            Borrar puntos
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Result row */}
+                  {editedHotspotData && (
+                    <div className="coord-tool__result">
+                      <code className="coord-tool__result-code">
+                        x: {editedHotspotData.x}, y: {editedHotspotData.y}, w: {editedHotspotData.w}, h: {editedHotspotData.h}
+                        {editedHotspotData.points && ` · ${editedHotspotData.points.length} pts`}
+                      </code>
+                      <div className="coord-tool__actions">
+                        <button
+                          type="button"
+                          className={`coord-tool__save-btn ${currentHotspotIsSaved ? "saved" : ""}`}
+                          onClick={handleSaveHotspot}
+                        >
+                          {saveFeedback ? "Guardado!" : currentHotspotIsSaved ? "Guardado" : "Guardar"}
+                        </button>
+                        {effectiveHotspotOverrides[overrideKey]?.[selectedHotspotId] && (
+                          <button
+                            type="button"
+                            className="coord-tool__reset-btn"
+                            onClick={handleResetHotspot}
+                          >
+                            Resetear
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="coord-tool__copy-btn"
+                          onClick={handleCopyCoords}
+                        >
+                          {copyFeedback ? "Copiado!" : "Copiar"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       <section className="react-gm-grid">
         {/* ---- Partida ---- */}
@@ -300,9 +708,6 @@ export function GMScreen() {
               Iniciar partida
             </NButton>
             <NButton variant="danger" onClick={handleResetGame} disabled={isBusy}>Resetear</NButton>
-            <NButton variant="ghost" onClick={() => setShowCoordinates((v) => !v)}>
-              {showCoordinates ? "Ocultar coordenadas" : "Modo coordenadas"}
-            </NButton>
           </div>
           <p className="react-status gm-start-rule">
             Inicio manual GM: disponible con {readyPlayerCount} jugador(es) preparado(s).

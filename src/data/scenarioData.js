@@ -10,6 +10,8 @@
 // Default: "sandbox" — blank scenario used for development and testing.
 // ---------------------------------------------------------------------------
 
+import almacenA from "../../assets/Pantalla de juego/maps/almacen_A.png";
+
 export const SCENARIO_VARIANTS = ["A", "B", "C", "D"];
 export const DEFAULT_SCENARIO_ID = "almacen";
 export const DEFAULT_VARIANT = "A";
@@ -17,7 +19,8 @@ export const DEFAULT_VARIANT = "A";
 // ---------------------------------------------------------------------------
 // Scenario definitions
 // Add new scenarios here as the adventure is written.
-// Each variant needs a label and a backgroundSrc (image path).
+// Each variant needs a label, backgroundSrc (image URL), and imageAspect
+// (width / height ratio — used so SceneMap can handle panoramic layouts).
 // ---------------------------------------------------------------------------
 
 export const scenarios = [
@@ -26,10 +29,10 @@ export const scenarios = [
     label: "Almacen",
     description: "Primer nivel: almacen del gimnasio fragmentado en realidades paralelas.",
     variants: {
-      A: { label: "Almacen A", backgroundSrc: "/assets/boards/placeholder_empollon.svg" },
-      B: { label: "Almacen B", backgroundSrc: "/assets/boards/placeholder_mistica.svg" },
-      C: { label: "Almacen C", backgroundSrc: "/assets/boards/placeholder_manitas.svg" },
-      D: { label: "Almacen D", backgroundSrc: "/assets/boards/placeholder_guaperas.svg" },
+      A: { label: "Almacen A", backgroundSrc: almacenA, imageAspect: 4096 / 1536 },
+      B: { label: "Almacen B", backgroundSrc: null, imageAspect: null },
+      C: { label: "Almacen C", backgroundSrc: null, imageAspect: null },
+      D: { label: "Almacen D", backgroundSrc: null, imageAspect: null },
     },
   },
   {
@@ -37,10 +40,10 @@ export const scenarios = [
     label: "Sandbox",
     description: "Escenario de desarrollo. Sin contenido narrativo.",
     variants: {
-      A: { label: "Sandbox A", backgroundSrc: "/assets/boards/placeholder_empollon.svg" },
-      B: { label: "Sandbox B", backgroundSrc: "/assets/boards/placeholder_manitas.svg" },
-      C: { label: "Sandbox C", backgroundSrc: "/assets/boards/placeholder_guaperas.svg" },
-      D: { label: "Sandbox D", backgroundSrc: "/assets/boards/placeholder_mistica.svg" },
+      A: { label: "Sandbox A", backgroundSrc: null, imageAspect: null },
+      B: { label: "Sandbox B", backgroundSrc: null, imageAspect: null },
+      C: { label: "Sandbox C", backgroundSrc: null, imageAspect: null },
+      D: { label: "Sandbox D", backgroundSrc: null, imageAspect: null },
     },
   },
 ];
@@ -56,6 +59,11 @@ export function getScenario(scenarioId = DEFAULT_SCENARIO_ID) {
 export function getVariantBackground(scenarioId, variant) {
   const scenario = getScenario(scenarioId);
   return scenario?.variants?.[variant]?.backgroundSrc || null;
+}
+
+export function getVariantImageAspect(scenarioId, variant) {
+  const scenario = getScenario(scenarioId);
+  return scenario?.variants?.[variant]?.imageAspect || null;
 }
 
 export function getVariantLabel(scenarioId, variant) {

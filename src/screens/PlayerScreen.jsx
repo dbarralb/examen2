@@ -5,8 +5,8 @@ import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, targets } from "../data/gameData.js";
-import { DEFAULT_SCENARIO_ID, getVariantBackground } from "../data/scenarioData.js";
-import { getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
+import { DEFAULT_SCENARIO_ID, getVariantBackground, getVariantImageAspect } from "../data/scenarioData.js";
+import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -92,8 +92,17 @@ export function PlayerScreen({ navigation, params }) {
   const playerBoard = remoteState?.playerBoards?.[role.id] || {};
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
-  const boardTargets = useMemo(() => getScenarioHotspots(boardScenarioId, boardVariant), [boardScenarioId, boardVariant]);
+  const remoteHotspotOverrides = remoteState?.hotspotOverrides || {};
+  const boardTargets = useMemo(() => (
+    applyScenarioHotspotOverrides(
+      getScenarioHotspots(boardScenarioId, boardVariant),
+      remoteHotspotOverrides,
+      boardScenarioId,
+      boardVariant,
+    )
+  ), [boardScenarioId, boardVariant, remoteHotspotOverrides]);
   const boardSrc = getVariantBackground(boardScenarioId, boardVariant);
+  const boardAspect = getVariantImageAspect(boardScenarioId, boardVariant);
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = isResultOverlayActive(pulseState);
@@ -578,6 +587,7 @@ export function PlayerScreen({ navigation, params }) {
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
           boardTargets={boardTargets}
           backgroundSrc={boardSrc}
+          imageAspect={boardAspect}
           scenarioId={boardScenarioId}
           variant={boardVariant}
           onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}

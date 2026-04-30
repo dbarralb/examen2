@@ -10,10 +10,9 @@ import { getContainerOpenState, getTarget, getTargetImage, getTargetStateLabel, 
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
-const MAP_WIDTH = 1826;
-const MAP_HEIGHT = 1080;
-const MAP_ASPECT = MAP_WIDTH / MAP_HEIGHT;
+const DEFAULT_MAP_ASPECT = 1826 / 1080;
 const MIN_SCALE = 0.8;
+const MIN_SCALE_WIDE = 1.0; // panoramic images must fill viewport height
 const MAX_SCALE = 3;
 const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
 const TARGET_FOCUS_SCALE = 1.45;
@@ -25,13 +24,19 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function getFitLayout(width, height) {
+function getFitLayout(width, height, aspect = DEFAULT_MAP_ASPECT) {
   if (!width || !height) {
     return { width: 0, height: 0, mapWidth: 0, mapHeight: 0 };
   }
 
-  const mapWidth = Math.min(width, height * MAP_ASPECT);
-  const mapHeight = mapWidth / MAP_ASPECT;
+  if (aspect > width / height) {
+    // Wide/panoramic: fit to viewport height so full height is always visible;
+    // excess width is revealed by horizontal panning.
+    return { width, height, mapWidth: height * aspect, mapHeight: height };
+  }
+
+  const mapWidth = Math.min(width, height * aspect);
+  const mapHeight = mapWidth / aspect;
   return { width, height, mapWidth, mapHeight };
 }
 
@@ -52,8 +57,8 @@ function clampCamera(camera, layout) {
   };
 }
 
-function getFitCamera(layout) {
-  return clampCamera({ x: (layout.width - layout.mapWidth) / 2, y: (layout.height - layout.mapHeight) / 2, scale: MIN_SCALE }, layout);
+function getFitCamera(layout, minScale = MIN_SCALE) {
+  return clampCamera({ x: (layout.width - layout.mapWidth) / 2, y: (layout.height - layout.mapHeight) / 2, scale: minScale }, layout);
 }
 
 function getTargetCardSide(target) {
@@ -70,6 +75,73 @@ function getTargetCardStyle(target) {
     left: `${left}%`,
     top: `${top}%`,
   };
+}
+
+// SVG preview rendered inside scene-map-world (transforms with zoom/pan)
+function DrawingPreviewSVG({ drawingState }) {
+  const { mode, p1, p2, polygonPoints, cursorPos } = drawingState;
+
+  return (
+    <svg
+      className="map-drawing-preview"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 20 }}
+    >
+      {mode === "rect" && (
+        <>
+          {/* Ghost rect between p1 and cursor (or p2 if captured) */}
+          {p1 && (p2 || cursorPos) && (() => {
+            const end = p2 || cursorPos;
+            const rx = Math.min(p1.x, end.x);
+            const ry = Math.min(p1.y, end.y);
+            const rw = Math.abs(end.x - p1.x);
+            const rh = Math.abs(end.y - p1.y);
+            return <rect x={rx} y={ry} width={rw} height={rh} className="draw-preview-rect" />;
+          })()}
+          {/* P1 dot */}
+          {p1 && <circle cx={p1.x} cy={p1.y} r="0.8" className="draw-preview-dot draw-preview-dot--p1" />}
+          {/* P2 dot */}
+          {p2 && <circle cx={p2.x} cy={p2.y} r="0.8" className="draw-preview-dot draw-preview-dot--p2" />}
+        </>
+      )}
+
+      {mode === "polygon" && (
+        <>
+          {/* Completed edges */}
+          {polygonPoints.length >= 2 && (
+            <polyline
+              points={polygonPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+              className="draw-preview-polyline"
+            />
+          )}
+          {/* Line from last point to cursor */}
+          {polygonPoints.length >= 1 && cursorPos && (() => {
+            const last = polygonPoints[polygonPoints.length - 1];
+            return (
+              <line
+                x1={last.x} y1={last.y}
+                x2={cursorPos.x} y2={cursorPos.y}
+                className="draw-preview-cursor-line"
+              />
+            );
+          })()}
+          {/* Vertex dots */}
+          {polygonPoints.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="0.8" className="draw-preview-dot" />
+          ))}
+          {/* Close-path preview line (first vertex) */}
+          {polygonPoints.length >= 3 && cursorPos && (
+            <line
+              x1={polygonPoints[0].x} y1={polygonPoints[0].y}
+              x2={cursorPos.x} y2={cursorPos.y}
+              className="draw-preview-close-line"
+            />
+          )}
+        </>
+      )}
+    </svg>
+  );
 }
 
 export function SceneMap({
@@ -100,11 +172,19 @@ export function SceneMap({
   activeZone = null,
   boardTargets = null,
   backgroundSrc = null,
+  imageAspect = null,
   scenarioId = "almacen",
   variant = "A",
   onDeviceCommand,
   deviceCommandResult = null,
+  disablePan = false,
+  onCoordClick = null,
+  onCursorMove = null,
+  drawingState = null,
 }) {
+  const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
+  const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
+
   // boardTargets takes priority; otherwise filter by activeZone or show all.
   const visibleTargets = boardTargets
     ? boardTargets
@@ -113,8 +193,8 @@ export function SceneMap({
       : targets;
   const viewportRef = useRef(null);
   const panRef = useRef(null);
-  const [layout, setLayout] = useState(() => getFitLayout(0, 0));
-  const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: MIN_SCALE }));
+  const [layout, setLayout] = useState(() => getFitLayout(0, 0, effectiveAspect));
+  const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: effectiveMinScale }));
   const [isPanning, setIsPanning] = useState(false);
   const [isFocusTransitioning, setIsFocusTransitioning] = useState(false);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
@@ -136,11 +216,11 @@ export function SceneMap({
 
     function updateLayout() {
       const rect = viewport.getBoundingClientRect();
-      const nextLayout = getFitLayout(rect.width, rect.height);
+      const nextLayout = getFitLayout(rect.width, rect.height, effectiveAspect);
       setLayout(nextLayout);
       setCamera((current) => {
         if (!layout.mapWidth || !layout.mapHeight) {
-          return getFitCamera(nextLayout);
+          return getFitCamera(nextLayout, effectiveMinScale);
         }
 
         return clampCamera(current, nextLayout);
@@ -152,7 +232,7 @@ export function SceneMap({
     observer.observe(viewport);
 
     return () => observer.disconnect();
-  }, [layout.mapHeight, layout.mapWidth]);
+  }, [layout.mapHeight, layout.mapWidth, effectiveAspect, effectiveMinScale]);
 
   useEffect(() => () => window.clearTimeout(focusTransitionTimeoutRef.current), []);
 
@@ -224,7 +304,7 @@ export function SceneMap({
   }
 
   function handleViewportPointerDown(event) {
-    if (isMonitorView) {
+    if (isMonitorView || disablePan) {
       return;
     }
 
@@ -290,7 +370,7 @@ export function SceneMap({
     const pointerX = event.clientX - rect.left;
     const pointerY = event.clientY - rect.top;
     const zoomFactor = Math.exp(-event.deltaY * 0.001);
-    const nextScale = clamp(camera.scale * zoomFactor, MIN_SCALE, MAX_SCALE);
+    const nextScale = clamp(camera.scale * zoomFactor, effectiveMinScale, MAX_SCALE);
     const worldX = (pointerX - camera.x) / camera.scale;
     const worldY = (pointerY - camera.y) / camera.scale;
 
@@ -432,8 +512,21 @@ export function SceneMap({
             );
           })}
         </InteractiveLayer>
+
+        {/* Drawing preview SVG — rendered inside scene-map-world so it transforms with zoom/pan */}
+        {drawingState && (
+          <DrawingPreviewSVG drawingState={drawingState} />
+        )}
       </div>
-      {showCoordinates && <CoordinateOverlay camera={camera} layout={layout} />}
+      {showCoordinates && (
+        <CoordinateOverlay
+          camera={camera}
+          layout={layout}
+          onCoordClick={onCoordClick}
+          onCursorMove={onCursorMove}
+          drawingState={drawingState}
+        />
+      )}
       {consoleOpenTargetId && (() => {
         const consoleTarget = visibleTargets.find((t) => t.id === consoleOpenTargetId);
         return consoleTarget?.deviceConfig ? (
