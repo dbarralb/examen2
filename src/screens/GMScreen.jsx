@@ -35,6 +35,22 @@ function getActionSummary(action) {
   return `${formatCardLabel(action)} -> ${target?.label || action.target || "objetivo"}`;
 }
 
+function clampPercent(value, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getDefaultCardPosition(target) {
+  const side = target.x > 72 ? "left" : "right";
+  const left = side === "left" ? target.x - 22 : target.x + target.w + 2;
+  const isLowerHalf = target.y + target.h / 2 > 50;
+  const top = isLowerHalf ? clampPercent(target.y - 30, 4, 76) : clampPercent(target.y - 2, 4, 76);
+
+  return {
+    cardX: +clampPercent(left, 0, 88).toFixed(2),
+    cardY: +top.toFixed(2),
+  };
+}
+
 export function GMScreen() {
   const [remoteState, setRemoteState] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -44,10 +60,11 @@ export function GMScreen() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [coordinateVariant, setCoordinateVariant] = useState("A");
   const [selectedHotspotId, setSelectedHotspotId] = useState("");
-  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon"
-  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon"
+  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon" | "card"
+  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon" | "card"
   const [capturedPoints, setCapturedPoints] = useState({ p1: null, p2: null });
   const [polygonPoints, setPolygonPoints] = useState([]);
+  const [cardPosition, setCardPosition] = useState(null);
   const [cursorPos, setCursorPos] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState(false);
@@ -112,10 +129,18 @@ export function GMScreen() {
     setClickCapture(null);
     setCapturedPoints({ p1: null, p2: null });
     setPolygonPoints([]);
+    setCardPosition(null);
     setCursorPos(null);
     if (!selectedHotspotId) return;
     // Prefill p1/p2 from saved override or base data
     const hs = savedCoordinateTargets.find((t) => t.id === selectedHotspotId);
+    if (hs) {
+      const defaultCardPosition = getDefaultCardPosition(hs);
+      setCardPosition({
+        cardX: hs.cardX ?? defaultCardPosition.cardX,
+        cardY: hs.cardY ?? defaultCardPosition.cardY,
+      });
+    }
     if (hs && !hs.points) {
       setCapturedPoints({
         p1: { x: hs.x, y: hs.y },
@@ -133,6 +158,7 @@ export function GMScreen() {
     setClickCapture(null);
     setCapturedPoints({ p1: null, p2: null });
     setPolygonPoints([]);
+    setCardPosition(null);
     setCursorPos(null);
   }, [coordinateVariant]);
 
@@ -173,12 +199,23 @@ export function GMScreen() {
       }
     } else if (drawMode === "polygon" && clickCapture === "polygon") {
       setPolygonPoints((prev) => [...prev, { x, y }]);
+    } else if (drawMode === "card" && clickCapture === "card") {
+      setCardPosition({ cardX: x, cardY: y });
+      setClickCapture(null);
     }
   }
 
   // Live targets with current drawing applied
   const liveCoordinateTargets = useMemo(() => {
     if (!selectedHotspotId) return savedCoordinateTargets;
+    if (drawMode === "card" && (cardPosition || cursorPos)) {
+      const nextCardPosition = clickCapture === "card" && cursorPos
+        ? { cardX: cursorPos.x, cardY: cursorPos.y }
+        : cardPosition;
+      return savedCoordinateTargets.map((t) =>
+        t.id === selectedHotspotId ? { ...t, ...nextCardPosition } : t,
+      );
+    }
     const { p1, p2 } = capturedPoints;
     if (drawMode === "rect" && p1 && p2) {
       const x = Math.min(p1.x, p2.x);
@@ -203,10 +240,17 @@ export function GMScreen() {
       );
     }
     return savedCoordinateTargets;
-  }, [savedCoordinateTargets, selectedHotspotId, capturedPoints, polygonPoints, drawMode]);
+  }, [savedCoordinateTargets, selectedHotspotId, capturedPoints, polygonPoints, cardPosition, cursorPos, clickCapture, drawMode]);
 
   // Computed result data
   const editedHotspotData = useMemo(() => {
+    if (drawMode === "card") {
+      if (!cardPosition) return null;
+      return {
+        cardX: +cardPosition.cardX.toFixed(2),
+        cardY: +cardPosition.cardY.toFixed(2),
+      };
+    }
     if (drawMode === "rect") {
       const { p1, p2 } = capturedPoints;
       if (!p1 || !p2) return null;
@@ -214,7 +258,7 @@ export function GMScreen() {
       const y = +Math.min(p1.y, p2.y).toFixed(2);
       const w = +(Math.abs(p2.x - p1.x)).toFixed(2);
       const h = +(Math.abs(p2.y - p1.y)).toFixed(2);
-      return { x, y, w, h };
+      return { x, y, w, h, points: null };
     }
     if (drawMode === "polygon" && polygonPoints.length >= 3) {
       const xs = polygonPoints.map((p) => p.x);
@@ -228,7 +272,7 @@ export function GMScreen() {
       };
     }
     return null;
-  }, [drawMode, capturedPoints, polygonPoints]);
+  }, [drawMode, capturedPoints, polygonPoints, cardPosition]);
 
   // Drawing state passed to SceneMap for SVG preview
   const drawingState = useMemo(() => {
@@ -236,6 +280,7 @@ export function GMScreen() {
     const hint = clickCapture === "p1" ? "P1 — esquina superior izq."
       : clickCapture === "p2" ? "P2 — esquina inferior der."
       : clickCapture === "polygon" ? "Clic para añadir vértice"
+      : clickCapture === "card" ? "Clic para colocar ventana"
       : null;
     return {
       mode: drawMode,
@@ -253,6 +298,9 @@ export function GMScreen() {
     if (!selectedHotspotId || !editedHotspotData) return false;
     const saved = effectiveHotspotOverrides[overrideKey]?.[selectedHotspotId];
     if (!saved) return false;
+    if (drawMode === "card") {
+      return saved.cardX === editedHotspotData.cardX && saved.cardY === editedHotspotData.cardY;
+    }
     if (drawMode === "polygon") {
       return JSON.stringify(saved.points) === JSON.stringify(editedHotspotData.points);
     }
@@ -261,13 +309,16 @@ export function GMScreen() {
   }, [selectedHotspotId, editedHotspotData, effectiveHotspotOverrides, overrideKey, drawMode]);
 
   async function persistOverride(data) {
+    const current = effectiveHotspotOverrides[overrideKey]?.[selectedHotspotId] || {};
+    const mergedData = { ...current, ...data };
+
     const next = {
       ...hotspotOverrides,
-      [overrideKey]: { ...(hotspotOverrides[overrideKey] || {}), [selectedHotspotId]: data },
+      [overrideKey]: { ...(hotspotOverrides[overrideKey] || {}), [selectedHotspotId]: mergedData },
     };
     setHotspotOverrides(next);
     localStorage.setItem("el_examen_hotspot_overrides", JSON.stringify(next));
-    await firebasePatch(`hotspotOverrides/${overrideKey}`, { [selectedHotspotId]: data });
+    await firebasePatch(`hotspotOverrides/${overrideKey}`, { [selectedHotspotId]: mergedData });
   }
 
   async function handleSaveHotspot() {
@@ -304,12 +355,20 @@ export function GMScreen() {
     if (base) {
       setCapturedPoints({ p1: { x: base.x, y: base.y }, p2: { x: +(base.x + base.w).toFixed(2), y: +(base.y + base.h).toFixed(2) } });
       setPolygonPoints([]);
+      setCardPosition(getDefaultCardPosition(base));
       setDrawMode("rect");
     }
   }
 
   function handleCopyCoords() {
     if (!editedHotspotData || !selectedHotspotId) return;
+    if (drawMode === "card") {
+      navigator.clipboard.writeText(`cardX: ${editedHotspotData.cardX}, cardY: ${editedHotspotData.cardY}`);
+      setCopyFeedback(true);
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
+      return;
+    }
     const { x, y, w, h } = editedHotspotData;
     navigator.clipboard.writeText(`x: ${x}, y: ${y}, w: ${w}, h: ${h}`);
     setCopyFeedback(true);
@@ -576,6 +635,13 @@ export function GMScreen() {
                       >
                         ⬡ Polígono
                       </button>
+                      <button
+                        type="button"
+                        className={`coord-tool__mode-btn ${drawMode === "card" ? "active" : ""}`}
+                        onClick={() => { setDrawMode("card"); setClickCapture(null); }}
+                      >
+                        ▤ Ventana
+                      </button>
                     </div>
                   </div>
 
@@ -643,11 +709,43 @@ export function GMScreen() {
                     </div>
                   )}
 
+                  {/* Object card controls */}
+                  {drawMode === "card" && (
+                    <div className="coord-tool__editor-row">
+                      <span className="coord-tool__label">Ventana</span>
+                      <div className="coord-tool__click-points">
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "card" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "card" ? null : "card")}
+                        >
+                          {clickCapture === "card"
+                            ? "● Colocando ventana…"
+                            : cardPosition
+                              ? `Ventana (${cardPosition.cardX.toFixed(1)}, ${cardPosition.cardY.toFixed(1)})`
+                              : "Colocar ventana"}
+                        </button>
+                        <button
+                          type="button"
+                          className="coord-tool__click-btn"
+                          onClick={() => {
+                            const hs = savedCoordinateTargets.find((t) => t.id === selectedHotspotId);
+                            if (hs) setCardPosition(getDefaultCardPosition({ ...hs, cardX: undefined, cardY: undefined }));
+                          }}
+                        >
+                          Auto
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Result row */}
                   {editedHotspotData && (
                     <div className="coord-tool__result">
                       <code className="coord-tool__result-code">
-                        x: {editedHotspotData.x}, y: {editedHotspotData.y}, w: {editedHotspotData.w}, h: {editedHotspotData.h}
+                        {drawMode === "card"
+                          ? `cardX: ${editedHotspotData.cardX}, cardY: ${editedHotspotData.cardY}`
+                          : `x: ${editedHotspotData.x}, y: ${editedHotspotData.y}, w: ${editedHotspotData.w}, h: ${editedHotspotData.h}`}
                         {editedHotspotData.points && ` · ${editedHotspotData.points.length} pts`}
                       </code>
                       <div className="coord-tool__actions">

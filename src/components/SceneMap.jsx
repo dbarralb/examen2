@@ -66,6 +66,13 @@ function getTargetCardSide(target) {
 }
 
 function getTargetCardStyle(target) {
+  if (Number.isFinite(target.cardX) && Number.isFinite(target.cardY)) {
+    return {
+      left: `${target.cardX}%`,
+      top: `${target.cardY}%`,
+    };
+  }
+
   const side = getTargetCardSide(target);
   const left = side === "left" ? target.x - 22 : target.x + target.w + 2;
   const isLowerHalf = target.y + target.h / 2 > 50;
