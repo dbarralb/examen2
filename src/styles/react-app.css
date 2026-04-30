@@ -2308,6 +2308,8 @@ a {
 }
 
 .scene-object-card {
+  --object-card-offset-x: 0px;
+  --object-card-offset-y: 0px;
   position: absolute;
   z-index: 9;
   width: 330px;
@@ -2318,7 +2320,7 @@ a {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(8px);
+  transform: translate(var(--object-card-offset-x), calc(var(--object-card-offset-y) + 8px));
   transition: opacity 160ms ease, transform 160ms ease;
   display: flex;
   flex-direction: column;
@@ -2328,16 +2330,16 @@ a {
 .scene-object-card.open {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: translate(var(--object-card-offset-x), var(--object-card-offset-y));
 }
 
 .react-player-monitor-view .scene-object-card {
-  transform: scale(0.5) translateY(8px);
+  transform: scale(0.5) translate(var(--object-card-offset-x), calc(var(--object-card-offset-y) + 8px));
   transform-origin: top left;
 }
 
 .react-player-monitor-view .scene-object-card.open {
-  transform: scale(0.5) translateY(0);
+  transform: scale(0.5) translate(var(--object-card-offset-x), var(--object-card-offset-y));
 }
 
 .scene-object-card h3 {

@@ -70,6 +70,8 @@ function getTargetCardStyle(target) {
     return {
       left: `${target.cardX}%`,
       top: `${target.cardY}%`,
+      "--object-card-offset-x": "-50%",
+      "--object-card-offset-y": "-50%",
     };
   }
 
@@ -270,8 +272,11 @@ export function SceneMap({
     const hotspotTop = (target.y / 100) * layout.mapHeight;
     const hotspotRight = ((target.x + target.w) / 100) * layout.mapWidth;
     const hotspotBottom = ((target.y + target.h) / 100) * layout.mapHeight;
-    const cardLeft = (parseFloat(cardStyle.left) / 100) * layout.mapWidth;
-    const cardTop = (parseFloat(cardStyle.top) / 100) * layout.mapHeight;
+    const cardAnchorLeft = (parseFloat(cardStyle.left) / 100) * layout.mapWidth;
+    const cardAnchorTop = (parseFloat(cardStyle.top) / 100) * layout.mapHeight;
+    const isManualCardPosition = Number.isFinite(target.cardX) && Number.isFinite(target.cardY);
+    const cardLeft = isManualCardPosition ? cardAnchorLeft - TARGET_CARD_WIDTH / 2 : cardAnchorLeft;
+    const cardTop = isManualCardPosition ? cardAnchorTop - TARGET_CARD_HEIGHT / 2 : cardAnchorTop;
     const cardRight = cardLeft + TARGET_CARD_WIDTH;
     const cardBottom = cardTop + TARGET_CARD_HEIGHT;
     const focusLeft = Math.min(hotspotLeft, cardLeft);
