@@ -53,6 +53,7 @@ export function GMScreen() {
   const [saveFeedback, setSaveFeedback] = useState(false);
   const copyTimerRef = useRef(null);
   const saveTimerRef = useRef(null);
+  const localOverrideSyncRef = useRef(false);
   const [hotspotOverrides, setHotspotOverrides] = useState(() => {
     try { return JSON.parse(localStorage.getItem("el_examen_hotspot_overrides") || "{}"); }
     catch { return {}; }
@@ -134,6 +135,30 @@ export function GMScreen() {
     setPolygonPoints([]);
     setCursorPos(null);
   }, [coordinateVariant]);
+
+  useEffect(() => {
+    if (!remoteState || localOverrideSyncRef.current || Object.keys(hotspotOverrides).length === 0) {
+      return;
+    }
+
+    localOverrideSyncRef.current = true;
+    const merged = { ...remoteHotspotOverrides };
+
+    for (const [key, value] of Object.entries(hotspotOverrides)) {
+      merged[key] = { ...(merged[key] || {}), ...(value || {}) };
+    }
+
+    firebasePatch("hotspotOverrides", merged)
+      .then(async () => {
+        setStatusMessage("Hotspots locales publicados para jugadores.");
+        await refresh();
+      })
+      .catch(() => {
+        localOverrideSyncRef.current = false;
+        setStatusMessage("No se pudieron publicar los hotspots locales.");
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteState, hotspotOverrides, remoteHotspotOverrides]);
 
   // Handle map click in drawing mode
   function handleMapCoordClick({ x, y }) {
