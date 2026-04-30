@@ -190,6 +190,7 @@ export function SceneMap({
   onCoordClick = null,
   onCursorMove = null,
   drawingState = null,
+  focusSelectedTarget = false,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -200,6 +201,21 @@ export function SceneMap({
     : activeZone
       ? activeZone.targetIds.map((id) => getTarget(id)).filter(Boolean)
       : targets;
+  const selectedFocusTarget = focusSelectedTarget
+    ? visibleTargets.find((item) => item.id === selectedTargetId)
+    : null;
+  const selectedFocusSignature = selectedFocusTarget
+    ? [
+      selectedFocusTarget.id,
+      selectedFocusTarget.x,
+      selectedFocusTarget.y,
+      selectedFocusTarget.w,
+      selectedFocusTarget.h,
+      selectedFocusTarget.cardX,
+      selectedFocusTarget.cardY,
+      selectedFocusTarget.points?.length || 0,
+    ].join(":")
+    : "";
   const viewportRef = useRef(null);
   const panRef = useRef(null);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0, effectiveAspect));
@@ -260,6 +276,15 @@ export function SceneMap({
       scale: Math.max(MIN_SCALE, (Number(externalCamera.scale) || MIN_SCALE) * MONITOR_CAMERA_SCALE_FACTOR),
     }, layout));
   }, [externalCamera, isMonitorView, layout]);
+
+  useEffect(() => {
+    if (!focusSelectedTarget || disablePan || !selectedFocusTarget || !layout.mapWidth || !layout.mapHeight) {
+      return;
+    }
+
+    focusTarget(selectedFocusTarget);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSelectedTarget, disablePan, selectedFocusSignature, layout.mapWidth, layout.mapHeight]);
 
   function focusTarget(target) {
     if (!layout.mapWidth || !layout.mapHeight) {
