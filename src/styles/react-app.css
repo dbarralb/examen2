@@ -5239,6 +5239,10 @@ select {
   color: var(--neon-green);
 }
 
+.scene-map-world .scene-object-card {
+  position: absolute;
+}
+
 .n-btn,
 .session-code-copy,
 .gm-variant-btn,
