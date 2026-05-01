@@ -28,6 +28,8 @@ El sistema antiguo `Instituto Newton Design System` esta archivado en `docs/OLD/
 
 `src/services/gameRules.js` mantiene la alarma y delega la resolucion narrativa a `resolveScenarioAction()`.
 
+El panel GM puede ajustar hotspots por escenario y variante. Esos overrides se guardan en `/hotspotOverrides` con clave `scenario_variant` y `SceneMap` los aplica tambien en la vista de jugador.
+
 ## Estado inicial
 
 `src/services/remoteState.js` inicializa Firebase con:
@@ -54,6 +56,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 /chatMessages      chat
 /playerViews       espejo de camara/seleccion para monitores GM
 /playerBoards      escenario y variante por rol
+/hotspotOverrides  posicion/tamano de hotspots editados por GM
 /playerInventories inventario por rol
 /itemSeenState     items vistos/recogidos
 /cardUsage         usos de cartas por rol
@@ -85,6 +88,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 | `src/screens/PlayerScreen.jsx` | Pantalla del jugador |
 | `src/screens/GMScreen.jsx` | Panel GM |
 | `src/components/SceneMap.jsx` | Tablero paneable/zoomeable |
+| `src/components/map/*` | Capas del mapa y overlay de coordenadas |
 | `src/components/DeviceConsole.jsx` | Consola generica de dispositivo |
 | `src/services/pulseService.js` | Ciclo del pulso |
 | `src/services/gameRules.js` | Alarma y dispatch de resolucion |
