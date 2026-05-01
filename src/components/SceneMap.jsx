@@ -18,7 +18,7 @@ const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
 const TARGET_FOCUS_SCALE = 1.45;
 const TARGET_CARD_WIDTH = 264;
 const TARGET_CARD_HEIGHT = 376;
-const FOCUS_TRANSITION_MS = 420;
+const FOCUS_TRANSITION_MS = 620;
 const MOUSE_DETECTION_RADII = [
   { level: 4, distance: 24 },
   { level: 3, distance: 48 },
@@ -427,6 +427,40 @@ export function SceneMap({
     focusTarget(target);
   }
 
+  function handleObjectCardPointerMove(event) {
+    if (isMonitorView) {
+      return;
+    }
+
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    const rotateY = (x - 0.5) * 12;
+    const rotateX = (0.5 - y) * 10;
+
+    card.style.setProperty("--object-card-tilt-x", `${rotateX.toFixed(2)}deg`);
+    card.style.setProperty("--object-card-tilt-y", `${rotateY.toFixed(2)}deg`);
+    card.style.setProperty("--object-shadow-x", `${(-rotateY * 0.7).toFixed(2)}px`);
+    card.style.setProperty("--object-shadow-y", `${(rotateX * 0.9 + 18).toFixed(2)}px`);
+    card.style.setProperty("--object-glare-x", `${(x * 100).toFixed(1)}%`);
+    card.style.setProperty("--object-glare-y", `${(y * 100).toFixed(1)}%`);
+  }
+
+  function handleObjectCardPointerLeave(event) {
+    if (isMonitorView) {
+      return;
+    }
+
+    const card = event.currentTarget;
+    card.style.setProperty("--object-card-tilt-x", "0deg");
+    card.style.setProperty("--object-card-tilt-y", "0deg");
+    card.style.setProperty("--object-shadow-x", "0px");
+    card.style.setProperty("--object-shadow-y", "18px");
+    card.style.setProperty("--object-glare-x", "50%");
+    card.style.setProperty("--object-glare-y", "0%");
+  }
+
   function setMouseDetectionLevel(level) {
     if (detectionLevelRef.current === level) {
       return;
@@ -593,6 +627,8 @@ export function SceneMap({
                 style={getTargetCardStyle(target)}
                 aria-hidden={!isOpen}
                 onClick={(event) => event.stopPropagation()}
+                onPointerMove={handleObjectCardPointerMove}
+                onPointerLeave={handleObjectCardPointerLeave}
               >
                 <h3>{target.label}</h3>
                 {target.hotspotClass && <span className="scene-object-card-class">{target.hotspotClass}</span>}

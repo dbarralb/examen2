@@ -2186,7 +2186,7 @@ a {
 }
 
 .scene-map-viewport.is-focus-transitioning .scene-focus-fade {
-  animation: scene-focus-fade 420ms ease-in-out;
+  animation: scene-focus-fade 620ms steps(4, end);
 }
 
 .scene-map-world {
@@ -2200,7 +2200,8 @@ a {
 }
 
 .scene-map-world.is-focus-transitioning {
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1), filter 420ms ease-in-out;
+  animation: scene-digital-focus 620ms steps(4, end);
+  transition: transform 620ms cubic-bezier(0.12, 0.82, 0.18, 1), filter 620ms steps(4, end);
 }
 
 .scene-map-world.is-monitor-view .scene-map-hotspot {
@@ -2412,6 +2413,14 @@ a {
 .scene-object-card {
   --object-card-offset-x: 0px;
   --object-card-offset-y: 0px;
+  --object-card-tilt-x: 0deg;
+  --object-card-tilt-y: 0deg;
+  --object-shadow-x: 0px;
+  --object-shadow-y: 18px;
+  --object-glare-x: 50%;
+  --object-glare-y: 0%;
+  --object-glitch-pink: #E92EE6;
+  --object-glitch-green: #5EF483;
   position: absolute;
   z-index: 9;
   width: 264px;
@@ -2429,10 +2438,43 @@ a {
   align-items: center;
 }
 
+.scene-object-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border: 1px solid transparent;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at var(--object-glare-x) var(--object-glare-y), rgba(94, 244, 131, 0.16), transparent 28%),
+    radial-gradient(circle at calc(100% - var(--object-glare-x)) calc(100% - var(--object-glare-y)), rgba(233, 46, 230, 0.07), transparent 34%),
+    radial-gradient(circle at 0 0, rgba(0, 255, 135, 0.08), transparent 42%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 40%),
+    var(--bg-surface);
+  box-shadow:
+    var(--object-shadow-x) var(--object-shadow-y) 26px rgba(0, 0, 0, 0.22),
+    inset 0 0 18px rgba(94, 244, 131, 0.035);
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    perspective(900px)
+    rotateX(var(--object-card-tilt-x))
+    rotateY(var(--object-card-tilt-y));
+  transform-origin: center;
+  transform-style: preserve-3d;
+  transition: transform 140ms ease-out, background 180ms ease, box-shadow 180ms ease;
+  will-change: transform;
+}
+
 .scene-object-card.open {
   opacity: 1;
   pointer-events: auto;
   transform: translate(var(--object-card-offset-x), var(--object-card-offset-y));
+}
+
+.scene-object-card.open::before {
+  opacity: 1;
+  animation: object-card-shell-glitch 8s steps(1, end) infinite;
 }
 
 .react-player-monitor-view .scene-object-card {
@@ -2445,6 +2487,8 @@ a {
 }
 
 .scene-object-card h3 {
+  position: relative;
+  z-index: 1;
   margin: 0 0 3px;
   color: #fff;
   font-size: 19px;
@@ -2452,6 +2496,10 @@ a {
   line-height: 1;
   text-transform: uppercase;
   align-self: stretch;
+}
+
+.scene-object-card.open h3 {
+  animation: object-card-title-glitch 5s steps(1, end) infinite;
 }
 
 .scene-object-card-class {
@@ -3861,14 +3909,118 @@ a {
     background: rgba(4, 12, 24, 0);
   }
 
-  35% {
+  18% {
     opacity: 1;
-    background: rgba(4, 12, 24, 0.12);
+    background:
+      linear-gradient(rgba(0, 255, 135, 0.08), transparent 42%),
+      rgba(4, 12, 24, 0.2);
+  }
+
+  42% {
+    opacity: 0.72;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0, transparent 3px, rgba(0, 0, 0, 0.16) 3px, rgba(0, 0, 0, 0.16) 5px),
+      rgba(4, 12, 24, 0.12);
+  }
+
+  68% {
+    opacity: 0.46;
+    background: rgba(0, 255, 135, 0.06);
   }
 
   100% {
     opacity: 0;
     background: rgba(4, 12, 24, 0);
+  }
+}
+
+@keyframes scene-digital-focus {
+  0% {
+    filter: blur(0) brightness(1) contrast(1);
+  }
+
+  18% {
+    filter: blur(3px) brightness(0.9) contrast(1.18) saturate(0.85);
+  }
+
+  42% {
+    filter: blur(1px) brightness(1.08) contrast(1.32) saturate(1.08);
+  }
+
+  68% {
+    filter: blur(0.5px) brightness(1.03) contrast(1.16);
+  }
+
+  100% {
+    filter: blur(0) brightness(1) contrast(1);
+  }
+}
+
+@keyframes object-card-title-glitch {
+  0%, 91%, 100% {
+    transform: translateX(0);
+    color: #fff;
+    text-shadow: none;
+  }
+
+  92% {
+    transform: translateX(1px);
+    color: var(--object-glitch-green);
+    text-shadow: -2px 0 var(--object-glitch-pink), 2px 0 rgba(94, 244, 131, 0.45);
+  }
+
+  93% {
+    transform: translateX(-1px);
+    color: #fff;
+    text-shadow: 2px 0 rgba(233, 46, 230, 0.5), -1px 0 rgba(94, 244, 131, 0.55);
+  }
+
+  94% {
+    transform: translateX(0);
+    color: var(--object-glitch-pink);
+    text-shadow: 1px 0 rgba(94, 244, 131, 0.65);
+  }
+
+  95% {
+    transform: translateX(0);
+    color: #fff;
+    text-shadow: none;
+  }
+}
+
+@keyframes object-card-shell-glitch {
+  0%, 93%, 100% {
+    border-color: transparent;
+    filter: none;
+    box-shadow:
+      var(--object-shadow-x) var(--object-shadow-y) 26px rgba(0, 0, 0, 0.22),
+      inset 0 0 18px rgba(94, 244, 131, 0.035);
+  }
+
+  94% {
+    border-color: var(--object-glitch-pink);
+    filter: drop-shadow(1px 0 3px rgba(233, 46, 230, 0.28));
+    box-shadow:
+      var(--object-shadow-x) var(--object-shadow-y) 26px rgba(0, 0, 0, 0.22),
+      0 0 10px rgba(233, 46, 230, 0.18),
+      inset 0 0 12px rgba(233, 46, 230, 0.08);
+  }
+
+  95% {
+    border-color: var(--object-glitch-green);
+    filter: drop-shadow(-1px 0 3px rgba(94, 244, 131, 0.24));
+    box-shadow:
+      var(--object-shadow-x) var(--object-shadow-y) 26px rgba(0, 0, 0, 0.22),
+      0 0 10px rgba(94, 244, 131, 0.16),
+      inset 0 0 12px rgba(94, 244, 131, 0.08);
+  }
+
+  96% {
+    border-color: rgba(255, 255, 255, 0.16);
+    filter: none;
+    box-shadow:
+      var(--object-shadow-x) var(--object-shadow-y) 26px rgba(0, 0, 0, 0.22),
+      inset 0 0 18px rgba(94, 244, 131, 0.035);
   }
 }
 
@@ -5385,6 +5537,11 @@ select {
 .access-console > * {
   position: relative;
   z-index: 1;
+}
+
+.scene-object-card.open {
+  background: transparent;
+  box-shadow: none;
 }
 
 .n-card-glow {
