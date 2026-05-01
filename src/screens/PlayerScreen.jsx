@@ -23,6 +23,7 @@ const SUCCESS_CLOSE_DELAY_MS = 2000;
 const PLAYER_VIEW_STALE_MS = 15000;
 const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
+const ACTION_INFO_DELAY_MS = 500;
 
 function isResultOverlayActive(pulseState) {
   const overlay = pulseState?.resultOverlay;
@@ -66,11 +67,13 @@ export function PlayerScreen({ navigation, params }) {
   const [deviceCommandResult, setDeviceCommandResult] = useState(null);
   const [eventLog, setEventLog] = useState([]);
   const [eventLogVisible, setEventLogVisible] = useState(false);
+  const [actionInfoState, setActionInfoState] = useState({ status: "idle", cardId: null, info: null });
   const prevGameStateRef = useRef(null);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
+  const actionInfoTimerRef = useRef(null);
   const latestCameraRef = useRef(null);
   const viewPublishTimerRef = useRef(null);
 
@@ -299,6 +302,27 @@ export function PlayerScreen({ navigation, params }) {
       chatList.scrollTop = chatList.scrollHeight;
     }
   }, [chatMessages]);
+
+  useEffect(() => () => window.clearTimeout(actionInfoTimerRef.current), []);
+
+  function handleActionInfoStart(cardId, info) {
+    window.clearTimeout(actionInfoTimerRef.current);
+    setActionInfoState({ status: "loading", cardId, info });
+    actionInfoTimerRef.current = window.setTimeout(() => {
+      setActionInfoState((current) => (
+        current.cardId === cardId
+          ? { status: "ready", cardId, info }
+          : current
+      ));
+    }, ACTION_INFO_DELAY_MS);
+  }
+
+  function handleActionInfoCancel(cardId) {
+    window.clearTimeout(actionInfoTimerRef.current);
+    setActionInfoState((current) => (
+      current.cardId === cardId ? { status: "idle", cardId: null, info: null } : current
+    ));
+  }
 
   function createSoftwareLoadSequence() {
     return Array.from({ length: 10 }, () => SOFTWARE_LOAD_DIRECTIONS[Math.floor(Math.random() * SOFTWARE_LOAD_DIRECTIONS.length)]);
@@ -599,34 +623,56 @@ export function PlayerScreen({ navigation, params }) {
             <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
           </aside>
         )}
-        {!isGmMonitorView && <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
-          {visibleCards.map((card) => {
-            const isCharging = pendingAction?.card === card.id;
-            const uses = cardUsage[card.id] || 0;
-            const isExhausted = uses >= 3;
-            return (
-              <PlayerActionCard
-                key={card.id}
-                card={card}
-                usageCount={uses}
-                isSelected={selectedCardId === card.id}
-                isCharging={isCharging}
-                isExhausted={isExhausted}
-                onSelect={isExhausted ? undefined : setSelectedCardId}
-                onDragStart={(event, draggedCard, charging) => {
-                  if (isCharging || isExhausted) {
-                    event.preventDefault();
-                    return;
-                  }
+        {!isGmMonitorView && (
+          <div className="scene-action-zone">
+            <div
+              id="action-card-info-panel"
+              className={`action-info-popover ${actionInfoState.status}`}
+              role="tooltip"
+              aria-hidden={actionInfoState.status === "idle"}
+            >
+              {actionInfoState.status === "loading" ? (
+                <span className="action-info-loader" aria-label="Cargando informacion" />
+              ) : actionInfoState.info ? (
+                <>
+                  <strong>{actionInfoState.info.cardLabel}</strong>
+                  <span className="action-info-family">{actionInfoState.info.actionLabel}</span>
+                  <span className="action-info-description">{actionInfoState.info.description}</span>
+                </>
+              ) : null}
+            </div>
+            <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
+              {visibleCards.map((card) => {
+                const isCharging = pendingAction?.card === card.id;
+                const uses = cardUsage[card.id] || 0;
+                const isExhausted = uses >= 3;
+                return (
+                  <PlayerActionCard
+                    key={card.id}
+                    card={card}
+                    usageCount={uses}
+                    isSelected={selectedCardId === card.id}
+                    isCharging={isCharging}
+                    isExhausted={isExhausted}
+                    onSelect={isExhausted ? undefined : setSelectedCardId}
+                    onInfoStart={handleActionInfoStart}
+                    onInfoCancel={handleActionInfoCancel}
+                    onDragStart={(event, draggedCard, charging) => {
+                      if (isCharging || isExhausted) {
+                        event.preventDefault();
+                        return;
+                      }
 
-                  setSelectedCardId(draggedCard.id);
-                  event.dataTransfer.setData("application/x-card-id", draggedCard.id);
-                  event.dataTransfer.effectAllowed = "copy";
-                }}
-              />
-            );
-          })}
-        </div>}
+                      setSelectedCardId(draggedCard.id);
+                      event.dataTransfer.setData("application/x-card-id", draggedCard.id);
+                      event.dataTransfer.effectAllowed = "copy";
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
         {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} pulseState={pulseState} />}
         {!isGmMonitorView && (
           <PlayerInventoryBar

@@ -43,7 +43,6 @@
 - [ ] Convertir el pulso en ventana de visibilidad entre jugadores
 - [ ] Refinar textos finales de tarjetas, feedback y consola
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
-- [ ] `mouse_inspection`: click mantenido para abrir la card de objeto
 
 ---
 

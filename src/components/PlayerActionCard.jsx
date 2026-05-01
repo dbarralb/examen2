@@ -1,7 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { buildActionInfoModel } from "../presentation/actionQueuePresentation.js";
 
-const INFO_DELAY_MS = 500;
 const MAX_USES = 3;
 
 export function PlayerActionCard({
@@ -12,25 +10,17 @@ export function PlayerActionCard({
   usageCount = 0,
   onSelect,
   onDragStart,
+  onInfoStart,
+  onInfoCancel,
 }) {
-  const [infoState, setInfoState] = useState("idle");
-  const infoTimerRef = useRef(null);
   const actionInfo = buildActionInfoModel(card);
-  const showInfo = infoState === "loading" || infoState === "ready";
-
-  useEffect(() => () => window.clearTimeout(infoTimerRef.current), []);
 
   function startInfoTimer() {
-    window.clearTimeout(infoTimerRef.current);
-    setInfoState("loading");
-    infoTimerRef.current = window.setTimeout(() => {
-      setInfoState("ready");
-    }, INFO_DELAY_MS);
+    onInfoStart?.(card.id, actionInfo);
   }
 
   function cancelInfoTimer() {
-    window.clearTimeout(infoTimerRef.current);
-    setInfoState("idle");
+    onInfoCancel?.(card.id);
   }
 
   const isWarning = usageCount === MAX_USES - 1; // last use before exhaustion
@@ -51,7 +41,7 @@ export function PlayerActionCard({
       onMouseLeave={cancelInfoTimer}
       onFocus={startInfoTimer}
       onBlur={cancelInfoTimer}
-      aria-describedby={showInfo ? `${card.id}-action-info` : undefined}
+      aria-describedby="action-card-info-panel"
     >
       <img src={card.image} alt={card.label} />
       <div className="action-card-usage" aria-label={`${usageCount} de ${MAX_USES} usos`}>
@@ -60,19 +50,6 @@ export function PlayerActionCard({
         ))}
       </div>
       {isCharging && <span>charging</span>}
-      {showInfo && (
-        <span id={`${card.id}-action-info`} className={`action-info-popover ${infoState}`} role="tooltip">
-          {infoState === "loading" ? (
-            <span className="action-info-loader" aria-label="Cargando informacion" />
-          ) : (
-            <>
-              <strong>{actionInfo.cardLabel}</strong>
-              <span className="action-info-family">{actionInfo.actionLabel}</span>
-              <span className="action-info-description">{actionInfo.description}</span>
-            </>
-          )}
-        </span>
-      )}
     </button>
   );
 }
