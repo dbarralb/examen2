@@ -1,7 +1,7 @@
 import { targets as allTargets } from "../../data/gameData.js";
 import { markDefinitions } from "../../data/mapData.js";
 
-export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, onHotspotClick, children, visibleTargets }) {
+export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, hideHotspotChrome = false, onHotspotClick, children, visibleTargets }) {
   const targets = visibleTargets || allTargets;
   const visibleMarks = markDefinitions.filter((mark) => mark.visibleWhen(gameState));
 
@@ -27,7 +27,7 @@ export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, o
                 if (!isMonitorView) onHotspotClick(event, target);
               }}
             >
-              <title>{target.label}</title>
+              {!hideHotspotChrome && <title>{target.label}</title>}
             </polygon>
           ))}
         </svg>
@@ -40,7 +40,7 @@ export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, o
           className={`scene-map-hotspot ${selectedTargetId === target.id ? "selected" : ""}`}
           style={{ left: `${target.x}%`, top: `${target.y}%`, width: `${target.w}%`, height: `${target.h}%` }}
           type="button"
-          title={target.label}
+          title={hideHotspotChrome ? undefined : target.label}
           disabled={isMonitorView}
           onClick={(event) => onHotspotClick(event, target)}
         >

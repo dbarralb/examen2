@@ -16,9 +16,15 @@ const MIN_SCALE_WIDE = 1.0; // panoramic images must fill viewport height
 const MAX_SCALE = 3;
 const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
 const TARGET_FOCUS_SCALE = 1.45;
-const TARGET_CARD_WIDTH = 330;
-const TARGET_CARD_HEIGHT = 470;
+const TARGET_CARD_WIDTH = 264;
+const TARGET_CARD_HEIGHT = 376;
 const FOCUS_TRANSITION_MS = 420;
+const MOUSE_DETECTION_RADII = [
+  { level: 4, distance: 24 },
+  { level: 3, distance: 48 },
+  { level: 2, distance: 80 },
+  { level: 1, distance: 120 },
+];
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -59,6 +65,83 @@ function clampCamera(camera, layout) {
 
 function getFitCamera(layout, minScale = MIN_SCALE) {
   return clampCamera({ x: (layout.width - layout.mapWidth) / 2, y: (layout.height - layout.mapHeight) / 2, scale: minScale }, layout);
+}
+
+function getRectDistanceToPoint(target, point, layout) {
+  const left = (target.x / 100) * layout.mapWidth;
+  const top = (target.y / 100) * layout.mapHeight;
+  const right = ((target.x + target.w) / 100) * layout.mapWidth;
+  const bottom = ((target.y + target.h) / 100) * layout.mapHeight;
+
+  if (point.x >= left && point.x <= right && point.y >= top && point.y <= bottom) {
+    return 0;
+  }
+
+  const dx = Math.max(left - point.x, 0, point.x - right);
+  const dy = Math.max(top - point.y, 0, point.y - bottom);
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getPixelPoint(point, layout) {
+  return {
+    x: (point.x / 100) * layout.mapWidth,
+    y: (point.y / 100) * layout.mapHeight,
+  };
+}
+
+function isPointInPolygon(point, points, layout) {
+  let inside = false;
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = getPixelPoint(points[i], layout);
+    const b = getPixelPoint(points[j], layout);
+    const intersects = ((a.y > point.y) !== (b.y > point.y))
+      && (point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y || 1) + a.x);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+function getDistanceToSegment(point, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq === 0 ? 0 : clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq, 0, 1);
+  const closestX = a.x + t * dx;
+  const closestY = a.y + t * dy;
+  const offX = point.x - closestX;
+  const offY = point.y - closestY;
+  return Math.sqrt(offX * offX + offY * offY);
+}
+
+function getPolygonDistanceToPoint(target, point, layout) {
+  if (isPointInPolygon(point, target.points, layout)) {
+    return 0;
+  }
+
+  return target.points.reduce((minDistance, current, index) => {
+    const next = target.points[(index + 1) % target.points.length];
+    return Math.min(minDistance, getDistanceToSegment(point, getPixelPoint(current, layout), getPixelPoint(next, layout)));
+  }, Infinity);
+}
+
+function getTargetDistanceToPoint(target, point, layout) {
+  if (target.points?.length >= 3) {
+    return getPolygonDistanceToPoint(target, point, layout);
+  }
+
+  return getRectDistanceToPoint(target, point, layout);
+}
+
+function getDetectionLevel(screenDistance) {
+  if (screenDistance <= 0) {
+    return 5;
+  }
+
+  return MOUSE_DETECTION_RADII.find(({ distance }) => screenDistance <= distance)?.level || 0;
+}
+
+function emitCursorDetectionLevel(level) {
+  window.dispatchEvent(new CustomEvent("game-cursor-state", { detail: { level } }));
 }
 
 function getTargetCardSide(target) {
@@ -218,12 +301,14 @@ export function SceneMap({
     : "";
   const viewportRef = useRef(null);
   const panRef = useRef(null);
+  const detectionLevelRef = useRef(0);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0, effectiveAspect));
   const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: effectiveMinScale }));
   const [isPanning, setIsPanning] = useState(false);
   const [isFocusTransitioning, setIsFocusTransitioning] = useState(false);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
   const focusTransitionTimeoutRef = useRef(null);
+  const shouldDetectMouse = !isMonitorView && !showCoordinates;
 
   // Close device console when the selected target changes or closes
   useEffect(() => {
@@ -260,6 +345,8 @@ export function SceneMap({
   }, [layout.mapHeight, layout.mapWidth, effectiveAspect, effectiveMinScale]);
 
   useEffect(() => () => window.clearTimeout(focusTransitionTimeoutRef.current), []);
+
+  useEffect(() => () => emitCursorDetectionLevel(0), []);
 
   useEffect(() => {
     onCameraChange?.(camera);
@@ -340,6 +427,40 @@ export function SceneMap({
     focusTarget(target);
   }
 
+  function setMouseDetectionLevel(level) {
+    if (detectionLevelRef.current === level) {
+      return;
+    }
+
+    detectionLevelRef.current = level;
+    emitCursorDetectionLevel(level);
+  }
+
+  function updateMouseDetection(event) {
+    if (!shouldDetectMouse || !layout.mapWidth || !layout.mapHeight || !camera.scale) {
+      setMouseDetectionLevel(0);
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pointerX = event.clientX - rect.left;
+    const pointerY = event.clientY - rect.top;
+    const worldPoint = {
+      x: (pointerX - camera.x) / camera.scale,
+      y: (pointerY - camera.y) / camera.scale,
+    };
+
+    if (worldPoint.x < 0 || worldPoint.y < 0 || worldPoint.x > layout.mapWidth || worldPoint.y > layout.mapHeight) {
+      setMouseDetectionLevel(0);
+      return;
+    }
+
+    const closestDistance = visibleTargets.reduce((minDistance, target) => {
+      return Math.min(minDistance, getTargetDistanceToPoint(target, worldPoint, layout));
+    }, Infinity);
+    setMouseDetectionLevel(getDetectionLevel(closestDistance * camera.scale));
+  }
+
   function handleViewportPointerDown(event) {
     if (isMonitorView || disablePan) {
       return;
@@ -368,6 +489,8 @@ export function SceneMap({
   }
 
   function handleViewportPointerMove(event) {
+    updateMouseDetection(event);
+
     const pan = panRef.current;
 
     if (!pan || pan.pointerId !== event.pointerId) {
@@ -390,6 +513,10 @@ export function SceneMap({
 
     panRef.current = null;
     setIsPanning(false);
+  }
+
+  function handleViewportPointerLeave() {
+    setMouseDetectionLevel(0);
   }
 
   function handleWheel(event) {
@@ -426,13 +553,14 @@ export function SceneMap({
       onPointerMove={handleViewportPointerMove}
       onPointerUp={finishPan}
       onPointerCancel={finishPan}
+      onPointerLeave={handleViewportPointerLeave}
       onWheel={handleWheel}
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
     >
       <div className="scene-focus-fade" aria-hidden="true" />
       <div
-        className={`scene-map-world ${isFocusTransitioning ? "is-focus-transitioning" : ""} ${isMonitorView ? "is-monitor-view" : ""}`}
+        className={`scene-map-world ${isFocusTransitioning ? "is-focus-transitioning" : ""} ${isMonitorView ? "is-monitor-view" : ""} ${shouldDetectMouse ? "hide-player-hotspots" : ""}`}
         style={{
           width: `${layout.mapWidth}px`,
           height: `${layout.mapHeight}px`,
@@ -450,6 +578,7 @@ export function SceneMap({
           gameState={gameState}
           selectedTargetId={selectedTargetId}
           isMonitorView={isMonitorView}
+          hideHotspotChrome={shouldDetectMouse}
           onHotspotClick={handleHotspotClick}
           visibleTargets={visibleTargets}
         >

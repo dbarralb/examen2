@@ -4,6 +4,7 @@ import { RoleSelectScreen } from "./screens/RoleSelectScreen.jsx";
 import { WaitingScreen } from "./screens/WaitingScreen.jsx";
 import { PlayerScreen } from "./screens/PlayerScreen.jsx";
 import { GMScreen } from "./screens/GMScreen.jsx";
+import { GameCursor } from "./components/GameCursor.jsx";
 
 const routes = {
   access: AccessScreen,
@@ -47,5 +48,10 @@ export default function App() {
     []
   );
 
-  return <Screen navigation={navigation} params={locationState.params} />;
+  return (
+    <>
+      <Screen navigation={navigation} params={locationState.params} />
+      <GameCursor />
+    </>
+  );
 }

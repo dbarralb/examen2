@@ -1,6 +1,6 @@
 # Estado del Proyecto - El Examen II
 
-**Fecha de ultima actualizacion:** 2026-04-28  
+**Fecha de ultima actualizacion:** 2026-05-01  
 **Rama activa:** `react-oficial`  
 **Historico:** `docs/OLD`
 
@@ -19,12 +19,18 @@
 - [x] Contenido inicial por escenario en `src/data/scenarioContent.js`
 - [x] Resolver inicial por escenario conectado a `gameRules.js`
 - [x] Panel GM con asignacion de variantes por jugador
+- [x] Herramienta GM de coordenadas/hotspots por variante
+- [x] Overrides de hotspots persistidos en Firebase y aplicados a jugadores
+- [x] Escalado del mapa de coordenadas alineado con la vista de jugador
 - [x] Inventario: barra de 3 slots + grid de objetos por contenedor
 - [x] Sistema de pulso manual controlado por GM
 - [x] Minijuego de carga de accion
 - [x] Sistema de alarma y efectos GM desacoplados del puzzle antiguo
 - [x] Monitores de jugadores en panel GM
 - [x] Chat entre jugadores y GM
+- [x] Cursor global custom con escala visual al 50%
+- [x] Cards de objeto reducidas un 20%
+- [x] `mouse_detection`: hotspots ocultos para jugadores y cursor animado por proximidad
 - [x] HTML legacy archivado en `docs/OLD/html-legacy`
 - [x] Prototipos de minijuegos archivados en `docs/OLD/assets-legacy/minigames`
 - [x] Sistema de diseno activo unico: `El Examen 2 Design System`
@@ -36,7 +42,8 @@
 - [ ] Balancear y testear el puzzle completo del almacen
 - [ ] Convertir el pulso en ventana de visibilidad entre jugadores
 - [ ] Refinar textos finales de tarjetas, feedback y consola
-- [ ] Reset/semilla de Firebase para pruebas repetibles
+- [ ] Semilla reproducible de Firebase para pruebas repetibles
+- [ ] `mouse_inspection`: click mantenido para abrir la card de objeto
 
 ---
 
@@ -44,12 +51,16 @@
 
 | Archivo | Para editar |
 |---|---|
+| `docs/INDEX.md` | Indice y mapa de busqueda de documentacion |
 | `src/data/scenarioData.js` | Alta de escenarios y fondos por variante |
 | `src/data/scenarioContent.js` | Hotspots, items, feedback, consola y resolver inicial por escenario |
 | `src/data/gameData.js` | Familias y cartas globales |
 | `src/services/gameRules.js` | Alarma + delegacion al resolver de escenario |
 | `src/services/pulseService.js` | Ciclo completo del pulso |
 | `src/services/remoteState.js` | Estado inicial de Firebase |
+| `src/services/firebaseClient.js` | Lectura/escritura REST de Firebase |
+| `src/components/SceneMap.jsx` | Tablero paneable/zoomeable |
+| `src/components/map/*` | Capas visuales e interactivas del mapa |
 | `docs/game_design.md` | Diseno narrativo y mecanicas |
 | `docs/architecture.md` | Referencia tecnica del sistema |
 | `docs/gm-operations.md` | Reglas operativas del panel GM |

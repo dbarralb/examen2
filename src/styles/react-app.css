@@ -2,6 +2,87 @@
   box-sizing: border-box;
 }
 
+:root {
+  --game-cursor-scale: 0.5;
+}
+
+html,
+body,
+#root,
+#root *,
+#root *::before,
+#root *::after {
+  cursor: none !important;
+}
+
+.game-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  transform-origin: 0 0;
+  opacity: 0;
+  user-select: none;
+  will-change: transform;
+}
+
+.game-cursor.is-visible {
+  opacity: 1;
+}
+
+.game-cursor-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: none;
+  image-rendering: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: filter, opacity, transform;
+}
+
+.game-cursor.is-detection-1 .game-cursor-image {
+  filter: drop-shadow(1px 0 rgba(0, 234, 255, 0.35)) drop-shadow(-1px 0 rgba(255, 45, 120, 0.22));
+}
+
+.game-cursor.is-detection-2 .game-cursor-image,
+.game-cursor.is-detection-3 .game-cursor-image {
+  animation: cursor-glitch-soft 520ms steps(2, end) infinite;
+  filter: drop-shadow(2px 0 rgba(0, 234, 255, 0.45)) drop-shadow(-2px 0 rgba(255, 45, 120, 0.28));
+}
+
+.game-cursor.is-detection-4 .game-cursor-image,
+.game-cursor.is-detection-5 .game-cursor-image {
+  animation: cursor-glitch-hard 320ms steps(2, end) infinite;
+  filter: drop-shadow(3px 0 rgba(0, 234, 255, 0.6)) drop-shadow(-3px 0 rgba(255, 45, 120, 0.42));
+}
+
+.game-cursor.is-switching .game-cursor-image {
+  animation: cursor-detection-switch 300ms steps(2, end), cursor-glitch-hard 300ms steps(2, end) infinite;
+}
+
+@keyframes cursor-detection-switch {
+  0%, 100% { opacity: 1; }
+  18%, 48%, 78% { opacity: 0.35; }
+  32%, 62% { opacity: 0.92; }
+}
+
+@keyframes cursor-glitch-soft {
+  0%, 100% { transform: translate(0, 0); }
+  24% { transform: translate(1px, -1px); }
+  50% { transform: translate(-1px, 1px); }
+  76% { transform: translate(1px, 0); }
+}
+
+@keyframes cursor-glitch-hard {
+  0%, 100% { transform: translate(0, 0) skew(0deg); }
+  20% { transform: translate(2px, -1px) skew(-2deg); }
+  42% { transform: translate(-2px, 2px) skew(2deg); }
+  64% { transform: translate(3px, 0) skew(-1deg); }
+  82% { transform: translate(-1px, -2px) skew(1deg); }
+}
+
 ::-webkit-scrollbar { width: 6px; background: #172321; }
 ::-webkit-scrollbar-thumb { background: #3A514E; border-radius: 3px; }
 
@@ -1006,6 +1087,13 @@ a {
 .scene-map-hotspot-poly:hover {
   fill: var(--color-amber-dim);
   stroke: var(--color-amber);
+}
+
+.scene-map-world.hide-player-hotspots .scene-map-hotspot-poly,
+.scene-map-world.hide-player-hotspots .scene-map-hotspot-poly.selected,
+.scene-map-world.hide-player-hotspots .scene-map-hotspot-poly:hover {
+  fill: transparent;
+  stroke: transparent;
 }
 
 /* SVG drawing preview */
@@ -2289,6 +2377,14 @@ a {
   background: var(--color-amber-dim);
 }
 
+.scene-map-world.hide-player-hotspots .scene-map-hotspot,
+.scene-map-world.hide-player-hotspots .scene-map-hotspot.selected,
+.scene-map-world.hide-player-hotspots .scene-map-hotspot:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .scene-map-hotspot:disabled {
   cursor: default;
 }
@@ -2309,15 +2405,19 @@ a {
   text-transform: uppercase;
 }
 
+.scene-map-world.hide-player-hotspots .scene-map-hotspot span {
+  display: none;
+}
+
 .scene-object-card {
   --object-card-offset-x: 0px;
   --object-card-offset-y: 0px;
   position: absolute;
   z-index: 9;
-  width: 330px;
+  width: 264px;
   border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 11px;
+  padding: 14px;
   background: rgba(42, 62, 59, 0.96);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
   opacity: 0;
@@ -2345,9 +2445,9 @@ a {
 }
 
 .scene-object-card h3 {
-  margin: 0 0 4px;
+  margin: 0 0 3px;
   color: #fff;
-  font-size: 24px;
+  font-size: 19px;
   letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
@@ -2356,9 +2456,9 @@ a {
 
 .scene-object-card-class {
   display: inline-block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   align-self: flex-start;
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -2368,17 +2468,17 @@ a {
 
 .scene-object-card-image {
   width: 100%;
-  height: 132px;
+  height: 106px;
   object-fit: contain;
-  margin-bottom: 14px;
+  margin-bottom: 11px;
   border: 1px solid var(--border-subtle);
   background: rgba(23, 35, 33, 0.42);
 }
 
 .scene-object-card p {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   color: var(--fg-secondary);
-  font-size: 14px;
+  font-size: 11px;
   line-height: 1.45;
   align-self: stretch;
 }
@@ -2404,15 +2504,15 @@ a {
 .device-connect-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 8px 14px;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 6px 11px;
   background: transparent;
   border: 1px solid var(--color-lime);
-  border-radius: 6px;
+  border-radius: 5px;
   color: var(--color-lime);
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   cursor: pointer;
@@ -3008,21 +3108,23 @@ a {
 
 .react-drop-slot {
   display: grid;
-  gap: 10px;
-  min-height: 90px;
-  margin-top: 16px;
+  gap: 8px;
+  min-height: 72px;
+  margin-top: 13px;
   border: 1px dashed var(--color-lime);
-  border-radius: 8px;
-  padding: 14px;
+  border-radius: 6px;
+  padding: 11px;
   align-content: center;
   color: var(--color-cream);
+  font-size: 11px;
   background: var(--color-lime-dim);
   text-align: center;
 }
 
 .scene-object-card .n-badge {
-  margin-top: 6px;
+  margin-top: 5px;
   align-self: stretch;
+  font-size: 9px;
 }
 
 .react-drop-slot.loading {
@@ -3034,7 +3136,7 @@ a {
 
 .software-load-minigame {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   outline: none;
 }
 
@@ -3042,19 +3144,19 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .software-load-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .software-load-dot {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   flex: 0 0 auto;
   border-radius: 999px;
   animation: software-load-dot-pulse 260ms ease-out;
@@ -3072,18 +3174,18 @@ a {
 
 .software-load-header strong {
   color: #fff;
-  font-size: 14px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: uppercase;
 }
 
 .software-load-timer {
-  min-width: 48px;
+  min-width: 38px;
   border-radius: 999px;
-  padding: 5px 9px;
+  padding: 4px 7px;
   color: #06111d;
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-align: center;
@@ -3105,8 +3207,8 @@ a {
 .software-load-progress {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 3px;
-  height: 14px;
+  gap: 2px;
+  height: 11px;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: 999px;
@@ -3127,7 +3229,7 @@ a {
 .software-load-arrows {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
   align-items: center;
 }
 
@@ -3199,21 +3301,21 @@ a {
   position: absolute;
   z-index: 4;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 6px;
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
 }
 
 .software-load-arrow-index {
-  top: 6px;
-  left: 7px;
+  top: 5px;
+  left: 6px;
   color: var(--text-ghost);
 }
 
 .software-load-arrow-key {
-  right: 7px;
-  bottom: 6px;
+  right: 6px;
+  bottom: 5px;
   color: currentColor;
   text-shadow: 0 0 6px currentColor;
 }
@@ -3266,7 +3368,7 @@ a {
 
 .software-load-minigame small {
   color: var(--color-gray-300);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.08em;
   line-height: 1.35;
@@ -3285,7 +3387,7 @@ a {
 .software-load-actions {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 @keyframes software-load-dot-pulse {
@@ -4066,16 +4168,16 @@ code {
   }
 
   .scene-object-card {
-    width: min(300px, 78vw);
-    padding: 14px;
+    width: min(240px, 78vw);
+    padding: 11px;
   }
 
   .scene-object-card h3 {
-    font-size: 20px;
+    font-size: 16px;
   }
 
   .scene-object-card-image {
-    height: 108px;
+    height: 86px;
   }
 
   .scene-action-deck {
@@ -4472,17 +4574,17 @@ code {
 /* ── Object Inventory Grid (inside scene-object-card) ────────────────── */
 .obj-inv-grid {
   display: inline-grid;
-  grid-template-columns: repeat(6, 48px);
+  grid-template-columns: repeat(6, 38px);
   gap: 2px;
-  margin-top: 10px;
-  margin-bottom: 4px;
+  margin-top: 8px;
+  margin-bottom: 3px;
   width: fit-content;
   align-self: center;
 }
 
 .obj-inv-slot {
-  width: 48px;
-  height: 48px;
+  width: 38px;
+  height: 38px;
   background-image: url('/assets/Pantalla de juego/Inventory/Inventory_Slot_square.png');
   background-size: 100% 100%;
   background-color: transparent;
@@ -4520,7 +4622,7 @@ code {
 }
 
 .obj-inv-mystery {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 900;
   color: var(--fg-secondary);
   opacity: 0.6;
@@ -4588,12 +4690,12 @@ code {
 }
 
 .obj-inv-icon {
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
 }
 
 .obj-inv-label {
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -4606,8 +4708,8 @@ code {
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: var(--color-amber);
 }
@@ -4677,13 +4779,13 @@ code {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
 }
 
 .drop-zone-staged-card,
 .drop-zone-staged-item {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -4695,13 +4797,13 @@ code {
 }
 
 .drop-zone-confirm-btn {
-  margin-top: 4px;
-  padding: 6px 14px;
+  margin-top: 3px;
+  padding: 5px 11px;
   background: var(--color-lime);
   color: #0a1a0f;
   border: none;
-  border-radius: 4px;
-  font-size: 10px;
+  border-radius: 3px;
+  font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -4715,11 +4817,11 @@ code {
 }
 
 .drop-zone-cancel-btn {
-  padding: 4px 10px;
+  padding: 3px 8px;
   background: none;
   border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: 3px;
+  font-size: 7px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
