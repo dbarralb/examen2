@@ -7,18 +7,13 @@ import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
 import { getContainerOpenState, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { getScenarioScopedTargetKey } from "../data/scenarioContent.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
 const DEFAULT_MAP_ASPECT = 1826 / 1080;
 const MIN_SCALE = 0.8;
 const MIN_SCALE_WIDE = 1.0; // panoramic images must fill viewport height
-const MAX_SCALE = 3;
-const MONITOR_CAMERA_SCALE_FACTOR = 0.6;
-const TARGET_FOCUS_SCALE = 1.45;
-const TARGET_CARD_WIDTH = 264;
-const TARGET_CARD_HEIGHT = 376;
-const FOCUS_TRANSITION_MS = 620;
 const MOUSE_DETECTION_RADII = [
   { level: 4, distance: 24 },
   { level: 3, distance: 48 },
@@ -184,12 +179,12 @@ function getDiscoveryCardStyle(target) {
 
   return {
     ...cardStyle,
-    "--discovery-card-offset-x": side === "left" ? "calc(-100% - 16px)" : "calc(264px + 16px)",
+    "--discovery-card-offset-x": side === "left" ? "calc(-100% - 18px)" : "calc(304px + 18px)",
     "--discovery-card-offset-y": cardStyle["--object-card-offset-y"] || "0px",
   };
 }
 
-// SVG preview rendered inside scene-map-world (transforms with zoom/pan)
+// SVG preview rendered inside scene-map-world (transforms with the camera pan)
 function DrawingPreviewSVG({ drawingState }) {
   const { mode, p1, p2, polygonPoints, cursorPos } = drawingState;
 
@@ -293,7 +288,6 @@ export function SceneMap({
   onCoordClick = null,
   onCursorMove = null,
   drawingState = null,
-  focusSelectedTarget = false,
   showInspectionDiscoveryPreview = false,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
@@ -305,32 +299,14 @@ export function SceneMap({
     : activeZone
       ? activeZone.targetIds.map((id) => getTarget(id)).filter(Boolean)
       : targets;
-  const selectedFocusTarget = focusSelectedTarget
-    ? visibleTargets.find((item) => item.id === selectedTargetId)
-    : null;
-  const selectedFocusSignature = selectedFocusTarget
-    ? [
-      selectedFocusTarget.id,
-      selectedFocusTarget.x,
-      selectedFocusTarget.y,
-      selectedFocusTarget.w,
-      selectedFocusTarget.h,
-      selectedFocusTarget.cardX,
-      selectedFocusTarget.cardY,
-      selectedFocusTarget.discoveryCardX,
-      selectedFocusTarget.discoveryCardY,
-      selectedFocusTarget.points?.length || 0,
-    ].join(":")
-    : "";
   const viewportRef = useRef(null);
   const panRef = useRef(null);
   const detectionLevelRef = useRef(0);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0, effectiveAspect));
   const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: effectiveMinScale }));
   const [isPanning, setIsPanning] = useState(false);
-  const [isFocusTransitioning, setIsFocusTransitioning] = useState(false);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
-  const focusTransitionTimeoutRef = useRef(null);
+  const [expandedSoftwareDrops, setExpandedSoftwareDrops] = useState({});
   const shouldDetectMouse = !isMonitorView && !showCoordinates;
 
   // Close device console when the selected target changes or closes
@@ -339,6 +315,10 @@ export function SceneMap({
       setConsoleOpenTargetId(null);
     }
   }, [selectedTargetId, consoleOpenTargetId]);
+
+  useEffect(() => {
+    setExpandedSoftwareDrops({});
+  }, [selectedTargetId]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -356,7 +336,7 @@ export function SceneMap({
           return getFitCamera(nextLayout, effectiveMinScale);
         }
 
-        return clampCamera(current, nextLayout);
+        return clampCamera({ ...current, scale: effectiveMinScale }, nextLayout);
       });
     }
 
@@ -366,8 +346,6 @@ export function SceneMap({
 
     return () => observer.disconnect();
   }, [layout.mapHeight, layout.mapWidth, effectiveAspect, effectiveMinScale]);
-
-  useEffect(() => () => window.clearTimeout(focusTransitionTimeoutRef.current), []);
 
   useEffect(() => () => emitCursorDetectionLevel(0), []);
 
@@ -383,62 +361,9 @@ export function SceneMap({
     setCamera(clampCamera({
       x: Number(externalCamera.x) || 0,
       y: Number(externalCamera.y) || 0,
-      scale: Math.max(MIN_SCALE, (Number(externalCamera.scale) || MIN_SCALE) * MONITOR_CAMERA_SCALE_FACTOR),
+      scale: effectiveMinScale,
     }, layout));
-  }, [externalCamera, isMonitorView, layout]);
-
-  useEffect(() => {
-    if (!focusSelectedTarget || disablePan || !selectedFocusTarget || !layout.mapWidth || !layout.mapHeight) {
-      return;
-    }
-
-    focusTarget(selectedFocusTarget);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSelectedTarget, disablePan, selectedFocusSignature, layout.mapWidth, layout.mapHeight]);
-
-  function focusTarget(target) {
-    if (!layout.mapWidth || !layout.mapHeight) {
-      return;
-    }
-
-    const FOCUS_PADDING = 28; // px margin around the combined hotspot+card box
-    const cardStyle = getTargetCardStyle(target);
-    const hotspotLeft = (target.x / 100) * layout.mapWidth;
-    const hotspotTop = (target.y / 100) * layout.mapHeight;
-    const hotspotRight = ((target.x + target.w) / 100) * layout.mapWidth;
-    const hotspotBottom = ((target.y + target.h) / 100) * layout.mapHeight;
-    const cardAnchorLeft = (parseFloat(cardStyle.left) / 100) * layout.mapWidth;
-    const cardAnchorTop = (parseFloat(cardStyle.top) / 100) * layout.mapHeight;
-    const isManualCardPosition = Number.isFinite(target.cardX) && Number.isFinite(target.cardY);
-    const cardLeft = isManualCardPosition ? cardAnchorLeft - TARGET_CARD_WIDTH / 2 : cardAnchorLeft;
-    const cardTop = isManualCardPosition ? cardAnchorTop - TARGET_CARD_HEIGHT / 2 : cardAnchorTop;
-    const cardRight = cardLeft + TARGET_CARD_WIDTH;
-    const cardBottom = cardTop + TARGET_CARD_HEIGHT;
-    const focusLeft = Math.min(hotspotLeft, cardLeft);
-    const focusTop = Math.min(hotspotTop, cardTop);
-    const focusRight = Math.max(hotspotRight, cardRight);
-    const focusBottom = Math.max(hotspotBottom, cardBottom);
-    const focusCenterX = (focusLeft + focusRight) / 2;
-    const focusCenterY = (focusTop + focusBottom) / 2;
-
-    // Scale to fit the whole box in the viewport; cap at TARGET_FOCUS_SCALE, allow below MIN_SCALE
-    const boxW = focusRight - focusLeft + FOCUS_PADDING * 2;
-    const boxH = focusBottom - focusTop + FOCUS_PADDING * 2;
-    const fitScale = Math.min(layout.width / boxW, layout.height / boxH);
-    const nextScale = clamp(fitScale, 0.3, TARGET_FOCUS_SCALE);
-
-    // Position without clamping to map bounds — the card must always be fully visible
-    window.clearTimeout(focusTransitionTimeoutRef.current);
-    setIsFocusTransitioning(true);
-    setCamera({
-      scale: nextScale,
-      x: layout.width / 2 - focusCenterX * nextScale,
-      y: layout.height / 2 - focusCenterY * nextScale,
-    });
-    focusTransitionTimeoutRef.current = window.setTimeout(() => {
-      setIsFocusTransitioning(false);
-    }, FOCUS_TRANSITION_MS);
-  }
+  }, [effectiveMinScale, externalCamera, isMonitorView, layout]);
 
   function handleHotspotClick(event, target) {
     if (isMonitorView) {
@@ -447,7 +372,6 @@ export function SceneMap({
 
     event.stopPropagation();
     onSelectTarget?.(target.id);
-    focusTarget(target);
   }
 
   function handleObjectCardPointerMove(event) {
@@ -482,6 +406,10 @@ export function SceneMap({
     card.style.setProperty("--object-shadow-y", "18px");
     card.style.setProperty("--object-glare-x", "50%");
     card.style.setProperty("--object-glare-y", "0%");
+  }
+
+  function expandSoftwareDrop(targetId) {
+    setExpandedSoftwareDrops((current) => current[targetId] ? current : { ...current, [targetId]: true });
   }
 
   function setMouseDetectionLevel(level) {
@@ -576,48 +504,21 @@ export function SceneMap({
     setMouseDetectionLevel(0);
   }
 
-  function handleWheel(event) {
-    if (isMonitorView || consoleOpenTargetId) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (!layout.mapWidth || !layout.mapHeight) {
-      return;
-    }
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const pointerX = event.clientX - rect.left;
-    const pointerY = event.clientY - rect.top;
-    const zoomFactor = Math.exp(-event.deltaY * 0.001);
-    const nextScale = clamp(camera.scale * zoomFactor, effectiveMinScale, MAX_SCALE);
-    const worldX = (pointerX - camera.x) / camera.scale;
-    const worldY = (pointerY - camera.y) / camera.scale;
-
-    setCamera(clampCamera({
-      scale: nextScale,
-      x: pointerX - worldX * nextScale,
-      y: pointerY - worldY * nextScale,
-    }, layout));
-  }
-
   return (
     <div
       ref={viewportRef}
-      className={`scene-map-viewport ${isPanning ? "is-panning" : ""} ${isFocusTransitioning ? "is-focus-transitioning" : ""}`}
+      className={`scene-map-viewport ${isPanning ? "is-panning" : ""}`}
       onPointerDown={handleViewportPointerDown}
       onPointerMove={handleViewportPointerMove}
       onPointerUp={finishPan}
       onPointerCancel={finishPan}
       onPointerLeave={handleViewportPointerLeave}
-      onWheel={handleWheel}
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
     >
       <div className="scene-focus-fade" aria-hidden="true" />
       <div
-        className={`scene-map-world ${isFocusTransitioning ? "is-focus-transitioning" : ""} ${isMonitorView ? "is-monitor-view" : ""} ${shouldDetectMouse ? "hide-player-hotspots" : ""}`}
+        className={`scene-map-world ${isMonitorView ? "is-monitor-view" : ""} ${shouldDetectMouse ? "hide-player-hotspots" : ""}`}
         style={{
           width: `${layout.mapWidth}px`,
           height: `${layout.mapHeight}px`,
@@ -644,8 +545,17 @@ export function SceneMap({
             const targetImage = getTargetImage(target, gameState, scenarioId, variant);
             const inspectionDiscovery = getInspectionDiscovery(target.id, gameState, scenarioId, variant);
             const previewInspectionDiscovery = showInspectionDiscoveryPreview && target.id === selectedTargetId
-              ? inspectionDiscovery || getInspectionDiscovery(target.id, { inspectionDiscoveries: { [target.id]: true } }, scenarioId, variant)
+              ? inspectionDiscovery || getInspectionDiscovery(
+                target.id,
+                { inspectionDiscoveries: { [getScenarioScopedTargetKey(scenarioId, variant, target.id)]: true } },
+                scenarioId,
+                variant,
+              )
               : inspectionDiscovery;
+            const hasActiveSoftwareDrop = pendingAction?.target === target.id
+              || queuedForPlayer?.target === target.id
+              || dropZoneState.targetId === target.id;
+            const isSoftwareDropExpanded = expandedSoftwareDrops[target.id] || hasActiveSoftwareDrop;
 
             return (
               <Fragment key={`${target.id}-cards`}>
@@ -662,7 +572,7 @@ export function SceneMap({
                 {target.hotspotClass && <span className="scene-object-card-class">{target.hotspotClass}</span>}
                 {targetImage && <img className="scene-object-card-image" src={targetImage} alt={target.label} draggable="false" />}
                 {(() => {
-                  const stateLabel = getTargetStateLabel(target, gameState);
+                  const stateLabel = getTargetStateLabel(target, gameState, scenarioId, variant);
                   const isDisabled = /disabled/i.test(stateLabel);
                   return <NBadge status={isDisabled ? "danger" : "info"}>Estado: {stateLabel}</NBadge>;
                 })()}
@@ -688,9 +598,14 @@ export function SceneMap({
                   containerOpen={getContainerOpenState(target.id, gameState, scenarioId, variant)}
                 />
                 <section
-                  className={`react-drop-slot ${pendingAction?.target === target.id ? "loading" : ""} ${
+                  className={`react-drop-slot ${isSoftwareDropExpanded ? "expanded" : ""} ${pendingAction?.target === target.id ? "loading" : ""} ${
                     dropZoneState.targetId === target.id && !pendingAction ? "staged" : ""
                   }`}
+                  tabIndex={isMonitorView ? undefined : 0}
+                  aria-label="Cargar software"
+                  onMouseEnter={() => expandSoftwareDrop(target.id)}
+                  onFocus={() => expandSoftwareDrop(target.id)}
+                  onDragEnter={() => expandSoftwareDrop(target.id)}
                   onDragOver={(event) => {
                     if (!isMonitorView) event.preventDefault();
                   }}
@@ -701,10 +616,11 @@ export function SceneMap({
                   }}
                 >
                   {pendingAction?.target === target.id && isMonitorView ? (
-                    <>
+                    <div className="software-drop-body">
+                      <span className="software-drop-title">Cargar software</span>
                       <strong>{formatCardLabel(pendingAction)} cargando</strong>
                       <span>Vista espejo del jugador.</span>
-                    </>
+                    </div>
                   ) : pendingAction?.target === target.id ? (
                     <SoftwareLoadMinigame
                       action={pendingAction}
@@ -714,9 +630,13 @@ export function SceneMap({
                       onCancel={onCancelPendingAction}
                     />
                   ) : queuedForPlayer?.target === target.id ? (
-                    <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
+                    <div className="software-drop-body">
+                      <span className="software-drop-title">Cargar software</span>
+                      <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
+                    </div>
                   ) : dropZoneState.targetId === target.id && (dropZoneState.cardId || dropZoneState.itemId) ? (
                     <div className="drop-zone-staged">
+                      <span className="software-drop-title">Software preparado</span>
                       {dropZoneState.cardId && <span className="drop-zone-staged-card">{formatCardLabel({ card: dropZoneState.cardId })}</span>}
                       {dropZoneState.itemId && <span className="drop-zone-staged-item">✋ {dropZoneState.itemId}</span>}
                       <button
@@ -735,7 +655,14 @@ export function SceneMap({
                       </button>
                     </div>
                   ) : (
-                    <span>{overlayActive ? "Mira el resultado. Acciones bloqueadas." : "Suelta una carta o item aqui"}</span>
+                    <div className="software-drop-body">
+                      <span className="software-drop-title">Cargar software</span>
+                      <span className="software-drop-hint">
+                        {overlayActive ? "Resultado activo. Espera al pulso." : "Arrastra una accion a este puerto."}
+                      </span>
+                      <span className="software-drop-insert">Insertar aqui</span>
+                      <span className="software-drop-ghost" aria-hidden="true" />
+                    </div>
                   )}
                 </section>
               </article>
@@ -760,7 +687,7 @@ export function SceneMap({
           })}
         </InteractiveLayer>
 
-        {/* Drawing preview SVG — rendered inside scene-map-world so it transforms with zoom/pan */}
+        {/* Drawing preview SVG — rendered inside scene-map-world so it follows the camera pan */}
         {drawingState && (
           <DrawingPreviewSVG drawingState={drawingState} />
         )}

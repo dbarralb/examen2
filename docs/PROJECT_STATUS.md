@@ -12,7 +12,7 @@
 
 ### Que esta listo
 
-- [x] Tablero unico por jugador, paneable y zoomeable
+- [x] Tablero unico por jugador, paneable y con escala fija sin zoom
 - [x] Sistema de escenarios y variantes A/B/C/D
 - [x] Escenario `almacen` con realidades A/B repartidas 2+2
 - [x] Hotspots base del almacen: pizarra, taquillas, caja, balones, panel de salida
@@ -28,6 +28,7 @@
 - [x] Acciones atomicas por rol: `Accion_Inspeccion` y `Accion_Interaccion`
 - [x] Descubrimiento de inspeccion en taquillas con detalle A/B adyacente a la card de objeto
 - [x] Editor GM de posicion para el detalle de inspeccion en el mapa de coordenadas
+- [x] Inventario CSV de textos visibles/candidatos en `docs/textos_juego.csv`
 - [x] Sistema de alarma y efectos GM desacoplados del puzzle antiguo
 - [x] Monitores de jugadores en panel GM
 - [x] Chat entre jugadores y GM
@@ -46,6 +47,7 @@
 - [ ] Convertir el pulso en ventana de visibilidad entre jugadores
 - [ ] Refinar textos finales de tarjetas, feedback y consola
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
+- [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
 
 ---
 
@@ -55,6 +57,8 @@
 |---|---|
 | `docs/INDEX.md` | Indice y mapa de busqueda de documentacion |
 | `src/data/actionTypes.js` | Tipos atomicos de accion y descripciones genericas |
+| `docs/textos_juego.csv` | Inventario editable de textos del juego |
+| `scripts/export-texts.mjs` | Regenerar el inventario CSV de textos desde `src` |
 | `src/data/scenarioData.js` | Alta de escenarios y fondos por variante |
 | `src/data/scenarioContent.js` | Hotspots, items, feedback, consola y resolver inicial por escenario |
 | `src/data/gameData.js` | Familias y cartas globales |
@@ -62,7 +66,7 @@
 | `src/services/pulseService.js` | Ciclo completo del pulso |
 | `src/services/remoteState.js` | Estado inicial de Firebase |
 | `src/services/firebaseClient.js` | Lectura/escritura REST de Firebase |
-| `src/components/SceneMap.jsx` | Tablero paneable/zoomeable |
+| `src/components/SceneMap.jsx` | Tablero paneable con escala fija |
 | `src/components/map/*` | Capas visuales e interactivas del mapa |
 | `docs/game_design.md` | Diseno narrativo y mecanicas |
 | `docs/architecture.md` | Referencia tecnica del sistema |

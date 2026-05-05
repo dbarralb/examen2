@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 
 import { isInteractionAction } from "../data/actionTypes.js";
-import { LOCKER_STATES, RESONANCE_COSTS, resolveScenarioAction } from "../data/scenarioContent.js";
+import { LOCKER_STATES, RESONANCE_COSTS, getScenarioScopedTargetKey, resolveScenarioAction } from "../data/scenarioContent.js";
 
 // ---------------------------------------------------------------------------
 // 1. Alarm system
@@ -162,7 +162,7 @@ export function resolveActionWithResult(context, action, pulseFlags = {}) {
   const message = `${action.role} usa ${action.card} sobre ${action.target}. Sin efecto de puzzle definido.`;
   const feedback = "Acción registrada. Sin efecto de puzzle.";
 
-  context.targetFeedback[action.target] = feedback;
+  context.targetFeedback[getScenarioScopedTargetKey(action.scenarioId || context.sessionState?.scenarioId || "almacen", action.variant || context.playerBoards?.[action.role]?.variant || "A", action.target)] = feedback;
   context.lastRoleDebug = message;
   context.actionLog.unshift(message);
 

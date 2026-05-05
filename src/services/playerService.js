@@ -24,7 +24,7 @@ export function findQueuedActionForCurrentPlayer(queuedActions, roleId) {
   });
 }
 
-export function createPendingAction({ card, targetId, roleId, minigame = null }) {
+export function createPendingAction({ card, targetId, roleId, scenarioId = null, variant = null, minigame = null }) {
   const now = Date.now();
   const loadTimeSeconds = card.loadTimeSeconds || 5;
 
@@ -34,6 +34,8 @@ export function createPendingAction({ card, targetId, roleId, minigame = null })
     sessionCode: getStoredSessionCode(),
     player: getPlayerName(),
     role: roleId,
+    scenarioId,
+    variant,
     card: card.id,
     target: targetId,
     status: "charging",
@@ -107,17 +109,21 @@ function createMirrorPendingAction(pendingAction) {
   };
 }
 
-export async function markItemSeen(itemId) {
+function getScopedItemKey(itemId, scenarioId = null, variant = null) {
+  return scenarioId && variant ? `${scenarioId}_${variant}__${itemId}` : itemId;
+}
+
+export async function markItemSeen(itemId, scenarioId = null, variant = null) {
   await firebasePatch("", {
-    [`itemSeenState/${itemId}/seen`]: true,
+    [`itemSeenState/${getScopedItemKey(itemId, scenarioId, variant)}/seen`]: true,
   });
 }
 
-export async function pickUpItem(roleId, itemId, slotIndex) {
+export async function pickUpItem(roleId, itemId, slotIndex, scenarioId = null, variant = null) {
   await firebasePatch("", {
     [`playerInventories/${roleId}/slots/${slotIndex}`]: { itemId },
-    [`itemSeenState/${itemId}/seen`]: true,
-    [`itemSeenState/${itemId}/pickedUp`]: true,
+    [`itemSeenState/${getScopedItemKey(itemId, scenarioId, variant)}/seen`]: true,
+    [`itemSeenState/${getScopedItemKey(itemId, scenarioId, variant)}/pickedUp`]: true,
   });
 }
 

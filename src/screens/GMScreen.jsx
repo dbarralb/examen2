@@ -634,7 +634,6 @@ export function GMScreen() {
                 onCoordClick={isCapturing ? handleMapCoordClick : null}
                 onCursorMove={isCapturing ? setCursorPos : null}
                 drawingState={drawingState}
-                focusSelectedTarget
                 boardTargets={liveCoordinateTargets}
                 backgroundSrc={coordinateBg}
                 imageAspect={coordinateAspect}

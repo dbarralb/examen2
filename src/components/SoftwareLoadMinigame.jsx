@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NButton } from "./e2";
 
 const DIRECTION_META = {
-  up: { label: "arriba", key: "W" },
-  down: { label: "abajo", key: "S" },
-  left: { label: "izquierda", key: "A" },
-  right: { label: "derecha", key: "D" },
+  up: { label: "arriba" },
+  down: { label: "abajo" },
+  left: { label: "izquierda" },
+  right: { label: "derecha" },
 };
 
 const KEY_DIRECTIONS = {
@@ -43,6 +43,19 @@ function getTimerTone(timeRatio) {
   }
 
   return "red";
+}
+
+function DirectionArrowIcon() {
+  return (
+    <svg
+      className="software-load-arrow-icon"
+      viewBox="0 0 64 64"
+      focusable="false"
+      aria-hidden="true"
+    >
+      <path d="M32 5 57 31H43v28H21V31H7L32 5Z" />
+    </svg>
+  );
 }
 
 export function createSoftwareLoadMinigame(sequence) {
@@ -91,7 +104,6 @@ export function SoftwareLoadMinigame({ action, onChange, onSuccess, onRetry, onC
         index,
         state,
         isWrong: index === minigame.wrongIndex,
-        keyLabel: DIRECTION_META[direction]?.key || "?",
         label: DIRECTION_META[direction]?.label || direction,
       };
     });
@@ -243,8 +255,7 @@ export function SoftwareLoadMinigame({ action, onChange, onSuccess, onRetry, onC
             title={arrow.label}
           >
             <span className="software-load-arrow-index">{String(arrow.index + 1).padStart(2, "0")}</span>
-            <span className="software-load-arrow-glyph" />
-            <span className="software-load-arrow-key">{arrow.keyLabel}</span>
+            <DirectionArrowIcon />
           </span>
         ))}
       </div>

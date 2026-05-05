@@ -162,8 +162,8 @@ export function getTarget(targetId) {
  * Generic hotspots have no puzzle state yet — returns "idle" as baseline.
  * When scenario logic is implemented, this reads from playerBoards or gameState.
  */
-export function getTargetState(target, gameState) {
-  return getScenarioTargetStateLabel(target, gameState);
+export function getTargetState(target, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioTargetStateLabel(target, gameState, scenarioId, variant);
 }
 
 /** Hotspot image. Returns empty string until scenario art is defined. */
@@ -186,6 +186,6 @@ export function getContainerOpenState(targetId, gameState, scenarioId = "almacen
 }
 
 /** Short state label used in event log and GM coordinate overlay. */
-export function getTargetStateLabel(target, gameState) {
-  return getScenarioTargetStateLabel(target, gameState);
+export function getTargetStateLabel(target, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioTargetStateLabel(target, gameState, scenarioId, variant);
 }

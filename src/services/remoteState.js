@@ -36,6 +36,9 @@ export function createEmptyResultOverlay() {
     startedAt: null,
     endsAt: null,
     actionId: null,
+    role: null,
+    scenarioId: null,
+    variant: null,
   };
 }
 

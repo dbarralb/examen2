@@ -25,9 +25,15 @@ const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
 const ACTION_INFO_DELAY_MS = 500;
 
-function isResultOverlayActive(pulseState) {
+function isResultOverlayActive(pulseState, scenarioId, variant) {
   const overlay = pulseState?.resultOverlay;
-  return Boolean(overlay?.visible && (!overlay.endsAt || overlay.endsAt > Date.now()));
+  if (!overlay?.visible || (overlay.endsAt && overlay.endsAt <= Date.now())) {
+    return false;
+  }
+
+  const sameScenario = !overlay.scenarioId || overlay.scenarioId === scenarioId;
+  const sameVariant = !overlay.variant || overlay.variant === variant;
+  return sameScenario && sameVariant;
 }
 
 function getOverlayProgress(pulseState) {
@@ -40,14 +46,48 @@ function getOverlayProgress(pulseState) {
   return ((Date.now() - overlay.startedAt) / (overlay.endsAt - overlay.startedAt)) * 100;
 }
 
-function getTargetStateSignature(targetId, gameState, boardTargets = targets) {
+function getTargetStateSignature(targetId, gameState, boardTargets = targets, scenarioId = DEFAULT_SCENARIO_ID, variant = "A") {
   const target = boardTargets.find((item) => item.id === targetId);
 
   if (!target) {
     return "";
   }
 
-  return getScenarioTargetStateLabel(target, gameState);
+  return getScenarioTargetStateLabel(target, gameState, scenarioId, variant);
+}
+
+function getScopedTargetKey(scenarioId, variant, targetId) {
+  return `${scenarioId || DEFAULT_SCENARIO_ID}_${variant || "A"}__${targetId}`;
+}
+
+function getScopedItemKey(scenarioId, variant, itemId) {
+  return `${scenarioId || DEFAULT_SCENARIO_ID}_${variant || "A"}__${itemId}`;
+}
+
+function getVisibleTargetFeedback(baseFeedback, remoteFeedback, scenarioId, variant) {
+  const feedback = { ...baseFeedback };
+
+  for (const targetId of Object.keys(baseFeedback)) {
+    const scopedValue = remoteFeedback?.[getScopedTargetKey(scenarioId, variant, targetId)];
+    if (scopedValue) {
+      feedback[targetId] = scopedValue;
+    }
+  }
+
+  return feedback;
+}
+
+function getVisibleItemSeenState(remoteSeenState, scenarioId, variant) {
+  const scopedSeenState = {};
+
+  for (const [key, value] of Object.entries(remoteSeenState || {})) {
+    const [, itemId] = key.split("__");
+    if (itemId && key.startsWith(`${scenarioId}_${variant}__`)) {
+      scopedSeenState[itemId] = value;
+    }
+  }
+
+  return scopedSeenState;
 }
 
 export function PlayerScreen({ navigation, params }) {
@@ -79,7 +119,7 @@ export function PlayerScreen({ navigation, params }) {
 
   const session = remoteState?.session || {};
   const gameState = { ...createInitialGameState(), ...(remoteState?.gameState || {}) };
-  const targetFeedback = { ...createInitialTargetFeedback(), ...(remoteState?.targetFeedback || {}) };
+  const remoteTargetFeedback = remoteState?.targetFeedback || {};
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 5), [remoteState]);
@@ -90,11 +130,13 @@ export function PlayerScreen({ navigation, params }) {
   const effectiveSelectedTargetId = isGmMonitorView ? (isMirrorFresh ? mirroredView.selectedTargetId : null) : selectedTargetId;
   const effectivePendingAction = isGmMonitorView ? (isMirrorFresh ? mirroredView.pendingAction : null) : pendingAction;
   const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
-  const itemSeenState = remoteState?.itemSeenState || {};
+  const remoteItemSeenState = remoteState?.itemSeenState || {};
   const cardUsage = remoteState?.cardUsage?.[role.id] || {};
   const playerBoard = remoteState?.playerBoards?.[role.id] || {};
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
+  const targetFeedback = getVisibleTargetFeedback(createInitialTargetFeedback(), remoteTargetFeedback, boardScenarioId, boardVariant);
+  const itemSeenState = getVisibleItemSeenState(remoteItemSeenState, boardScenarioId, boardVariant);
   const remoteHotspotOverrides = remoteState?.hotspotOverrides || {};
   const boardTargets = useMemo(() => (
     applyScenarioHotspotOverrides(
@@ -108,7 +150,7 @@ export function PlayerScreen({ navigation, params }) {
   const boardAspect = getVariantImageAspect(boardScenarioId, boardVariant);
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
-  const overlayActive = isResultOverlayActive(pulseState);
+  const overlayActive = isResultOverlayActive(pulseState, boardScenarioId, boardVariant);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
 
   function logEvent(msg) {
@@ -390,7 +432,9 @@ export function PlayerScreen({ navigation, params }) {
     const minigame = createSoftwareLoadMinigame(createSoftwareLoadSequence());
     setPendingAction({
       ...createPendingAction({ card, targetId, roleId: role.id, minigame }),
-      targetStateSignature: getTargetStateSignature(targetId, gameState, boardTargets),
+      scenarioId: boardScenarioId,
+      variant: boardVariant,
+      targetStateSignature: getTargetStateSignature(targetId, gameState, boardTargets, boardScenarioId, boardVariant),
     });
     setSelectedTargetId(targetId);
   }
@@ -436,7 +480,7 @@ export function PlayerScreen({ navigation, params }) {
   function handleItemClick(item) {
     setOpenedItem(item);
     if (!itemSeenState[item.id]?.seen) {
-      markItemSeen(item.id).catch(() => {});
+      markItemSeen(item.id, boardScenarioId, boardVariant).catch(() => {});
     }
   }
 
@@ -449,7 +493,7 @@ export function PlayerScreen({ navigation, params }) {
     setPlayerInventory(optimistic);
 
     try {
-      await pickUpItem(role.id, itemId, slotIndex);
+      await pickUpItem(role.id, itemId, slotIndex, boardScenarioId, boardVariant);
     } catch {
       setPlayerInventory(playerInventory);
     }

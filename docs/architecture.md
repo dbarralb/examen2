@@ -90,7 +90,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 | `src/data/roles.js` | Roles activos |
 | `src/screens/PlayerScreen.jsx` | Pantalla del jugador |
 | `src/screens/GMScreen.jsx` | Panel GM |
-| `src/components/SceneMap.jsx` | Tablero paneable/zoomeable |
+| `src/components/SceneMap.jsx` | Tablero paneable con escala fija |
 | `src/components/map/*` | Capas del mapa y overlay de coordenadas |
 | `src/components/DeviceConsole.jsx` | Consola generica de dispositivo |
 | `src/services/pulseService.js` | Ciclo del pulso |

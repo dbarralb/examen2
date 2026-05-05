@@ -20,14 +20,17 @@ function sortActionsByLoadedAt(a, b) {
   return aTime - bTime;
 }
 
-function createPulseResultOverlay(message, actionId) {
+function createPulseResultOverlay(message, action) {
   const now = Date.now();
   return {
     visible: true,
     message: message || "Accion resuelta.",
     startedAt: now,
     endsAt: now + timing.resultOverlaySeconds * 1000,
-    actionId,
+    actionId: action?.id || null,
+    role: action?.role || null,
+    scenarioId: action?.scenarioId || null,
+    variant: action?.variant || null,
   };
 }
 
@@ -95,6 +98,7 @@ export async function startManualPulse({ onStatus } = {}) {
     const lastRoleActions = { ...((await firebaseGet("lastRoleActions")) || {}) };
     let lastRoleDebug = (await firebaseGet("lastRoleDebug")) || "Sin acciones resueltas todavia.";
     const sessionState = (await firebaseGet("sessionState")) || {};
+    const playerBoards = (await firebaseGet("playerBoards")) || {};
     const context = {
       gameState,
       targetFeedback,
@@ -102,6 +106,7 @@ export async function startManualPulse({ onStatus } = {}) {
       lastRoleDebug,
       metricsDelta: {},
       sessionState,
+      playerBoards,
     };
 
     pulseState = {
@@ -119,6 +124,9 @@ export async function startManualPulse({ onStatus } = {}) {
 
     for (let index = 0; index < pulseActions.length; index += 1) {
       const liveAction = { ...pulseActions[index] };
+      const actionBoard = playerBoards?.[liveAction.role] || {};
+      liveAction.scenarioId = liveAction.scenarioId || actionBoard.scenarioId || sessionState.scenarioId || "almacen";
+      liveAction.variant = liveAction.variant || actionBoard.variant || "A";
       const itemUsage = pendingItemUsage[liveAction.role];
       if (itemUsage?.itemId && itemUsage?.targetId === liveAction.target) {
         liveAction.itemId = itemUsage.itemId;
@@ -148,7 +156,7 @@ export async function startManualPulse({ onStatus } = {}) {
       liveAction.status = "resolved";
       liveAction.resolvedAt = Date.now();
       lastRoleActions[liveAction.role] = createLastRoleAction(liveAction, "resuelta", resultMessage);
-      pulseState.resultOverlay = createPulseResultOverlay(resultMessage, liveAction.id);
+      pulseState.resultOverlay = createPulseResultOverlay(resultMessage, liveAction);
       pulseState.updatedAt = Date.now();
 
       await firebasePatch("", {

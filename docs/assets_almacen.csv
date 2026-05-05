@@ -1,5 +1,5 @@
 Categoria,Tarea,Estado,Notas
-Arte A,Confirmar resolucion final y safe area,Pendiente,Preparar para UI hotspots zoom y pan
+Arte A,Confirmar resolucion final y safe area,Pendiente,Preparar para UI hotspots con escala fija y pan
 Arte A,Separar fondo base sin objetos interactivos,Pendiente,Si el montaje final va por capas
 Arte A,Exportar hotspots principales como capas o sprites,Pendiente,Taquillas caja balones panel puerta pizarra
 Arte A,Pintar pizarra con informacion parcial de variante A,Pendiente,Debe servir como pista narrativa
@@ -18,7 +18,7 @@ Arte Estados,Crear estado de puerta DOOR_OPEN,Pendiente,Fin del nivel
 Pulido A,Añadir sombras de contacto bajo objetos importantes,Pendiente,Mejora integracion visual
 Pulido A,Pulir perspectiva de cajas bancos y estanterias,Pendiente,Revisar coherencia espacial
 Pulido A,Añadir textura ligera de almacen,Pendiente,Rozaduras cinta polvo marcas de suelo
-Integracion,Comprobar que hotspots no quedan tapados por HUD,Pendiente,Probar con zoom pan y diferentes pantallas
+Integracion,Comprobar que hotspots no quedan tapados por HUD,Pendiente,Probar con escala fija pan y diferentes pantallas
 Integracion,Exportar version final A y sprites overlays con nombres consistentes,Pendiente,Preparar assets para React
 Variante B,Cambiar cantidad o posicion de balones,Pendiente,Contradiccion principal de conteo
 Variante B,Hacer que la caja no sea igual a A,Pendiente,Otra marca posicion duplicado tapa o contenido
