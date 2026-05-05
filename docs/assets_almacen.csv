@@ -1,0 +1,32 @@
+Categoria,Tarea,Estado,Notas
+Arte A,Confirmar resolucion final y safe area,Pendiente,Preparar para UI hotspots zoom y pan
+Arte A,Separar fondo base sin objetos interactivos,Pendiente,Si el montaje final va por capas
+Arte A,Exportar hotspots principales como capas o sprites,Pendiente,Taquillas caja balones panel puerta pizarra
+Arte A,Pintar pizarra con informacion parcial de variante A,Pendiente,Debe servir como pista narrativa
+Arte A,Añadir señal visual clara al candado o cierre de taquillas en A,Pendiente,Refuerza LOCKER_LOCKED
+Arte A,Definir numero exacto de balones en A,Pendiente,Debe ser facil de contar y comparar con B
+Arte A,Marcar la caja con etiqueta simbolo o pista visual legible,Pendiente,Introduce la regla no todo lo que ves es real
+Arte A,Rediseñar panel con ranura para modulo display y keypad,Pendiente,Debe comunicar PANEL_NEEDS_MODULE
+Arte Estados,Crear estado de taquilla LOCKER_LOCKED,Pendiente,Estado inicial
+Arte Estados,Crear estado de taquilla LOCKER_FUSION,Pendiente,Estado tras consumir resonancia
+Arte Estados,Crear estado de taquilla LOCKER_OPEN,Pendiente,Debe mostrar modulo y nota disponibles
+Arte Estados,Crear estado de panel PANEL_NEEDS_MODULE,Pendiente,Panel bloqueado por falta de modulo
+Arte Estados,Crear estado de panel PANEL_FUSION,Pendiente,Panel hibrido A+B activo
+Arte Estados,Crear estado de panel PANEL_OK,Pendiente,Panel validado tras codigo correcto
+Arte Estados,Crear estado de puerta DOOR_LOCKED,Pendiente,Estado inicial de salida
+Arte Estados,Crear estado de puerta DOOR_OPEN,Pendiente,Fin del nivel
+Pulido A,Añadir sombras de contacto bajo objetos importantes,Pendiente,Mejora integracion visual
+Pulido A,Pulir perspectiva de cajas bancos y estanterias,Pendiente,Revisar coherencia espacial
+Pulido A,Añadir textura ligera de almacen,Pendiente,Rozaduras cinta polvo marcas de suelo
+Integracion,Comprobar que hotspots no quedan tapados por HUD,Pendiente,Probar con zoom pan y diferentes pantallas
+Integracion,Exportar version final A y sprites overlays con nombres consistentes,Pendiente,Preparar assets para React
+Variante B,Cambiar cantidad o posicion de balones,Pendiente,Contradiccion principal de conteo
+Variante B,Hacer que la caja no sea igual a A,Pendiente,Otra marca posicion duplicado tapa o contenido
+Variante B,Mostrar en taquillas la mitad mecanica que falta en A,Pendiente,Pieza visible cierre imposible bisagra o hueco desplazado
+Variante B,Cambiar lectura tecnica del panel,Pendiente,Ranura cable lector o sensor en posicion distinta
+Variante B,Pintar pizarra con informacion complementaria o desplazada,Pendiente,No debe copiar exactamente A
+Variante B,Añadir diferencia tecnica en la puerta,Pendiente,Cierre luz sensor o cableado que solo B ve
+Variante B,Dar atmosfera menos estable,Pendiente,Offsets duplicados sombras raras o etiquetas repetidas
+Variante B,Mantener arquitectura base reconocible,Pendiente,Paredes puerta estanterias y composicion deben coincidir con A
+Direccion,Usar A como realidad contable y fisica,Pendiente,Criterio visual rector
+Direccion,Usar B como realidad mecanica y anomala,Pendiente,Criterio visual rector

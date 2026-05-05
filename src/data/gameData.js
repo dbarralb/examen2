@@ -14,12 +14,14 @@
 
 import {
   getScenarioContainerOpenState,
+  getScenarioInspectionDiscovery,
   getScenarioItem,
   getScenarioTarget,
   getScenarioTargetImage,
   getScenarioTargetItems,
   getScenarioTargetStateLabel,
 } from "./scenarioContent.js";
+import { ACTION_DESCRIPTIONS, ACTION_KINDS, ACTION_LABELS } from "./actionTypes.js";
 
 // ---------------------------------------------------------------------------
 // 1. Hotspot families
@@ -65,16 +67,70 @@ export const playerBoardSrc = {
 // ---------------------------------------------------------------------------
 
 export const cards = [
-  { id: "mirar_bien",         label: "mirar_bien",         roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/mirar_bien.png" },
-  { id: "consultar_apuntes",  label: "consultar_apuntes",  roles: ["empollon"], image: "/assets/Pantalla de juego/Actions/consultar_apuntes.png" },
-  { id: "apanar",             label: "apanar",             roles: ["manitas"],  image: "/assets/Pantalla de juego/Actions/apanar.png" },
-  { id: "puenteo_rapido",     label: "puenteo_rapido",     roles: ["manitas"],  image: "/assets/Pantalla de juego/Actions/puenteo_rapido.png" },
-  { id: "desmontar",          label: "desmontar",          roles: ["manitas"],  image: "/assets/Pantalla de juego/Actions/desmontar.png" },
-  { id: "a_lo_bestia",        label: "a_lo_bestia",        roles: ["guaperas"], image: "/assets/Pantalla de juego/Actions/a_lo_bestia.png" },
-  { id: "empujar",            label: "empujar",            roles: ["guaperas"], image: "/assets/Pantalla de juego/Actions/empujar.png" },
-  { id: "y_si",               label: "y_si",               roles: ["mistica"],  image: "/assets/Pantalla de juego/Actions/y_si.png" },
-  { id: "esto_vibra_raro",    label: "esto_vibra_raro",    roles: ["mistica"],  image: "/assets/Pantalla de juego/Actions/esto_vibra_raro.png" },
-  { id: "ritual_improvisado", label: "ritual_improvisado", roles: ["mistica"],  image: "/assets/Pantalla de juego/Actions/ritual_improvisado.png" },
+  {
+    id: "empollon_accion_inspeccion",
+    label: ACTION_LABELS[ACTION_KINDS.INSPECTION],
+    roles: ["empollon"],
+    actionKind: ACTION_KINDS.INSPECTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INSPECTION],
+    image: "/assets/Pantalla de juego/Actions/mirar_bien.png",
+  },
+  {
+    id: "empollon_accion_interaccion",
+    label: ACTION_LABELS[ACTION_KINDS.INTERACTION],
+    roles: ["empollon"],
+    actionKind: ACTION_KINDS.INTERACTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INTERACTION],
+    image: "/assets/Pantalla de juego/Actions/consultar_apuntes.png",
+  },
+  {
+    id: "manitas_accion_inspeccion",
+    label: ACTION_LABELS[ACTION_KINDS.INSPECTION],
+    roles: ["manitas"],
+    actionKind: ACTION_KINDS.INSPECTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INSPECTION],
+    image: "/assets/Pantalla de juego/Actions/desmontar.png",
+  },
+  {
+    id: "manitas_accion_interaccion",
+    label: ACTION_LABELS[ACTION_KINDS.INTERACTION],
+    roles: ["manitas"],
+    actionKind: ACTION_KINDS.INTERACTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INTERACTION],
+    image: "/assets/Pantalla de juego/Actions/apanar.png",
+  },
+  {
+    id: "guaperas_accion_inspeccion",
+    label: ACTION_LABELS[ACTION_KINDS.INSPECTION],
+    roles: ["guaperas"],
+    actionKind: ACTION_KINDS.INSPECTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INSPECTION],
+    image: "/assets/Pantalla de juego/Actions/empujar.png",
+  },
+  {
+    id: "guaperas_accion_interaccion",
+    label: ACTION_LABELS[ACTION_KINDS.INTERACTION],
+    roles: ["guaperas"],
+    actionKind: ACTION_KINDS.INTERACTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INTERACTION],
+    image: "/assets/Pantalla de juego/Actions/a_lo_bestia.png",
+  },
+  {
+    id: "mistica_accion_inspeccion",
+    label: ACTION_LABELS[ACTION_KINDS.INSPECTION],
+    roles: ["mistica"],
+    actionKind: ACTION_KINDS.INSPECTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INSPECTION],
+    image: "/assets/Pantalla de juego/Actions/esto_vibra_raro.png",
+  },
+  {
+    id: "mistica_accion_interaccion",
+    label: ACTION_LABELS[ACTION_KINDS.INTERACTION],
+    roles: ["mistica"],
+    actionKind: ACTION_KINDS.INTERACTION,
+    description: ACTION_DESCRIPTIONS[ACTION_KINDS.INTERACTION],
+    image: "/assets/Pantalla de juego/Actions/y_si.png",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -113,6 +169,11 @@ export function getTargetState(target, gameState) {
 /** Hotspot image. Returns empty string until scenario art is defined. */
 export function getTargetImage(target, gameState, scenarioId = "almacen", variant = "A") {
   return getScenarioTargetImage(target, gameState, scenarioId, variant);
+}
+
+/** Scenario-specific inspection detail revealed by inspection actions. */
+export function getInspectionDiscovery(targetId, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioInspectionDiscovery(targetId, gameState, scenarioId, variant);
 }
 
 /**

@@ -51,6 +51,17 @@ function getDefaultCardPosition(target) {
   };
 }
 
+function getDefaultDiscoveryCardPosition(target) {
+  const card = getDefaultCardPosition(target);
+  const side = target.x > 72 ? "left" : "right";
+  const left = side === "left" ? card.cardX - 18 : card.cardX + 18;
+
+  return {
+    discoveryCardX: +clampPercent(left, 4, 92).toFixed(2),
+    discoveryCardY: +clampPercent(card.cardY + 4, 4, 88).toFixed(2),
+  };
+}
+
 export function GMScreen() {
   const [remoteState, setRemoteState] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -60,11 +71,12 @@ export function GMScreen() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [coordinateVariant, setCoordinateVariant] = useState("A");
   const [selectedHotspotId, setSelectedHotspotId] = useState("");
-  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon" | "card"
-  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon" | "card"
+  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon" | "card" | "discovery"
+  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon" | "card" | "discovery"
   const [capturedPoints, setCapturedPoints] = useState({ p1: null, p2: null });
   const [polygonPoints, setPolygonPoints] = useState([]);
   const [cardPosition, setCardPosition] = useState(null);
+  const [discoveryCardPosition, setDiscoveryCardPosition] = useState(null);
   const [cursorPos, setCursorPos] = useState(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState(false);
@@ -130,15 +142,21 @@ export function GMScreen() {
     setCapturedPoints({ p1: null, p2: null });
     setPolygonPoints([]);
     setCardPosition(null);
+    setDiscoveryCardPosition(null);
     setCursorPos(null);
     if (!selectedHotspotId) return;
     // Prefill p1/p2 from saved override or base data
     const hs = savedCoordinateTargets.find((t) => t.id === selectedHotspotId);
     if (hs) {
       const defaultCardPosition = getDefaultCardPosition(hs);
+      const defaultDiscoveryCardPosition = getDefaultDiscoveryCardPosition(hs);
       setCardPosition({
         cardX: hs.cardX ?? defaultCardPosition.cardX,
         cardY: hs.cardY ?? defaultCardPosition.cardY,
+      });
+      setDiscoveryCardPosition({
+        discoveryCardX: hs.discoveryCardX ?? defaultDiscoveryCardPosition.discoveryCardX,
+        discoveryCardY: hs.discoveryCardY ?? defaultDiscoveryCardPosition.discoveryCardY,
       });
     }
     if (hs && !hs.points) {
@@ -159,6 +177,7 @@ export function GMScreen() {
     setCapturedPoints({ p1: null, p2: null });
     setPolygonPoints([]);
     setCardPosition(null);
+    setDiscoveryCardPosition(null);
     setCursorPos(null);
   }, [coordinateVariant]);
 
@@ -202,6 +221,9 @@ export function GMScreen() {
     } else if (drawMode === "card" && clickCapture === "card") {
       setCardPosition({ cardX: x, cardY: y });
       setClickCapture(null);
+    } else if (drawMode === "discovery" && clickCapture === "discovery") {
+      setDiscoveryCardPosition({ discoveryCardX: x, discoveryCardY: y });
+      setClickCapture(null);
     }
   }
 
@@ -214,6 +236,14 @@ export function GMScreen() {
         : cardPosition;
       return savedCoordinateTargets.map((t) =>
         t.id === selectedHotspotId ? { ...t, ...nextCardPosition } : t,
+      );
+    }
+    if (drawMode === "discovery" && (discoveryCardPosition || cursorPos)) {
+      const nextDiscoveryCardPosition = clickCapture === "discovery" && cursorPos
+        ? { discoveryCardX: cursorPos.x, discoveryCardY: cursorPos.y }
+        : discoveryCardPosition;
+      return savedCoordinateTargets.map((t) =>
+        t.id === selectedHotspotId ? { ...t, ...nextDiscoveryCardPosition } : t,
       );
     }
     const { p1, p2 } = capturedPoints;
@@ -240,7 +270,7 @@ export function GMScreen() {
       );
     }
     return savedCoordinateTargets;
-  }, [savedCoordinateTargets, selectedHotspotId, capturedPoints, polygonPoints, cardPosition, cursorPos, clickCapture, drawMode]);
+  }, [savedCoordinateTargets, selectedHotspotId, capturedPoints, polygonPoints, cardPosition, discoveryCardPosition, cursorPos, clickCapture, drawMode]);
 
   // Computed result data
   const editedHotspotData = useMemo(() => {
@@ -249,6 +279,13 @@ export function GMScreen() {
       return {
         cardX: +cardPosition.cardX.toFixed(2),
         cardY: +cardPosition.cardY.toFixed(2),
+      };
+    }
+    if (drawMode === "discovery") {
+      if (!discoveryCardPosition) return null;
+      return {
+        discoveryCardX: +discoveryCardPosition.discoveryCardX.toFixed(2),
+        discoveryCardY: +discoveryCardPosition.discoveryCardY.toFixed(2),
       };
     }
     if (drawMode === "rect") {
@@ -272,7 +309,7 @@ export function GMScreen() {
       };
     }
     return null;
-  }, [drawMode, capturedPoints, polygonPoints, cardPosition]);
+  }, [drawMode, capturedPoints, polygonPoints, cardPosition, discoveryCardPosition]);
 
   // Drawing state passed to SceneMap for SVG preview
   const drawingState = useMemo(() => {
@@ -281,6 +318,7 @@ export function GMScreen() {
       : clickCapture === "p2" ? "P2 — esquina inferior der."
       : clickCapture === "polygon" ? "Clic para añadir vértice"
       : clickCapture === "card" ? "Clic para colocar ventana"
+      : clickCapture === "discovery" ? "Clic para colocar detalle"
       : null;
     return {
       mode: drawMode,
@@ -300,6 +338,9 @@ export function GMScreen() {
     if (!saved) return false;
     if (drawMode === "card") {
       return saved.cardX === editedHotspotData.cardX && saved.cardY === editedHotspotData.cardY;
+    }
+    if (drawMode === "discovery") {
+      return saved.discoveryCardX === editedHotspotData.discoveryCardX && saved.discoveryCardY === editedHotspotData.discoveryCardY;
     }
     if (drawMode === "polygon") {
       return JSON.stringify(saved.points) === JSON.stringify(editedHotspotData.points);
@@ -356,6 +397,7 @@ export function GMScreen() {
       setCapturedPoints({ p1: { x: base.x, y: base.y }, p2: { x: +(base.x + base.w).toFixed(2), y: +(base.y + base.h).toFixed(2) } });
       setPolygonPoints([]);
       setCardPosition(getDefaultCardPosition(base));
+      setDiscoveryCardPosition(getDefaultDiscoveryCardPosition(base));
       setDrawMode("rect");
     }
   }
@@ -364,6 +406,13 @@ export function GMScreen() {
     if (!editedHotspotData || !selectedHotspotId) return;
     if (drawMode === "card") {
       navigator.clipboard.writeText(`cardX: ${editedHotspotData.cardX}, cardY: ${editedHotspotData.cardY}`);
+      setCopyFeedback(true);
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
+      return;
+    }
+    if (drawMode === "discovery") {
+      navigator.clipboard.writeText(`discoveryCardX: ${editedHotspotData.discoveryCardX}, discoveryCardY: ${editedHotspotData.discoveryCardY}`);
       setCopyFeedback(true);
       window.clearTimeout(copyTimerRef.current);
       copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
@@ -590,6 +639,8 @@ export function GMScreen() {
                 backgroundSrc={coordinateBg}
                 imageAspect={coordinateAspect}
                 scenarioId={activeScenario.id}
+                variant={coordinateVariant}
+                showInspectionDiscoveryPreview={drawMode === "discovery"}
               />
             </section>
 
@@ -642,6 +693,13 @@ export function GMScreen() {
                         onClick={() => { setDrawMode("card"); setClickCapture(null); }}
                       >
                         ▤ Ventana
+                      </button>
+                      <button
+                        type="button"
+                        className={`coord-tool__mode-btn ${drawMode === "discovery" ? "active" : ""}`}
+                        onClick={() => { setDrawMode("discovery"); setClickCapture(null); }}
+                      >
+                        Detalle inspeccion
                       </button>
                     </div>
                   </div>
@@ -740,13 +798,45 @@ export function GMScreen() {
                     </div>
                   )}
 
+                  {/* Inspection detail card controls */}
+                  {drawMode === "discovery" && (
+                    <div className="coord-tool__editor-row">
+                      <span className="coord-tool__label">Detalle</span>
+                      <div className="coord-tool__click-points">
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "discovery" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "discovery" ? null : "discovery")}
+                        >
+                          {clickCapture === "discovery"
+                            ? "Colocando detalle..."
+                            : discoveryCardPosition
+                              ? `Detalle (${discoveryCardPosition.discoveryCardX.toFixed(1)}, ${discoveryCardPosition.discoveryCardY.toFixed(1)})`
+                              : "Colocar detalle"}
+                        </button>
+                        <button
+                          type="button"
+                          className="coord-tool__click-btn"
+                          onClick={() => {
+                            const hs = savedCoordinateTargets.find((t) => t.id === selectedHotspotId);
+                            if (hs) setDiscoveryCardPosition(getDefaultDiscoveryCardPosition({ ...hs, discoveryCardX: undefined, discoveryCardY: undefined }));
+                          }}
+                        >
+                          Auto
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Result row */}
                   {editedHotspotData && (
                     <div className="coord-tool__result">
                       <code className="coord-tool__result-code">
                         {drawMode === "card"
                           ? `cardX: ${editedHotspotData.cardX}, cardY: ${editedHotspotData.cardY}`
-                          : `x: ${editedHotspotData.x}, y: ${editedHotspotData.y}, w: ${editedHotspotData.w}, h: ${editedHotspotData.h}`}
+                          : drawMode === "discovery"
+                            ? `discoveryCardX: ${editedHotspotData.discoveryCardX}, discoveryCardY: ${editedHotspotData.discoveryCardY}`
+                            : `x: ${editedHotspotData.x}, y: ${editedHotspotData.y}, w: ${editedHotspotData.w}, h: ${editedHotspotData.h}`}
                         {editedHotspotData.points && ` · ${editedHotspotData.points.length} pts`}
                       </code>
                       <div className="coord-tool__actions">

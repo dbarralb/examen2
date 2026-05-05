@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { NBadge } from "./e2";
 import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
 import { DeviceConsole } from "./DeviceConsole.jsx";
@@ -6,7 +6,7 @@ import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
-import { getContainerOpenState, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { getContainerOpenState, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 
@@ -169,6 +169,26 @@ function getTargetCardStyle(target) {
   };
 }
 
+function getDiscoveryCardStyle(target) {
+  if (Number.isFinite(target.discoveryCardX) && Number.isFinite(target.discoveryCardY)) {
+    return {
+      left: `${target.discoveryCardX}%`,
+      top: `${target.discoveryCardY}%`,
+      "--discovery-card-offset-x": "-50%",
+      "--discovery-card-offset-y": "-50%",
+    };
+  }
+
+  const cardStyle = getTargetCardStyle(target);
+  const side = getTargetCardSide(target);
+
+  return {
+    ...cardStyle,
+    "--discovery-card-offset-x": side === "left" ? "calc(-100% - 16px)" : "calc(264px + 16px)",
+    "--discovery-card-offset-y": cardStyle["--object-card-offset-y"] || "0px",
+  };
+}
+
 // SVG preview rendered inside scene-map-world (transforms with zoom/pan)
 function DrawingPreviewSVG({ drawingState }) {
   const { mode, p1, p2, polygonPoints, cursorPos } = drawingState;
@@ -274,6 +294,7 @@ export function SceneMap({
   onCursorMove = null,
   drawingState = null,
   focusSelectedTarget = false,
+  showInspectionDiscoveryPreview = false,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -296,6 +317,8 @@ export function SceneMap({
       selectedFocusTarget.h,
       selectedFocusTarget.cardX,
       selectedFocusTarget.cardY,
+      selectedFocusTarget.discoveryCardX,
+      selectedFocusTarget.discoveryCardY,
       selectedFocusTarget.points?.length || 0,
     ].join(":")
     : "";
@@ -619,8 +642,13 @@ export function SceneMap({
           {visibleTargets.map((target) => {
             const isOpen = selectedTargetId === target.id;
             const targetImage = getTargetImage(target, gameState, scenarioId, variant);
+            const inspectionDiscovery = getInspectionDiscovery(target.id, gameState, scenarioId, variant);
+            const previewInspectionDiscovery = showInspectionDiscoveryPreview && target.id === selectedTargetId
+              ? inspectionDiscovery || getInspectionDiscovery(target.id, { inspectionDiscoveries: { [target.id]: true } }, scenarioId, variant)
+              : inspectionDiscovery;
 
             return (
+              <Fragment key={`${target.id}-cards`}>
               <article
                 key={`${target.id}-card`}
                 className={`scene-object-card ${isOpen ? "open" : ""}`}
@@ -711,6 +739,23 @@ export function SceneMap({
                   )}
                 </section>
               </article>
+              {previewInspectionDiscovery && (
+                <aside
+                  key={`${target.id}-inspection-card`}
+                  className={`scene-inspection-card ${isOpen ? "open" : ""}`}
+                  style={getDiscoveryCardStyle(target)}
+                  aria-hidden={!isOpen}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  <div className="scene-inspection-card-image" aria-label={previewInspectionDiscovery.assetDev}>
+                    <span>{previewInspectionDiscovery.assetDev}</span>
+                  </div>
+                  <strong>{previewInspectionDiscovery.cipherName}</strong>
+                  <p>{previewInspectionDiscovery.description}</p>
+                </aside>
+              )}
+              </Fragment>
             );
           })}
         </InteractiveLayer>

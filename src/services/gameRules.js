@@ -11,7 +11,8 @@
 // the adventure content is written.
 // ---------------------------------------------------------------------------
 
-import { resolveScenarioAction } from "../data/scenarioContent.js";
+import { isInteractionAction } from "../data/actionTypes.js";
+import { LOCKER_STATES, RESONANCE_COSTS, resolveScenarioAction } from "../data/scenarioContent.js";
 
 // ---------------------------------------------------------------------------
 // 1. Alarm system
@@ -110,9 +111,20 @@ export function getAlarmRecommendations(gameState) {
 // 3. Pulse helpers
 // ---------------------------------------------------------------------------
 
-/** Build shared flags for the current pulse (e.g. combo detection). Blank by default. */
-export function buildPulseFlags(_pulseActions, _gameState) {
-  return {};
+/** Build shared flags for the current pulse (e.g. combo detection). */
+export function buildPulseFlags(pulseActions = [], gameState = {}) {
+  const resonanceValue = Number(gameState.resonance?.value || 0);
+  const lockerState = gameState.hotspotStates?.taquillas || LOCKER_STATES.LOCKED;
+  const hasLockerFusionAction = pulseActions.some((action) => (
+    action.target === "taquillas"
+    && isInteractionAction(action)
+  ));
+
+  return {
+    canFuseLocker: lockerState === LOCKER_STATES.LOCKED
+      && hasLockerFusionAction
+      && resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION,
+  };
 }
 
 /** Resolve an item-card combo. Returns null until scenario logic is wired. */
@@ -138,10 +150,10 @@ export function checkPuzzleCompletion() {
  * Scenario-specific logic (puzzle mutations, flag changes, noise generation)
  * should be injected here when adventure content is written.
  */
-export function resolveActionWithResult(context, action) {
+export function resolveActionWithResult(context, action, pulseFlags = {}) {
   if (!context.metricsDelta) context.metricsDelta = {};
 
-  const scenarioResult = resolveScenarioAction(context, action);
+  const scenarioResult = resolveScenarioAction(context, action, pulseFlags);
   if (scenarioResult) {
     return scenarioResult;
   }

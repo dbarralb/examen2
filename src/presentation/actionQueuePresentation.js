@@ -3,6 +3,7 @@ import chipEngineeringImage from "../../assets/Pantalla de juego/Chips/Chip_Inge
 import chipIntelligenceImage from "../../assets/Pantalla de juego/Chips/Chip_Inteligencia.png";
 import chipMagicImage from "../../assets/Pantalla de juego/Chips/Chip_Magia.png";
 import { getCard, getTarget } from "../data/gameData.js";
+import { getActionDescription } from "../data/actionTypes.js";
 
 export const actionChipBlueprint = {
   actionTypes: {
@@ -27,16 +28,14 @@ export const actionChipBlueprint = {
 };
 
 export const actionInfoCopy = {
-  mirar_bien: "Observa detalles y protocolos para descubrir como interactuar con seguridad.",
-  consultar_apuntes: "Contrasta pistas con teoria y revela la logica oculta de un sistema.",
-  apanar: "Ajusta mecanismos con precision para preparar una apertura o reparacion limpia.",
-  puenteo_rapido: "Improvisa un bypass tecnico rapido con riesgo si el sistema no esta entendido.",
-  desmontar: "Abre, separa o inutiliza componentes fisicos de un dispositivo.",
-  a_lo_bestia: "Aplica fuerza bruta para romper bloqueos cuando la delicadeza deja de importar.",
-  empujar: "Aplica presion directa para mover, abrir o forzar un objeto fisico.",
-  y_si: "Prueba una solucion improbable que puede conectar patrones que nadie esperaba.",
-  esto_vibra_raro: "Percibe senales extranas y detecta patrones ocultos en el entorno.",
-  ritual_improvisado: "Convierte intuicion rara en una secuencia experimental de activacion.",
+  empollon_accion_inspeccion: "Inspeccionar una zona para obtener resonancia de anomalia.",
+  empollon_accion_interaccion: "Manipula un objeto para intentar arreglarlo o resolverlo.",
+  manitas_accion_inspeccion: "Inspeccionar una zona para obtener resonancia de anomalia.",
+  manitas_accion_interaccion: "Manipula un objeto para intentar arreglarlo o resolverlo.",
+  guaperas_accion_inspeccion: "Inspeccionar una zona para obtener resonancia de anomalia.",
+  guaperas_accion_interaccion: "Manipula un objeto para intentar arreglarlo o resolverlo.",
+  mistica_accion_inspeccion: "Inspeccionar una zona para obtener resonancia de anomalia.",
+  mistica_accion_interaccion: "Manipula un objeto para intentar arreglarlo o resolverlo.",
 };
 
 export function getActionChipType(action) {
@@ -97,7 +96,7 @@ export function buildActionInfoModel(card) {
     id: card?.id || "accion",
     cardLabel: formatCardLabel(card),
     actionLabel: actionBlueprint.label,
-    description: actionInfoCopy[card?.id] || "Ejecuta una accion narrativa sobre el objeto elegido.",
+    description: card?.description || actionInfoCopy[card?.id] || getActionDescription(card) || "Ejecuta una accion narrativa sobre el objeto elegido.",
   };
 }
 

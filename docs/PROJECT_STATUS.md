@@ -1,7 +1,7 @@
 # Estado del Proyecto - El Examen II
 
-**Fecha de ultima actualizacion:** 2026-05-01  
-**Rama activa:** `react-oficial`  
+**Fecha de ultima actualizacion:** 2026-05-05
+**Rama activa:** `react-oficial`
 **Historico:** `docs/OLD`
 
 ---
@@ -25,6 +25,9 @@
 - [x] Inventario: barra de 3 slots + grid de objetos por contenedor
 - [x] Sistema de pulso manual controlado por GM
 - [x] Minijuego de carga de accion
+- [x] Acciones atomicas por rol: `Accion_Inspeccion` y `Accion_Interaccion`
+- [x] Descubrimiento de inspeccion en taquillas con detalle A/B adyacente a la card de objeto
+- [x] Editor GM de posicion para el detalle de inspeccion en el mapa de coordenadas
 - [x] Sistema de alarma y efectos GM desacoplados del puzzle antiguo
 - [x] Monitores de jugadores en panel GM
 - [x] Chat entre jugadores y GM
@@ -51,6 +54,7 @@
 | Archivo | Para editar |
 |---|---|
 | `docs/INDEX.md` | Indice y mapa de busqueda de documentacion |
+| `src/data/actionTypes.js` | Tipos atomicos de accion y descripciones genericas |
 | `src/data/scenarioData.js` | Alta de escenarios y fondos por variante |
 | `src/data/scenarioContent.js` | Hotspots, items, feedback, consola y resolver inicial por escenario |
 | `src/data/gameData.js` | Familias y cartas globales |

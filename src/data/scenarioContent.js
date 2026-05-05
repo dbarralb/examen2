@@ -1,3 +1,43 @@
+import { getActionLabel, isInspectionAction, isInteractionAction } from "./actionTypes.js";
+
+export const LOCKER_STATES = {
+  LOCKED: "LOCKER_LOCKED",
+  FUSION: "LOCKER_FUSION",
+  OPEN: "LOCKER_OPEN",
+};
+
+export const PANEL_STATES = {
+  NEEDS_MODULE: "PANEL_NEEDS_MODULE",
+  FUSION: "PANEL_FUSION",
+  OK: "PANEL_OK",
+};
+
+export const DOOR_STATES = {
+  LOCKED: "DOOR_LOCKED",
+  OPEN: "DOOR_OPEN",
+};
+
+export const RESONANCE_COSTS = {
+  LOCKER_FUSION: 6,
+};
+
+export const SCENARIO_ITEMS = {
+  MODULE_SYNC: "MODULE_SYNC_01",
+};
+
+const LOCKER_INSPECTION_DISCOVERY = {
+  A: {
+    assetDev: "LOCKER_PADLOCK_DETAIL_VAR_A",
+    cipherName: "C%$D$%0",
+    description: "El candado tiene carcasa y arco, pero la zona de lectura esta incompleta. Hay una guia vacia donde deberia encajar un mecanismo.",
+  },
+  B: {
+    assetDev: "LOCKER_MECHANISM_DETAIL_VAR_B",
+    cipherName: "C%$D$%0",
+    description: "No ves la carcasa completa: ves el mecanismo interno. Las marcas verdes coinciden con la guia del candado de la otra realidad.",
+  },
+};
+
 const sandboxHotspots = [
   { id: "hotspot_1", label: "Hotspot 1", x: 20, y: 38, w: 9, h: 9, family: "objeto", hotspotClass: "generico" },
   { id: "hotspot_2", label: "Hotspot 2", x: 48, y: 38, w: 9, h: 9, family: "objeto", hotspotClass: "generico" },
@@ -93,16 +133,22 @@ const almacenItems = {
   A: {
     taquillas: [
       {
-        id: "nota_plan_a",
-        label: "Nota arrugada",
-        type: "clue",
-        content: "El plan escrito aqui no coincide del todo con la pizarra. Alguien cambio un paso.",
+        id: SCENARIO_ITEMS.MODULE_SYNC,
+        label: "Modulo de sincronizacion",
+        type: "usable",
+        content: "Modulo nacido de la fusion de la taquilla. El panel lo necesita para activar la salida.",
       },
       {
-        id: "cinta_aislante",
-        label: "Cinta aislante",
-        type: "usable",
-        content: "Cinta vieja, suficiente para sujetar un cable o marcar una posicion.",
+        id: "NOTE_PANEL_MODULE_01",
+        label: "Nota del mecanismo",
+        type: "clue",
+        content: "El panel no abre con el codigo solo. Primero debe reconocer el modulo.",
+      },
+      {
+        id: "HINT_BALONES_01",
+        label: "Pista incompleta del codigo",
+        type: "clue",
+        content: "Primer digito: numero de balones correctos.",
       },
     ],
     caja: [
@@ -117,10 +163,10 @@ const almacenItems = {
   B: {
     taquillas: [
       {
-        id: "destornillador_corto",
-        label: "Destornillador corto",
+        id: SCENARIO_ITEMS.MODULE_SYNC,
+        label: "Modulo de sincronizacion",
         type: "usable",
-        content: "Herramienta pequena. Encaja con tornillos de panel, si alguien sabe donde aplicarla.",
+        content: "Modulo nacido de la fusion de la taquilla. El panel lo necesita para activar la salida.",
       },
     ],
     caja: [
@@ -138,7 +184,7 @@ const almacenItems = {
 
 const almacenFeedback = {
   pizarra: "El plan para robar el examen aparece incompleto. Conviene compararlo con lo que ven otros.",
-  taquillas: "Algunas puertas no coinciden entre realidades. Puede haber herramientas o pistas dentro.",
+  taquillas: "La taquilla no cede: A muestra un cierre claro y B sugiere una pieza mecanica que no encaja. Necesita fusion.",
   caja: "La caja introduce una regla: repetir informacion no la vuelve verdadera.",
   balones: "Los balones no mantienen la misma cantidad ni posicion cuando se comparan versiones.",
   panel_salida: "El panel combina codigo numerico y cierre fisico. Ninguna mitad basta por si sola.",
@@ -205,8 +251,22 @@ export function getScenarioTargetImage(_target, _gameState, _scenarioId, _varian
   return "";
 }
 
+export function getScenarioInspectionDiscovery(targetId, gameState = {}, scenarioId = "almacen", variant = "A") {
+  if (scenarioId !== "almacen" || targetId !== "taquillas") return null;
+  const inspected = Boolean(gameState.inspectionDiscoveries?.taquillas || gameState.flags?.contradiccionTaquillas);
+  if (!inspected) return null;
+
+  return LOCKER_INSPECTION_DISCOVERY[variant] || LOCKER_INSPECTION_DISCOVERY.A;
+}
+
 export function getScenarioTargetStateLabel(target, gameState = {}) {
   if (!target?.id) return "-";
+  if (target.id === "taquillas") {
+    return gameState.hotspotStates?.taquillas || LOCKER_STATES.LOCKED;
+  }
+  if (target.id === "panel_salida") {
+    return gameState.hotspotStates?.panel_salida || PANEL_STATES.NEEDS_MODULE;
+  }
   return gameState.hotspotStates?.[target.id] || "idle";
 }
 
@@ -214,6 +274,9 @@ export function getScenarioContainerOpenState(targetId, gameState = {}, scenario
   const target = getScenarioTarget(targetId, scenarioId, variant);
   if (!target || target.family !== "contenedor") return null;
   const state = gameState.hotspotStates?.[targetId];
+  if (targetId === "taquillas") {
+    return state === LOCKER_STATES.OPEN;
+  }
   return state !== "locked" && state !== "closed_locked";
 }
 
@@ -238,18 +301,18 @@ export function resolveScenarioDeviceCommand({ targetId, command, gameState }) {
 
   const flags = gameState?.flags || {};
   if (command.name === "intentar_salida") {
-    if (flags.codigoAlmacenCompleto && flags.mecanismoFisicoLiberado) {
+    if (flags.codigoAlmacenCompleto && gameState?.hotspotStates?.panel_salida === PANEL_STATES.OK) {
       return {
         patch: {
           "gameState/flags/almacenCompletado": true,
-          "gameState/hotspotStates/panel_salida": "open",
+          "gameState/hotspotStates/puerta": DOOR_STATES.OPEN,
         },
-        lines: ["Salida desbloqueada.", "El panel acepta codigo y mecanismo fisico."],
+        lines: ["Salida desbloqueada.", "El panel fusionado acepta el codigo y abre la puerta."],
         type: "system",
       };
     }
     return {
-      lines: ["Salida denegada.", "Falta combinar codigo numerico y mecanismo fisico."],
+      lines: ["Salida denegada.", "Falta modulo, fusion del panel o codigo correcto."],
       type: "error",
     };
   }
@@ -260,7 +323,35 @@ export function resolveScenarioDeviceCommand({ targetId, command, gameState }) {
   };
 }
 
-export function resolveScenarioAction(context, action) {
+function ensureResonanceState(gameState) {
+  if (!gameState.resonance || typeof gameState.resonance !== "object") {
+    gameState.resonance = { value: 0, spent: 0, discoveries: {} };
+  }
+  if (!gameState.resonance.discoveries) gameState.resonance.discoveries = {};
+  gameState.resonance.value = Number(gameState.resonance.value || 0);
+  gameState.resonance.spent = Number(gameState.resonance.spent || 0);
+  return gameState.resonance;
+}
+
+function addResonanceOnce(gameState, discoveryId, amount) {
+  const resonance = ensureResonanceState(gameState);
+  if (resonance.discoveries[discoveryId]) return 0;
+
+  resonance.discoveries[discoveryId] = true;
+  resonance.value += amount;
+  return amount;
+}
+
+function consumeResonance(gameState, amount) {
+  const resonance = ensureResonanceState(gameState);
+  if (resonance.value < amount) return false;
+
+  resonance.value -= amount;
+  resonance.spent += amount;
+  return true;
+}
+
+export function resolveScenarioAction(context, action, pulseFlags = {}) {
   const scenarioId = context.sessionState?.scenarioId || "almacen";
   if (scenarioId !== "almacen") {
     return null;
@@ -269,57 +360,116 @@ export function resolveScenarioAction(context, action) {
   const gameState = context.gameState;
   if (!gameState.flags) gameState.flags = {};
   if (!gameState.hotspotStates) gameState.hotspotStates = {};
+  if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
+  ensureResonanceState(gameState);
+  gameState.hotspotStates.taquillas = gameState.hotspotStates.taquillas || LOCKER_STATES.LOCKED;
+  gameState.hotspotStates.panel_salida = gameState.hotspotStates.panel_salida || PANEL_STATES.NEEDS_MODULE;
+  gameState.hotspotStates.puerta = gameState.hotspotStates.puerta || DOOR_STATES.LOCKED;
 
-  let message = `${action.role} usa ${action.card} sobre ${action.target}. La informacion queda registrada.`;
+  const actionLabel = getActionLabel(action);
+  const isInspection = isInspectionAction(action);
+  const isInteraction = isInteractionAction(action);
+
+  let message = `${action.role} usa ${actionLabel} sobre ${action.target}. La informacion queda registrada.`;
   let feedback = "Accion registrada. Comparadla con las otras perspectivas.";
 
-  if (action.target === "pizarra" && action.card === "mirar_bien") {
+  if (action.target === "taquillas") {
+    const lockerState = gameState.hotspotStates.taquillas;
+
+    if (lockerState === LOCKER_STATES.OPEN) {
+      feedback = "La taquilla fusionada ya esta abierta. Su contenido puede revisarse sin forzar nada mas.";
+      message = "La taquilla permanece abierta tras la fusion.";
+    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction) {
+      gameState.hotspotStates.taquillas = LOCKER_STATES.OPEN;
+      gameState.flags.mecanismoFisicoLocalizado = true;
+      gameState.flags.mecanismoFisicoLiberado = true;
+      gameState.flags.moduleSyncAvailable = true;
+      feedback = "La taquilla fusionada se abre: el cierre de A y el mecanismo de B encajan por fin en una sola realidad.";
+      message = "La taquilla se abre y deja disponible el modulo de sincronizacion.";
+    } else if (lockerState === LOCKER_STATES.LOCKED && isInteraction) {
+      if (pulseFlags.canFuseLocker && consumeResonance(gameState, RESONANCE_COSTS.LOCKER_FUSION)) {
+        gameState.hotspotStates.taquillas = LOCKER_STATES.FUSION;
+        gameState.flags.lockerFusionDone = true;
+        gameState.flags.mecanismoFisicoLocalizado = true;
+        feedback = "El pulso consume resonancia y fusiona la taquilla. Ahora el cierre existe de forma estable y puede abrirse.";
+        message = "El pulso fusiona la taquilla entre A y B.";
+      } else {
+        feedback = "La taquilla vibra con el pulso, pero no hay resonancia suficiente para estabilizar la fusion.";
+        message = "La taquilla intenta fusionarse, pero falta resonancia.";
+      }
+    } else if (isInspection) {
+      const gained = addResonanceOnce(gameState, "contradiction_locker_mechanism", 3);
+      gameState.inspectionDiscoveries.taquillas = true;
+      gameState.flags.contradiccionTaquillas = true;
+      feedback = gained > 0
+        ? "La taquilla confirma una contradiccion: A muestra el bloqueo, B muestra la logica mecanica. La resonancia aumenta."
+        : "La contradiccion de la taquilla ya esta detectada. Aun necesita un pulso con resonancia suficiente.";
+      message = gained > 0
+        ? "El grupo detecta una contradiccion resonante en la taquilla."
+        : "La taquilla sigue bloqueada hasta que se produzca una fusion.";
+    } else {
+      feedback = "La taquilla no responde a esta accion. Primero conviene inspeccionarla o estabilizar su fusion.";
+      message = "La taquilla sigue bloqueada.";
+    }
+  }
+
+  if (action.target === "pizarra" && isInspection) {
     gameState.flags.codigoAlmacenParcial = true;
     feedback = "La pizarra contiene una parte fiable del codigo, pero hay un paso que parece desplazado.";
-    message = "El Empollon extrae una regla parcial de la pizarra.";
+    message = "El grupo extrae una regla parcial de la pizarra.";
   }
 
-  if (action.target === "taquillas" && ["apanar", "desmontar"].includes(action.card)) {
-    gameState.flags.mecanismoFisicoLocalizado = true;
-    feedback = "Las taquillas revelan que el cierre tiene una pieza fisica oculta en otra realidad.";
-    message = "La Manitas localiza el mecanismo fisico asociado a la salida.";
-  }
-
-  if (action.target === "caja" && ["y_si", "esto_vibra_raro"].includes(action.card)) {
+  if (action.target === "caja" && isInspection) {
+    const gained = addResonanceOnce(gameState, "contradiction_box_duplicate", 2);
     gameState.flags.objetosDuplicadosDetectados = true;
-    feedback = "La caja confirma que un duplicado puede ser falso aunque parezca identico.";
-    message = "La Mistica detecta la regla de duplicados falsos.";
+    feedback = gained > 0
+      ? "La caja confirma una contradiccion: un duplicado puede ser falso aunque parezca identico. La resonancia aumenta."
+      : "La caja ya habia revelado su contradiccion. La regla sigue siendo util, pero no genera mas resonancia.";
+    message = gained > 0
+      ? "El grupo detecta una contradiccion resonante en la caja."
+      : "El grupo revisa una contradiccion ya registrada en la caja.";
   }
 
-  if (action.target === "balones" && action.card === "empujar") {
+  if (action.target === "balones" && isInspection) {
+    const gained = addResonanceOnce(gameState, "contradiction_balls_count", 3);
     gameState.flags.contradiccionBalones = true;
-    feedback = "Al moverlos, la cantidad de balones deja de cuadrar entre realidades.";
-    message = "El Guaperas fuerza una contradiccion visible en los balones.";
+    feedback = gained > 0
+      ? "Los balones dejan de cuadrar entre realidades. La contradiccion genera resonancia."
+      : "La contradiccion de los balones ya esta registrada. El conteo sigue siendo una pista para el codigo.";
+    message = gained > 0
+      ? "El grupo detecta una contradiccion resonante en los balones."
+      : "Los balones confirman una contradiccion ya detectada.";
   }
 
-  if (action.target === "panel_salida" && action.card === "consultar_apuntes") {
-    gameState.flags.codigoAlmacenCompleto = Boolean(gameState.flags.codigoAlmacenParcial);
-    feedback = gameState.flags.codigoAlmacenCompleto
-      ? "El codigo queda completo, pero el cierre fisico sigue pendiente."
-      : "El panel pide una secuencia que todavia no esta completa.";
-    message = gameState.flags.codigoAlmacenCompleto
-      ? "El Empollon completa la logica numerica del panel."
-      : "El Empollon confirma que falta una pista para el codigo.";
+  if (action.target === "panel_salida" && isInspection) {
+    if (gameState.hotspotStates.panel_salida === PANEL_STATES.FUSION) {
+      gameState.flags.codigoAlmacenCompleto = true;
+      gameState.hotspotStates.panel_salida = PANEL_STATES.OK;
+      gameState.flags.almacenSalidaLista = true;
+      feedback = "El panel fusionado acepta el codigo reconstruido. La puerta ya puede abrirse.";
+      message = "El grupo introduce el codigo reconstruido y el panel queda validado.";
+    } else {
+      gameState.flags.codigoAlmacenParcial = true;
+      feedback = "El codigo empieza a reconstruirse, pero el panel aun necesita el modulo para activarse.";
+      message = "El grupo obtiene parte del codigo del panel.";
+    }
   }
 
-  if (action.target === "panel_salida" && ["apanar", "puenteo_rapido"].includes(action.card)) {
-    gameState.flags.mecanismoFisicoLiberado = Boolean(gameState.flags.mecanismoFisicoLocalizado);
-    feedback = gameState.flags.mecanismoFisicoLiberado
-      ? "El cierre fisico queda liberado. Ahora falta que el codigo sea correcto."
-      : "El panel tiene una parte fisica que aun no habeis localizado.";
-    message = gameState.flags.mecanismoFisicoLiberado
-      ? "La Manitas libera el mecanismo fisico del panel."
-      : "La Manitas confirma que falta localizar el mecanismo.";
+  if (action.target === "panel_salida" && isInteraction) {
+    const hasModule = action.itemId === SCENARIO_ITEMS.MODULE_SYNC || gameState.flags.moduleSyncAvailable;
+    if (hasModule && gameState.hotspotStates.taquillas === LOCKER_STATES.OPEN) {
+      gameState.flags.moduleSyncInserted = true;
+      gameState.hotspotStates.panel_salida = PANEL_STATES.FUSION;
+      feedback = "El modulo encaja en el panel. El panel se fusiona y queda activo para introducir el codigo.";
+      message = "El grupo coloca el modulo y activa la fusion del panel.";
+    } else {
+      feedback = "El panel sigue bloqueado. Primero hay que abrir la taquilla fusionada y obtener el modulo.";
+      message = "El panel rechaza la manipulacion porque falta el modulo.";
+    }
   }
 
-  if (gameState.flags.codigoAlmacenCompleto && gameState.flags.mecanismoFisicoLiberado) {
+  if (gameState.flags.codigoAlmacenCompleto && gameState.hotspotStates.panel_salida === PANEL_STATES.OK) {
     gameState.flags.almacenSalidaLista = true;
-    gameState.hotspotStates.panel_salida = "ready";
   }
 
   context.targetFeedback[action.target] = feedback;

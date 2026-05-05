@@ -28,6 +28,8 @@ El sistema antiguo `Instituto Newton Design System` esta archivado en `docs/OLD/
 
 `src/services/gameRules.js` mantiene la alarma y delega la resolucion narrativa a `resolveScenarioAction()`.
 
+`src/data/actionTypes.js` define los dos tipos atomicos de accion del MVP: `Accion_Inspeccion` y `Accion_Interaccion`. Las cartas siguen siendo especificas por rol para conservar ilustraciones y usos independientes, pero el resolver del puzzle trabaja con el tipo atomico de accion.
+
 El panel GM puede ajustar hotspots por escenario y variante. Esos overrides se guardan en `/hotspotOverrides` con clave `scenario_variant` y `SceneMap` los aplica tambien en la vista de jugador.
 
 ## Estado inicial
@@ -69,7 +71,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 2. Jugadores reclaman rol.
 3. La partida arranca automaticamente cuando los roles estan completos, o manualmente desde GM con al menos 1 jugador preparado.
 4. Cada jugador ve su variante del almacen.
-5. Jugador abre hotspot, arrastra carta/item y completa minijuego.
+5. Jugador abre hotspot, arrastra `Accion_Inspeccion`, `Accion_Interaccion` o item y completa minijuego.
 6. La accion entra en `queuedActions`.
 7. GM inicia pulso.
 8. `pulseService` ejecuta acciones y llama a `resolveActionWithResult()`.
@@ -82,6 +84,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 |---|---|
 | `src/App.jsx` | Router por query params |
 | `src/data/scenarioData.js` | Escenarios y fondos |
+| `src/data/actionTypes.js` | Tipos atomicos de accion |
 | `src/data/scenarioContent.js` | Contenido jugable por escenario |
 | `src/data/gameData.js` | Cartas, familias y accessors globales |
 | `src/data/roles.js` | Roles activos |

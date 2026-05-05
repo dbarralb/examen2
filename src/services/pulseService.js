@@ -1,5 +1,6 @@
 import { createId, getOrCreateClientId } from "./clientIdentity.js";
 import { firebaseGet, firebaseGetWithEtag, firebasePatch, firebasePutIfMatch } from "./firebaseClient.js";
+import { getActionLabel } from "../data/actionTypes.js";
 import { buildPulseFlags, createLastRoleAction, resolveActionWithResult } from "./gameRules.js";
 import { createEmptyResultOverlay, createInitialGameState, createInitialPulseState, createInitialTargetFeedback, normalizeRemoteList } from "./remoteState.js";
 
@@ -130,7 +131,7 @@ export async function startManualPulse({ onStatus } = {}) {
       pulseState.currentActionId = liveAction.id;
       pulseState.updatedAt = startedAt;
       lastRoleActions[liveAction.role] = createLastRoleAction(liveAction, "ejecutando");
-      actionLog.unshift(`Ejecutando ${index + 1}/${pulseActions.length}: ${liveAction.card} sobre ${liveAction.target}.`);
+      actionLog.unshift(`Ejecutando ${index + 1}/${pulseActions.length}: ${getActionLabel(liveAction)} sobre ${liveAction.target}.`);
 
       await firebasePatch("", {
         [`queuedActions/${liveAction.id}`]: liveAction,
@@ -139,7 +140,7 @@ export async function startManualPulse({ onStatus } = {}) {
         lastRoleActions,
       });
 
-      onStatus?.(`Ejecutando ${index + 1}/${pulseActions.length}: ${liveAction.card}.`);
+      onStatus?.(`Ejecutando ${index + 1}/${pulseActions.length}: ${getActionLabel(liveAction)}.`);
       await waitMs((liveAction.executionTimeSeconds || timing.actionExecutionSeconds) * 1000);
 
       const resultMessage = resolveActionWithResult(context, liveAction, pulseFlags);

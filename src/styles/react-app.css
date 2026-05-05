@@ -2531,6 +2531,68 @@ a {
   align-self: stretch;
 }
 
+.scene-inspection-card {
+  position: absolute;
+  z-index: 10;
+  left: inherit;
+  top: inherit;
+  width: 220px;
+  padding: 12px;
+  border: 1px solid rgba(94, 244, 131, 0.34);
+  border-radius: 9px;
+  background: rgba(23, 35, 33, 0.96);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3), inset 0 0 18px rgba(94, 244, 131, 0.04);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(var(--discovery-card-offset-x), calc(var(--discovery-card-offset-y) + 8px));
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.scene-inspection-card.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(var(--discovery-card-offset-x), var(--discovery-card-offset-y));
+}
+
+.scene-inspection-card-image {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  margin-bottom: 10px;
+  border: 1px dashed rgba(207, 255, 138, 0.42);
+  background:
+    linear-gradient(135deg, rgba(233, 46, 230, 0.12), transparent 42%),
+    radial-gradient(circle at 68% 32%, rgba(94, 244, 131, 0.16), transparent 35%),
+    rgba(10, 14, 12, 0.48);
+}
+
+.scene-inspection-card-image span {
+  max-width: 92%;
+  color: rgba(207, 255, 138, 0.72);
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.scene-inspection-card strong {
+  display: block;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.scene-inspection-card p {
+  margin: 8px 0 0;
+  color: var(--fg-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 /* === Scene dim overlay (inside scene-map-world, between structure and interactive) === */
 
 .scene-target-dim {
