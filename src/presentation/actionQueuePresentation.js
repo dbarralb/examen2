@@ -1,16 +1,12 @@
-import chipForceImage from "../../assets/Pantalla de juego/Chips/Chip_Fuerza.png";
 import chipEngineeringImage from "../../assets/Pantalla de juego/Chips/Chip_Ingenieria.png";
 import chipIntelligenceImage from "../../assets/Pantalla de juego/Chips/Chip_Inteligencia.png";
-import chipMagicImage from "../../assets/Pantalla de juego/Chips/Chip_Magia.png";
 import { getCard, getTarget } from "../data/gameData.js";
-import { getActionDescription } from "../data/actionTypes.js";
+import { ACTION_KINDS, getActionDescription, getActionKind } from "../data/actionTypes.js";
 
 export const actionChipBlueprint = {
   actionTypes: {
-    force: { label: "Fuerza", accentClassName: "force", chipImage: chipForceImage },
-    intelligence: { label: "Inteligencia", accentClassName: "intelligence", chipImage: chipIntelligenceImage },
-    magic: { label: "Magia", accentClassName: "magic", chipImage: chipMagicImage },
-    engineering: { label: "Ingenieria", accentClassName: "engineering", chipImage: chipEngineeringImage },
+    revelation: { label: "Revelación", accentClassName: "revelation", chipImage: chipIntelligenceImage },
+    alteration: { label: "Alteración", accentClassName: "alteration", chipImage: chipEngineeringImage },
   },
   targetFamilies: {
     access: { label: "Acceso", icon: "|>", accentClassName: "door" },
@@ -39,21 +35,18 @@ export const actionInfoCopy = {
 };
 
 export function getActionChipType(action) {
-  const roleId = action?.role || getCard(action?.card)?.roles?.[0];
+  const card = typeof action?.card === "string" ? getCard(action.card) : null;
+  const actionKind = getActionKind(action) || getActionKind(card);
 
-  if (roleId === "guaperas") {
-    return "force";
+  if (actionKind === ACTION_KINDS.INSPECTION) {
+    return "revelation";
   }
 
-  if (roleId === "empollon") {
-    return "intelligence";
+  if (actionKind === ACTION_KINDS.INTERACTION) {
+    return "alteration";
   }
 
-  if (roleId === "mistica") {
-    return "magic";
-  }
-
-  return "engineering";
+  return "alteration";
 }
 
 export function getTargetFamily(targetId) {
@@ -90,7 +83,7 @@ export function formatCardLabel(cardOrAction) {
 
 export function buildActionInfoModel(card) {
   const actionType = getActionChipType({ card: card?.id });
-  const actionBlueprint = actionChipBlueprint.actionTypes[actionType] || actionChipBlueprint.actionTypes.engineering;
+  const actionBlueprint = actionChipBlueprint.actionTypes[actionType] || actionChipBlueprint.actionTypes.alteration;
 
   return {
     id: card?.id || "accion",
@@ -104,7 +97,7 @@ export function buildQueuedActionChipModel(action) {
   const actionType = getActionChipType(action);
   const targetFamily = getTargetFamily(action?.target);
   const status = action?.status || "queued";
-  const actionBlueprint = actionChipBlueprint.actionTypes[actionType] || actionChipBlueprint.actionTypes.engineering;
+  const actionBlueprint = actionChipBlueprint.actionTypes[actionType] || actionChipBlueprint.actionTypes.alteration;
   const targetBlueprint = actionChipBlueprint.targetFamilies[targetFamily] || actionChipBlueprint.targetFamilies.generic;
   const statusBlueprint = actionChipBlueprint.statuses[status] || actionChipBlueprint.statuses.queued;
   const target = getTarget(action?.target);

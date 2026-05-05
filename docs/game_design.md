@@ -86,6 +86,8 @@ Cada rol conserva su identidad visual y narrativa, pero el MVP reduce la baraja 
 - `Accion_Inspeccion`: inspeccionar una zona para obtener resonancia de anomalia.
 - `Accion_Interaccion`: manipula un objeto para intentar arreglarlo o resolverlo.
 
+Las familias visibles de accion no son atributos del personaje. Para conservar la ambiguedad del sistema, toda inspeccion se presenta como **Revelación** y toda interaccion como **Alteración**. El rol aporta tono e ilustracion, pero no cambia la categoria mecanica de la carta.
+
 ## Regla fundamental
 
 No todo lo que ves es real.

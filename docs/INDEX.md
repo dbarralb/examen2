@@ -1,6 +1,6 @@
 # Indice de documentacion - El Examen II
 
-**Ultima actualizacion:** 2026-04-30  
+**Ultima actualizacion:** 2026-05-05  
 **Entrada recomendada:** `docs/PROJECT_STATUS.md`
 
 Este indice resume que documentacion existe, para que sirve y donde buscar cada tipo de respuesta. Los documentos de la raiz de `docs/` son la referencia activa. `docs/OLD/` es archivo historico: util para recuperar ideas, pero no debe tomarse como estado actual sin contrastarlo con codigo y `PROJECT_STATUS.md`.
@@ -188,10 +188,32 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 
 ---
 
-## 8. Rutina recomendada antes de cambios
+## 8. Matriz de cambios y actualizaciones asociadas
+
+Esta tabla funciona como checklist de mantenimiento. Cuando un cambio de codigo toca una de estas areas, hay que revisar tambien los documentos o archivos asociados antes de darlo por cerrado.
+
+| Tipo de cambio pedido | Revisar / actualizar normalmente | Motivo | Ejemplo reciente |
+|---|---|---|---|
+| Texto visible, feedback, tooltips, labels, consola, cartas, botones o UX writing | Codigo fuente correspondiente + `node scripts/export-texts.mjs` + `docs/textos_juego.csv` | El CSV es el inventario editable de copy. Si cambia texto visible y no se regenera, la hoja queda desfasada. | Cambio de "Cargar software", "Arrastra una accion a este puerto", descripciones del hallazgo de taquillas. |
+| Acciones, familias de accion, nombres de cartas o significado de `Accion_Inspeccion` / `Accion_Interaccion` | `src/data/actionTypes.js`, `src/data/gameData.js`, `src/presentation/actionQueuePresentation.js`, `docs/game_design.md`, `docs/textos_juego.csv` | Las acciones afectan a mecanica, presentacion, chips de cola y copy editable. | Cambio de familias visibles de Fuerza/Inteligencia/Magia/Ingenieria a Revelacion/Alteracion. |
+| Flujo de pulso, resonancia, fusion, resolucion de puzzle o estados de objetos | `src/services/pulseService.js`, `src/services/gameRules.js`, `src/data/scenarioContent.js`, `docs/architecture.md`, `docs/game_design.md`, `docs/PROJECT_STATUS.md` | Toca comportamiento sistemico y reglas narrativas; debe quedar explicado para futuras decisiones. | Fusion de taquilla tras resonancia y apertura posterior con accion de interaccion. |
+| Escenario, hotspots, variantes A/B, items, hallazgos o contenido del almacen | `src/data/scenarioData.js`, `src/data/scenarioContent.js`, `docs/game_design.md`, `docs/PROJECT_STATUS.md`, `docs/textos_juego.csv` si hay copy | Cambia lo que existe en la sala y lo que arte/diseno deben entender. | Hallazgo adyacente de inspeccion en taquillas con texto A/B y placeholder de asset. |
+| Herramientas del GM, mapa de coordenadas, overrides o monitores | `src/screens/GMScreen.jsx`, `src/components/SceneMap.jsx`, `docs/gm-operations.md`, `docs/architecture.md`, `docs/PROJECT_STATUS.md` | El GM necesita reglas operativas claras y el estado remoto debe seguir siendo trazable. | Editor GM de `discoveryCardX/discoveryCardY` para la ventana adyacente. |
+| UI de jugador, drop zones, inventario, minijuego o affordances de interaccion | Componentes/CSS afectados, `docs/textos_juego.csv`, `docs/game_design.md` si cambia el significado jugable | La UI no es solo visual: comunica reglas de accion y narrativa de interferencia. | Rediseño de la zona de drop como "Cargar software" con comportamiento de hackeo. |
+| Estado remoto, Firebase, seed inicial o rutas compartidas | `src/services/remoteState.js`, `src/services/firebaseClient.js`, `docs/architecture.md`, `docs/firebase-security.md` si toca permisos, `docs/PROJECT_STATUS.md` | Evita que la documentacion diga una ruta o garantia distinta a la real. | Cambios en `queuedActions`, `hotspotOverrides`, `gameState` o reglas de seguridad. |
+| Nuevo documento, CSV, script de soporte o cambio de responsabilidad documental | `docs/INDEX.md`, `docs/PROJECT_STATUS.md` | El indice debe saber que existe y `PROJECT_STATUS` debe apuntar al archivo correcto. | Alta de `docs/textos_juego.csv` y `scripts/export-texts.mjs`. |
+| Arte, tabla de assets, nombres para desarrollo o variantes visuales | Tabla externa de assets/Notion si aplica, `docs/PROJECT_STATUS.md`, `docs/game_design.md` si afecta al puzzle, `src/data/scenarioContent.js` si cambia asset id | Arte necesita una lista sin duplicados y desarrollo necesita nombres estables. | Consolidacion de assets del almacen, candado/mecanismo A/B y overlays por estado. |
+
+Regla practica: si el cambio altera lo que un jugador ve o lee, regenerar `docs/textos_juego.csv`. Si altera lo que el sistema hace, revisar `architecture` y `PROJECT_STATUS`. Si altera por que el puzzle tiene sentido, revisar `game_design`. Si altera como opera el GM, revisar `gm-operations`.
+
+---
+
+## 9. Rutina recomendada antes de cambios
 
 1. Leer `docs/PROJECT_STATUS.md` para confirmar estado y pendientes.
 2. Leer el doc especifico del area: arquitectura, diseno, GM o Firebase.
 3. Contrastar con el codigo actual si el cambio toca comportamiento.
 4. Consultar `docs/OLD/` solo para contexto historico o inspiracion.
-5. Actualizar este indice si se anade, mueve o cambia el rol de un documento.
+5. Consultar la matriz de cambios de este indice para saber que docs o archivos secundarios deben actualizarse.
+6. Si cambia copy visible, ejecutar `node scripts/export-texts.mjs`.
+7. Actualizar este indice si se anade, mueve o cambia el rol de un documento.
