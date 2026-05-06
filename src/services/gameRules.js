@@ -114,16 +114,19 @@ export function getAlarmRecommendations(gameState) {
 /** Build shared flags for the current pulse (e.g. combo detection). */
 export function buildPulseFlags(pulseActions = [], gameState = {}) {
   const resonanceValue = Number(gameState.resonance?.value || 0);
-  const lockerState = gameState.hotspotStates?.taquillas || LOCKER_STATES.LOCKED;
-  const hasLockerFusionAction = pulseActions.some((action) => (
-    action.target === "taquillas"
-    && isInteractionAction(action)
+  const lockerFusionActions = pulseActions.filter((action) => (
+    action.target === "taquillas" && isInteractionAction(action)
   ));
+  const hasLockerFusionAction = lockerFusionActions.some((action) => {
+    const scenarioId = action.scenarioId || "almacen";
+    const variant = action.variant || "A";
+    const scopedLockerKey = getScenarioScopedTargetKey(scenarioId, variant, "taquillas");
+    const lockerState = gameState.hotspotStates?.[scopedLockerKey] || LOCKER_STATES.LOCKED;
+    return lockerState === LOCKER_STATES.LOCKED;
+  });
 
   return {
-    canFuseLocker: lockerState === LOCKER_STATES.LOCKED
-      && hasLockerFusionAction
-      && resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION,
+    canFuseLocker: hasLockerFusionAction && resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION,
   };
 }
 

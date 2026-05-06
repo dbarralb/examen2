@@ -297,6 +297,28 @@ export function getScenarioContainerOpenState(targetId, gameState = {}, scenario
   return state !== "locked" && state !== "closed_locked";
 }
 
+export function getScenarioPulseAnomalyTargetIds(gameState = {}, scenarioId = "almacen", variant = "A") {
+  if (scenarioId !== "almacen") {
+    return [];
+  }
+
+  const hotspotStates = gameState.hotspotStates || {};
+  const flags = gameState.flags || {};
+  const lockerState = hotspotStates[getScenarioScopedTargetKey(scenarioId, variant, "taquillas")] || LOCKER_STATES.LOCKED;
+  const panelState = hotspotStates[getScenarioScopedTargetKey(scenarioId, variant, "panel_salida")] || PANEL_STATES.NEEDS_MODULE;
+  const targetIds = [];
+
+  if (lockerState !== LOCKER_STATES.OPEN) {
+    targetIds.push("taquillas");
+  }
+
+  if (!flags.almacenSalidaLista && panelState !== PANEL_STATES.OK) {
+    targetIds.push("panel_salida");
+  }
+
+  return targetIds;
+}
+
 export function createScenarioTargetFeedback(scenarioId = "almacen") {
   return { ...(getScenarioContent(scenarioId).feedback || {}) };
 }
@@ -321,11 +343,17 @@ export function resolveScenarioDeviceCommand({ targetId, command, gameState, sce
   const doorStateKey = getScenarioScopedTargetKey(scenarioId, variant, "puerta");
   if (command.name === "intentar_salida") {
     if (flags.codigoAlmacenCompleto && gameState?.hotspotStates?.[panelStateKey] === PANEL_STATES.OK) {
+      const patch = {
+        "gameState/flags/almacenCompletado": true,
+        [`gameState/hotspotStates/${doorStateKey}`]: DOOR_STATES.OPEN,
+      };
+      if (scenarioId === "almacen") {
+        for (const variantId of ["A", "B"]) {
+          patch[`gameState/hotspotStates/${getScenarioScopedTargetKey(scenarioId, variantId, "puerta")}`] = DOOR_STATES.OPEN;
+        }
+      }
       return {
-        patch: {
-          "gameState/flags/almacenCompletado": true,
-          [`gameState/hotspotStates/${doorStateKey}`]: DOOR_STATES.OPEN,
-        },
+        patch,
         lines: ["Salida desbloqueada.", "El panel fusionado acepta el codigo y abre la puerta."],
         type: "system",
       };
@@ -370,6 +398,12 @@ function consumeResonance(gameState, amount) {
   return true;
 }
 
+function setAlmacenStateForBothVariants(gameState, targetId, state) {
+  for (const variantId of ["A", "B"]) {
+    gameState.hotspotStates[getScenarioScopedTargetKey("almacen", variantId, targetId)] = state;
+  }
+}
+
 export function resolveScenarioAction(context, action, pulseFlags = {}) {
   const scenarioId = context.sessionState?.scenarioId || "almacen";
   if (scenarioId !== "almacen") {
@@ -403,16 +437,20 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     if (lockerState === LOCKER_STATES.OPEN) {
       feedback = "La taquilla fusionada ya esta abierta. Su contenido puede revisarse sin forzar nada mas.";
       message = "La taquilla permanece abierta tras la fusion.";
-    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction) {
-      gameState.hotspotStates[lockerStateKey] = LOCKER_STATES.OPEN;
+    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction && !pulseFlags.lockerFusionResolvedThisPulse) {
+      setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.OPEN);
       gameState.flags.mecanismoFisicoLocalizado = true;
       gameState.flags.mecanismoFisicoLiberado = true;
       gameState.flags.moduleSyncAvailable = true;
       feedback = "La taquilla fusionada se abre: el cierre de A y el mecanismo de B encajan por fin en una sola realidad.";
       message = "La taquilla se abre y deja disponible el modulo de sincronizacion.";
+    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction) {
+      feedback = "La taquilla acaba de estabilizarse en este pulso. Necesita una nueva interaccion para abrirse.";
+      message = "La taquilla queda fusionada, pendiente de apertura.";
     } else if (lockerState === LOCKER_STATES.LOCKED && isInteraction) {
       if (pulseFlags.canFuseLocker && consumeResonance(gameState, RESONANCE_COSTS.LOCKER_FUSION)) {
-        gameState.hotspotStates[lockerStateKey] = LOCKER_STATES.FUSION;
+        setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.FUSION);
+        pulseFlags.lockerFusionResolvedThisPulse = true;
         gameState.flags.lockerFusionDone = true;
         gameState.flags.mecanismoFisicoLocalizado = true;
         feedback = "El pulso consume resonancia y fusiona la taquilla. Ahora el cierre existe de forma estable y puede abrirse.";
@@ -468,7 +506,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
   if (action.target === "panel_salida" && isInspection) {
     if (gameState.hotspotStates[panelStateKey] === PANEL_STATES.FUSION) {
       gameState.flags.codigoAlmacenCompleto = true;
-      gameState.hotspotStates[panelStateKey] = PANEL_STATES.OK;
+      setAlmacenStateForBothVariants(gameState, "panel_salida", PANEL_STATES.OK);
       gameState.flags.almacenSalidaLista = true;
       feedback = "El panel fusionado acepta el codigo reconstruido. La puerta ya puede abrirse.";
       message = "El grupo introduce el codigo reconstruido y el panel queda validado.";
@@ -481,9 +519,12 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
 
   if (action.target === "panel_salida" && isInteraction) {
     const hasModule = action.itemId === SCENARIO_ITEMS.MODULE_SYNC || gameState.flags.moduleSyncAvailable;
-    if (hasModule && gameState.hotspotStates[lockerStateKey] === LOCKER_STATES.OPEN) {
+    const lockerOpenInEitherReality = ["A", "B"].some((variantId) => (
+      gameState.hotspotStates[getScenarioScopedTargetKey(scenarioId, variantId, "taquillas")] === LOCKER_STATES.OPEN
+    ));
+    if (hasModule && lockerOpenInEitherReality) {
       gameState.flags.moduleSyncInserted = true;
-      gameState.hotspotStates[panelStateKey] = PANEL_STATES.FUSION;
+      setAlmacenStateForBothVariants(gameState, "panel_salida", PANEL_STATES.FUSION);
       feedback = "El modulo encaja en el panel. El panel se fusiona y queda activo para introducir el codigo.";
       message = "El grupo coloca el modulo y activa la fusion del panel.";
     } else {

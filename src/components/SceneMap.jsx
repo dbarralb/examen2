@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { NBadge } from "./e2";
 import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
 import { DeviceConsole } from "./DeviceConsole.jsx";
+import { PulseAnomalyVFX } from "./PulseAnomalyVFX.jsx";
 import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
@@ -20,9 +21,22 @@ const MOUSE_DETECTION_RADII = [
   { level: 2, distance: 80 },
   { level: 1, distance: 120 },
 ];
+const INTERACTIVE_TARGET_SELECTOR = ".scene-map-hotspot, .scene-map-hotspot-poly, .scene-object-card";
+const PAN_INERTIA_MAX_DISTANCE = 110;
+const PAN_INERTIA_MIN_DISTANCE = 4;
+const PAN_INERTIA_DURATION_MS = 340;
+const PAN_INERTIA_LOOKAHEAD_MS = 210;
+const PAN_EDGE_FAST_ZONE_WIDTH = 150;
+const PAN_EDGE_SLOW_ZONE_WIDTH = 150;
+const PAN_EDGE_FAST_SPEED = 420;
+const PAN_EDGE_SLOW_SPEED = 150;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function easeOutCubic(value) {
+  return 1 - Math.pow(1 - value, 3);
 }
 
 function getFitLayout(width, height, aspect = DEFAULT_MAP_ASPECT) {
@@ -184,6 +198,20 @@ function getDiscoveryCardStyle(target) {
   };
 }
 
+function getPulseAnomalyStyle(target) {
+  const x = Number.isFinite(target.anomalyX) ? target.anomalyX : target.x - 2;
+  const y = Number.isFinite(target.anomalyY) ? target.anomalyY : target.y - 4;
+  const w = Number.isFinite(target.anomalyW) ? target.anomalyW : target.w + 4;
+  const h = Number.isFinite(target.anomalyH) ? target.anomalyH : target.h + 8;
+
+  return {
+    left: `${x}%`,
+    top: `${y}%`,
+    width: `${w}%`,
+    height: `${h}%`,
+  };
+}
+
 // SVG preview rendered inside scene-map-world (transforms with the camera pan)
 function DrawingPreviewSVG({ drawingState }) {
   const { mode, p1, p2, polygonPoints, cursorPos } = drawingState;
@@ -195,7 +223,7 @@ function DrawingPreviewSVG({ drawingState }) {
       preserveAspectRatio="none"
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 20 }}
     >
-      {mode === "rect" && (
+      {(mode === "rect" || mode === "anomaly") && (
         <>
           {/* Ghost rect between p1 and cursor (or p2 if captured) */}
           {p1 && (p2 || cursorPos) && (() => {
@@ -204,7 +232,15 @@ function DrawingPreviewSVG({ drawingState }) {
             const ry = Math.min(p1.y, end.y);
             const rw = Math.abs(end.x - p1.x);
             const rh = Math.abs(end.y - p1.y);
-            return <rect x={rx} y={ry} width={rw} height={rh} className="draw-preview-rect" />;
+            return (
+              <rect
+                x={rx}
+                y={ry}
+                width={rw}
+                height={rh}
+                className={`draw-preview-rect${mode === "anomaly" ? " draw-preview-rect--anomaly" : ""}`}
+              />
+            );
           })()}
           {/* P1 dot */}
           {p1 && <circle cx={p1.x} cy={p1.y} r="0.8" className="draw-preview-dot draw-preview-dot--p1" />}
@@ -251,6 +287,26 @@ function DrawingPreviewSVG({ drawingState }) {
   );
 }
 
+function CameraRecordingOverlay() {
+  return (
+    <div className="scene-camera-effect" aria-hidden="true">
+      <svg
+        className="scene-camera-fisheye"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        focusable="false"
+      >
+        <path className="scene-camera-fisheye-edge" d="M0 0H100V18C70 8 30 8 0 18Z" />
+        <path className="scene-camera-fisheye-edge" d="M0 100H100V82C70 92 30 92 0 82Z" />
+        <path className="scene-camera-fisheye-side" d="M0 0H8C2 29 2 71 8 100H0Z" />
+        <path className="scene-camera-fisheye-side" d="M100 0H92C98 29 98 71 92 100H100Z" />
+        <ellipse className="scene-camera-fisheye-ring" cx="50" cy="50" rx="56" ry="41" />
+      </svg>
+      <div className="scene-camera-scanlines" />
+    </div>
+  );
+}
+
 export function SceneMap({
   gameState,
   targetFeedback,
@@ -289,6 +345,8 @@ export function SceneMap({
   onCursorMove = null,
   drawingState = null,
   showInspectionDiscoveryPreview = false,
+  showPulseAnomalyPreview = false,
+  pulseAnomalyTargetIds = [],
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -301,10 +359,15 @@ export function SceneMap({
       : targets;
   const viewportRef = useRef(null);
   const panRef = useRef(null);
+  const panInertiaRef = useRef(null);
+  const edgePanRef = useRef(null);
+  const cameraRef = useRef(null);
   const detectionLevelRef = useRef(0);
   const [layout, setLayout] = useState(() => getFitLayout(0, 0, effectiveAspect));
   const [camera, setCamera] = useState(() => ({ x: 0, y: 0, scale: effectiveMinScale }));
   const [isPanning, setIsPanning] = useState(false);
+  const [edgePanDirection, setEdgePanDirection] = useState(0);
+  const [edgePanSpeed, setEdgePanSpeed] = useState(0);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
   const [expandedSoftwareDrops, setExpandedSoftwareDrops] = useState({});
   const shouldDetectMouse = !isMonitorView && !showCoordinates;
@@ -348,6 +411,19 @@ export function SceneMap({
   }, [layout.mapHeight, layout.mapWidth, effectiveAspect, effectiveMinScale]);
 
   useEffect(() => () => emitCursorDetectionLevel(0), []);
+
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
+
+  useEffect(() => () => {
+    if (panInertiaRef.current?.frameId) {
+      window.cancelAnimationFrame(panInertiaRef.current.frameId);
+    }
+    if (edgePanRef.current?.frameId) {
+      window.cancelAnimationFrame(edgePanRef.current.frameId);
+    }
+  }, []);
 
   useEffect(() => {
     onCameraChange?.(camera);
@@ -446,6 +522,148 @@ export function SceneMap({
     setMouseDetectionLevel(getDetectionLevel(closestDistance * camera.scale));
   }
 
+  function stopPanInertia() {
+    if (panInertiaRef.current?.frameId) {
+      window.cancelAnimationFrame(panInertiaRef.current.frameId);
+    }
+    panInertiaRef.current = null;
+  }
+
+  function stopEdgePan() {
+    if (edgePanRef.current?.frameId) {
+      window.cancelAnimationFrame(edgePanRef.current.frameId);
+    }
+    edgePanRef.current = null;
+    setEdgePanDirection(0);
+    setEdgePanSpeed(0);
+  }
+
+  function startEdgePan(direction, speed = PAN_EDGE_FAST_SPEED) {
+    if (isMonitorView || disablePan || !layout.mapWidth || !layout.mapHeight) {
+      return;
+    }
+
+    if (edgePanRef.current?.direction === direction && edgePanRef.current?.speed === speed) {
+      return;
+    }
+
+    stopPanInertia();
+    stopEdgePan();
+    setEdgePanDirection(direction);
+    setEdgePanSpeed(speed);
+
+    edgePanRef.current = {
+      direction,
+      speed,
+      frameId: null,
+      lastTime: performance.now(),
+    };
+
+    function step(now) {
+      const current = edgePanRef.current;
+
+      if (!current || current.direction !== direction) {
+        return;
+      }
+
+      const elapsedSeconds = Math.min(0.05, Math.max(0, now - current.lastTime) / 1000);
+      current.lastTime = now;
+
+      const currentCamera = cameraRef.current || camera;
+      const nextCamera = clampCamera({
+        ...currentCamera,
+        x: currentCamera.x + direction * current.speed * elapsedSeconds,
+      }, layout);
+
+      cameraRef.current = nextCamera;
+      setCamera(nextCamera);
+
+      if (edgePanRef.current) {
+        edgePanRef.current.frameId = window.requestAnimationFrame(step);
+      }
+    }
+
+    edgePanRef.current.frameId = window.requestAnimationFrame(step);
+  }
+
+  function updateEdgePanFromPointer(event) {
+    if (isMonitorView || disablePan || panRef.current) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pointerX = event.clientX - rect.left;
+    const totalZoneWidth = PAN_EDGE_FAST_ZONE_WIDTH + PAN_EDGE_SLOW_ZONE_WIDTH;
+
+    if (pointerX <= PAN_EDGE_FAST_ZONE_WIDTH) {
+      startEdgePan(1, PAN_EDGE_FAST_SPEED);
+    } else if (pointerX <= totalZoneWidth) {
+      startEdgePan(1, PAN_EDGE_SLOW_SPEED);
+    } else if (pointerX >= rect.width - PAN_EDGE_FAST_ZONE_WIDTH) {
+      startEdgePan(-1, PAN_EDGE_FAST_SPEED);
+    } else if (pointerX >= rect.width - totalZoneWidth) {
+      startEdgePan(-1, PAN_EDGE_SLOW_SPEED);
+    } else {
+      stopEdgePan();
+    }
+  }
+
+  function startPanInertia(pan) {
+    if (!pan?.lastCamera || !layout.mapWidth || !layout.mapHeight) {
+      return;
+    }
+
+    const velocity = pan.velocity || { x: 0, y: 0 };
+    const projectedX = velocity.x * PAN_INERTIA_LOOKAHEAD_MS;
+    const projectedY = velocity.y * PAN_INERTIA_LOOKAHEAD_MS;
+    const projectedDistance = Math.sqrt(projectedX * projectedX + projectedY * projectedY);
+
+    if (projectedDistance < PAN_INERTIA_MIN_DISTANCE) {
+      return;
+    }
+
+    const distanceScale = Math.min(1, PAN_INERTIA_MAX_DISTANCE / projectedDistance);
+    const fromCamera = pan.lastCamera;
+    const toCamera = clampCamera({
+      ...fromCamera,
+      x: fromCamera.x + projectedX * distanceScale,
+      y: fromCamera.y + projectedY * distanceScale,
+    }, layout);
+
+    const dx = toCamera.x - fromCamera.x;
+    const dy = toCamera.y - fromCamera.y;
+    const clampedDistance = Math.sqrt(dx * dx + dy * dy);
+
+    if (clampedDistance < PAN_INERTIA_MIN_DISTANCE) {
+      return;
+    }
+
+    stopPanInertia();
+    const startedAt = performance.now();
+
+    function step(now) {
+      const progress = clamp((now - startedAt) / PAN_INERTIA_DURATION_MS, 0, 1);
+      const eased = easeOutCubic(progress);
+      const nextCamera = {
+        ...fromCamera,
+        x: fromCamera.x + dx * eased,
+        y: fromCamera.y + dy * eased,
+      };
+
+      setCamera(nextCamera);
+
+      if (progress < 1) {
+        panInertiaRef.current.frameId = window.requestAnimationFrame(step);
+      } else {
+        panInertiaRef.current = null;
+      }
+    }
+
+    panInertiaRef.current = {
+      frameId: window.requestAnimationFrame(step),
+    };
+  }
+
   function handleViewportPointerDown(event) {
     if (isMonitorView || disablePan) {
       return;
@@ -455,26 +673,33 @@ export function SceneMap({
       return;
     }
 
-    if (event.target.closest(".scene-map-hotspot, .scene-object-card")) {
+    if (event.target.closest(INTERACTIVE_TARGET_SELECTOR)) {
       return;
     }
 
     event.preventDefault();
+    stopEdgePan();
+    stopPanInertia();
     if (!pendingAction) {
       onCloseTarget?.();
     }
+    const now = performance.now();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     panRef.current = {
       pointerId: event.pointerId,
       x: event.clientX,
       y: event.clientY,
       camera,
+      lastCamera: camera,
+      lastPoint: { x: event.clientX, y: event.clientY, time: now },
+      velocity: { x: 0, y: 0 },
     };
     setIsPanning(true);
   }
 
   function handleViewportPointerMove(event) {
     updateMouseDetection(event);
+    updateEdgePanFromPointer(event);
 
     const pan = panRef.current;
 
@@ -487,21 +712,46 @@ export function SceneMap({
       x: pan.camera.x + event.clientX - pan.x,
       y: pan.camera.y + event.clientY - pan.y,
     };
+    const clampedCamera = clampCamera(nextCamera, layout);
+    const now = performance.now();
+    const elapsed = Math.max(1, now - pan.lastPoint.time);
 
-    setCamera(clampCamera(nextCamera, layout));
+    pan.velocity = {
+      x: (event.clientX - pan.lastPoint.x) / elapsed,
+      y: (event.clientY - pan.lastPoint.y) / elapsed,
+    };
+    pan.lastPoint = { x: event.clientX, y: event.clientY, time: now };
+    pan.lastCamera = clampedCamera;
+
+    setCamera(clampedCamera);
   }
 
   function finishPan(event) {
+    const pan = panRef.current;
+
+    if (pan?.pointerId !== event.pointerId) {
+      return;
+    }
+
+    panRef.current = null;
+    setIsPanning(false);
+    stopEdgePan();
+    startPanInertia(pan);
+  }
+
+  function cancelPan(event) {
     if (panRef.current?.pointerId !== event.pointerId) {
       return;
     }
 
     panRef.current = null;
     setIsPanning(false);
+    stopEdgePan();
   }
 
   function handleViewportPointerLeave() {
     setMouseDetectionLevel(0);
+    stopEdgePan();
   }
 
   return (
@@ -511,11 +761,43 @@ export function SceneMap({
       onPointerDown={handleViewportPointerDown}
       onPointerMove={handleViewportPointerMove}
       onPointerUp={finishPan}
-      onPointerCancel={finishPan}
+      onPointerCancel={cancelPan}
       onPointerLeave={handleViewportPointerLeave}
       onContextMenu={(event) => event.preventDefault()}
       onDragStart={(event) => event.preventDefault()}
     >
+      {!isMonitorView && !disablePan && (
+        <>
+          <div
+            className={`scene-map-edge-pan-zone scene-map-edge-pan-zone--left scene-map-edge-pan-zone--fast ${edgePanDirection === 1 && edgePanSpeed === PAN_EDGE_FAST_SPEED ? "active" : ""}`}
+            style={{ width: `${PAN_EDGE_FAST_ZONE_WIDTH}px` }}
+            aria-hidden="true"
+            onPointerEnter={() => startEdgePan(1, PAN_EDGE_FAST_SPEED)}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+          <div
+            className={`scene-map-edge-pan-zone scene-map-edge-pan-zone--left-inner scene-map-edge-pan-zone--slow ${edgePanDirection === 1 && edgePanSpeed === PAN_EDGE_SLOW_SPEED ? "active" : ""}`}
+            style={{ left: `${PAN_EDGE_FAST_ZONE_WIDTH}px`, width: `${PAN_EDGE_SLOW_ZONE_WIDTH}px` }}
+            aria-hidden="true"
+            onPointerEnter={() => startEdgePan(1, PAN_EDGE_SLOW_SPEED)}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+          <div
+            className={`scene-map-edge-pan-zone scene-map-edge-pan-zone--right-inner scene-map-edge-pan-zone--slow ${edgePanDirection === -1 && edgePanSpeed === PAN_EDGE_SLOW_SPEED ? "active" : ""}`}
+            style={{ right: `${PAN_EDGE_FAST_ZONE_WIDTH}px`, width: `${PAN_EDGE_SLOW_ZONE_WIDTH}px` }}
+            aria-hidden="true"
+            onPointerEnter={() => startEdgePan(-1, PAN_EDGE_SLOW_SPEED)}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+          <div
+            className={`scene-map-edge-pan-zone scene-map-edge-pan-zone--right scene-map-edge-pan-zone--fast ${edgePanDirection === -1 && edgePanSpeed === PAN_EDGE_FAST_SPEED ? "active" : ""}`}
+            style={{ width: `${PAN_EDGE_FAST_ZONE_WIDTH}px` }}
+            aria-hidden="true"
+            onPointerEnter={() => startEdgePan(-1, PAN_EDGE_FAST_SPEED)}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+        </>
+      )}
       <div className="scene-focus-fade" aria-hidden="true" />
       <div
         className={`scene-map-world ${isMonitorView ? "is-monitor-view" : ""} ${shouldDetectMouse ? "hide-player-hotspots" : ""}`}
@@ -527,6 +809,7 @@ export function SceneMap({
       >
         <BackgroundLayer backgroundSrc={backgroundSrc} />
         <StructureLayer gameState={gameState} />
+        <CameraRecordingOverlay />
         {/* Dim layer: covers background/structure but sits below cards (same z-index as interactive, earlier in DOM) */}
         <div
           className={`scene-target-dim ${selectedTargetId && !isMonitorView ? "active" : ""}`}
@@ -686,6 +969,16 @@ export function SceneMap({
             );
           })}
         </InteractiveLayer>
+
+        {(showPulseAnomalyPreview || pulseAnomalyTargetIds.length > 0) && visibleTargets.map((target) => (
+          target.id === selectedTargetId || pulseAnomalyTargetIds.includes(target.id) ? (
+            <PulseAnomalyVFX
+              key={`${target.id}-pulse-anomaly-preview`}
+              className="scene-pulse-anomaly-preview"
+              style={getPulseAnomalyStyle(target)}
+            />
+          ) : null
+        ))}
 
         {/* Drawing preview SVG — rendered inside scene-map-world so it follows the camera pan */}
         {drawingState && (

@@ -23,6 +23,9 @@ export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, h
               key={target.id}
               className={`scene-map-hotspot-poly ${selectedTargetId === target.id ? "selected" : ""}`}
               points={target.points.map((p) => `${p.x},${p.y}`).join(" ")}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+              }}
               onClick={(event) => {
                 if (!isMonitorView) onHotspotClick(event, target);
               }}

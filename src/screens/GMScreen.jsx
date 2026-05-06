@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { E2Logo, NBadge, NButton, NCard, NTimer } from "../components/e2";
 import { ActionQueuePanel } from "../components/ActionQueuePanel.jsx";
+import { GMTechnicalFlowchart } from "../components/GMTechnicalFlowchart.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { playerRoles } from "../data/roles.js";
@@ -12,8 +13,9 @@ import { firebasePatch } from "../services/firebaseClient.js";
 import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { getAlarmRecommendations } from "../services/gameRules.js";
 import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
-import { startManualPulse } from "../services/pulseService.js";
+import { ensureNextPulseScheduled, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
 import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
+import { formatPulseCountdown, getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 
 function getSessionBadgeStatus(status) {
   return status === "in_game" ? "success" : "muted";
@@ -62,6 +64,33 @@ function getDefaultDiscoveryCardPosition(target) {
   };
 }
 
+function getDefaultAnomalyBounds(target) {
+  return {
+    anomalyX: +clampPercent(target.x - 2, 0, 96).toFixed(2),
+    anomalyY: +clampPercent(target.y - 6, 0, 92).toFixed(2),
+    anomalyW: +clampPercent(target.w + 4, 2, 100).toFixed(2),
+    anomalyH: +clampPercent(target.h + 12, 2, 100).toFixed(2),
+  };
+}
+
+function getAnomalyCapturePoints(target) {
+  const fallback = getDefaultAnomalyBounds(target);
+  const bounds = {
+    anomalyX: Number.isFinite(target.anomalyX) ? target.anomalyX : fallback.anomalyX,
+    anomalyY: Number.isFinite(target.anomalyY) ? target.anomalyY : fallback.anomalyY,
+    anomalyW: Number.isFinite(target.anomalyW) ? target.anomalyW : fallback.anomalyW,
+    anomalyH: Number.isFinite(target.anomalyH) ? target.anomalyH : fallback.anomalyH,
+  };
+
+  return {
+    p1: { x: bounds.anomalyX, y: bounds.anomalyY },
+    p2: {
+      x: +(bounds.anomalyX + bounds.anomalyW).toFixed(2),
+      y: +(bounds.anomalyY + bounds.anomalyH).toFixed(2),
+    },
+  };
+}
+
 export function GMScreen() {
   const [remoteState, setRemoteState] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -71,8 +100,8 @@ export function GMScreen() {
   const [showCoordinates, setShowCoordinates] = useState(false);
   const [coordinateVariant, setCoordinateVariant] = useState("A");
   const [selectedHotspotId, setSelectedHotspotId] = useState("");
-  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon" | "card" | "discovery"
-  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon" | "card" | "discovery"
+  const [drawMode, setDrawMode] = useState("rect"); // "rect" | "polygon" | "card" | "discovery" | "anomaly"
+  const [clickCapture, setClickCapture] = useState(null); // null | "p1" | "p2" | "polygon" | "card" | "discovery" | "anomalyP1" | "anomalyP2"
   const [capturedPoints, setCapturedPoints] = useState({ p1: null, p2: null });
   const [polygonPoints, setPolygonPoints] = useState([]);
   const [cardPosition, setCardPosition] = useState(null);
@@ -89,10 +118,12 @@ export function GMScreen() {
   });
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
   const [sceneControlExpanded, setSceneControlExpanded] = useState(false);
+  const [technicalFlowExpanded, setTechnicalFlowExpanded] = useState(false);
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
   const pulseState = remoteState?.pulseState || { status: "idle" };
+  const pulseSchedule = getPulseScheduleProgress(pulseState);
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
   const activeScenario = getScenario(sessionState.scenarioId || DEFAULT_SCENARIO_ID);
@@ -158,6 +189,10 @@ export function GMScreen() {
         discoveryCardX: hs.discoveryCardX ?? defaultDiscoveryCardPosition.discoveryCardX,
         discoveryCardY: hs.discoveryCardY ?? defaultDiscoveryCardPosition.discoveryCardY,
       });
+      if (drawMode === "anomaly") {
+        setCapturedPoints(getAnomalyCapturePoints(hs));
+        return;
+      }
     }
     if (hs && !hs.points) {
       setCapturedPoints({
@@ -216,6 +251,14 @@ export function GMScreen() {
         setCapturedPoints((prev) => ({ ...prev, p2: { x, y } }));
         setClickCapture(null); // done
       }
+    } else if (drawMode === "anomaly") {
+      if (clickCapture === "anomalyP1") {
+        setCapturedPoints((prev) => ({ ...prev, p1: { x, y } }));
+        setClickCapture("anomalyP2");
+      } else if (clickCapture === "anomalyP2") {
+        setCapturedPoints((prev) => ({ ...prev, p2: { x, y } }));
+        setClickCapture(null);
+      }
     } else if (drawMode === "polygon" && clickCapture === "polygon") {
       setPolygonPoints((prev) => [...prev, { x, y }]);
     } else if (drawMode === "card" && clickCapture === "card") {
@@ -225,6 +268,19 @@ export function GMScreen() {
       setDiscoveryCardPosition({ discoveryCardX: x, discoveryCardY: y });
       setClickCapture(null);
     }
+  }
+
+  function setRectCaptureFromHotspot(hotspot) {
+    if (!hotspot) return;
+    setCapturedPoints({
+      p1: { x: hotspot.x, y: hotspot.y },
+      p2: { x: +(hotspot.x + hotspot.w).toFixed(2), y: +(hotspot.y + hotspot.h).toFixed(2) },
+    });
+  }
+
+  function setAnomalyCaptureFromHotspot(hotspot) {
+    if (!hotspot) return;
+    setCapturedPoints(getAnomalyCapturePoints(hotspot));
   }
 
   // Live targets with current drawing applied
@@ -247,6 +303,15 @@ export function GMScreen() {
       );
     }
     const { p1, p2 } = capturedPoints;
+    if (drawMode === "anomaly" && p1 && p2) {
+      const anomalyX = Math.min(p1.x, p2.x);
+      const anomalyY = Math.min(p1.y, p2.y);
+      const anomalyW = +(Math.abs(p2.x - p1.x)).toFixed(2);
+      const anomalyH = +(Math.abs(p2.y - p1.y)).toFixed(2);
+      return savedCoordinateTargets.map((t) =>
+        t.id === selectedHotspotId ? { ...t, anomalyX, anomalyY, anomalyW, anomalyH } : t,
+      );
+    }
     if (drawMode === "rect" && p1 && p2) {
       const x = Math.min(p1.x, p2.x);
       const y = Math.min(p1.y, p2.y);
@@ -288,6 +353,16 @@ export function GMScreen() {
         discoveryCardY: +discoveryCardPosition.discoveryCardY.toFixed(2),
       };
     }
+    if (drawMode === "anomaly") {
+      const { p1, p2 } = capturedPoints;
+      if (!p1 || !p2) return null;
+      return {
+        anomalyX: +Math.min(p1.x, p2.x).toFixed(2),
+        anomalyY: +Math.min(p1.y, p2.y).toFixed(2),
+        anomalyW: +(Math.abs(p2.x - p1.x)).toFixed(2),
+        anomalyH: +(Math.abs(p2.y - p1.y)).toFixed(2),
+      };
+    }
     if (drawMode === "rect") {
       const { p1, p2 } = capturedPoints;
       if (!p1 || !p2) return null;
@@ -313,12 +388,15 @@ export function GMScreen() {
 
   // Drawing state passed to SceneMap for SVG preview
   const drawingState = useMemo(() => {
-    if (!selectedHotspotId || clickCapture === null && drawMode === "rect" && !capturedPoints.p1) return null;
+    const isBoxMode = drawMode === "rect" || drawMode === "anomaly";
+    if (!selectedHotspotId || clickCapture === null && isBoxMode && !capturedPoints.p1) return null;
     const hint = clickCapture === "p1" ? "P1 — esquina superior izq."
       : clickCapture === "p2" ? "P2 — esquina inferior der."
       : clickCapture === "polygon" ? "Clic para añadir vértice"
       : clickCapture === "card" ? "Clic para colocar ventana"
       : clickCapture === "discovery" ? "Clic para colocar detalle"
+      : clickCapture === "anomalyP1" ? "P1 — caja anomalia"
+      : clickCapture === "anomalyP2" ? "P2 — caja anomalia"
       : null;
     return {
       mode: drawMode,
@@ -341,6 +419,10 @@ export function GMScreen() {
     }
     if (drawMode === "discovery") {
       return saved.discoveryCardX === editedHotspotData.discoveryCardX && saved.discoveryCardY === editedHotspotData.discoveryCardY;
+    }
+    if (drawMode === "anomaly") {
+      return saved.anomalyX === editedHotspotData.anomalyX && saved.anomalyY === editedHotspotData.anomalyY
+        && saved.anomalyW === editedHotspotData.anomalyW && saved.anomalyH === editedHotspotData.anomalyH;
     }
     if (drawMode === "polygon") {
       return JSON.stringify(saved.points) === JSON.stringify(editedHotspotData.points);
@@ -418,6 +500,13 @@ export function GMScreen() {
       copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
       return;
     }
+    if (drawMode === "anomaly") {
+      navigator.clipboard.writeText(`anomalyX: ${editedHotspotData.anomalyX}, anomalyY: ${editedHotspotData.anomalyY}, anomalyW: ${editedHotspotData.anomalyW}, anomalyH: ${editedHotspotData.anomalyH}`);
+      setCopyFeedback(true);
+      window.clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopyFeedback(false), 1800);
+      return;
+    }
     const { x, y, w, h } = editedHotspotData;
     navigator.clipboard.writeText(`x: ${x}, y: ${y}, w: ${w}, h: ${h}`);
     setCopyFeedback(true);
@@ -441,6 +530,10 @@ export function GMScreen() {
     intervalMs: 1000,
     task: async ({ isCancelled }) => {
       try {
+        if (remoteState?.session?.status === "in_game") {
+          await triggerAutoPulseIfDue({ onStatus(message) { setStatusMessage(message); } });
+        }
+
         const nextState = await getRemoteState();
         if (!isCancelled()) {
           setRemoteState(nextState);
@@ -452,6 +545,17 @@ export function GMScreen() {
       }
     },
   });
+
+  useEffect(() => {
+    if (session.status !== "in_game" || pulseState.status !== "idle" || pulseState.schedule?.nextPulseAt) {
+      return;
+    }
+
+    ensureNextPulseScheduled({ onStatus(message) { setStatusMessage(message); } })
+      .then(refresh)
+      .catch(() => setStatusMessage("No se pudo programar el siguiente pulso."));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.status, pulseState.status, pulseState.schedule?.nextPulseAt]);
 
   useEffect(() => {
     const clockTimer = window.setInterval(() => {
@@ -510,7 +614,7 @@ export function GMScreen() {
 
   async function handleStartPulse() {
     setIsPulseBusy(true);
-    setStatusMessage("Preparando pulso...");
+    setStatusMessage("Lanzando pulso manual...");
     try {
       await startManualPulse({ onStatus(message) { setStatusMessage(message); } });
       await refresh();
@@ -640,6 +744,7 @@ export function GMScreen() {
                 scenarioId={activeScenario.id}
                 variant={coordinateVariant}
                 showInspectionDiscoveryPreview={drawMode === "discovery"}
+                showPulseAnomalyPreview={drawMode === "anomaly"}
               />
             </section>
 
@@ -675,7 +780,12 @@ export function GMScreen() {
                       <button
                         type="button"
                         className={`coord-tool__mode-btn ${drawMode === "rect" ? "active" : ""}`}
-                        onClick={() => { setDrawMode("rect"); setClickCapture(null); setPolygonPoints([]); }}
+                        onClick={() => {
+                          setDrawMode("rect");
+                          setClickCapture(null);
+                          setPolygonPoints([]);
+                          setRectCaptureFromHotspot(savedCoordinateTargets.find((t) => t.id === selectedHotspotId));
+                        }}
                       >
                         ▣ Rectángulo
                       </button>
@@ -699,6 +809,18 @@ export function GMScreen() {
                         onClick={() => { setDrawMode("discovery"); setClickCapture(null); }}
                       >
                         Detalle inspeccion
+                      </button>
+                      <button
+                        type="button"
+                        className={`coord-tool__mode-btn ${drawMode === "anomaly" ? "active" : ""}`}
+                        onClick={() => {
+                          setDrawMode("anomaly");
+                          setClickCapture(null);
+                          setPolygonPoints([]);
+                          setAnomalyCaptureFromHotspot(savedCoordinateTargets.find((t) => t.id === selectedHotspotId));
+                        }}
+                      >
+                        Anomalia pulso
                       </button>
                     </div>
                   </div>
@@ -827,6 +949,39 @@ export function GMScreen() {
                     </div>
                   )}
 
+                  {/* Pulse anomaly controls */}
+                  {drawMode === "anomaly" && (
+                    <div className="coord-tool__editor-row">
+                      <span className="coord-tool__label">Anomalia</span>
+                      <div className="coord-tool__click-points">
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "anomalyP1" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "anomalyP1" ? null : "anomalyP1")}
+                        >
+                          {clickCapture === "anomalyP1" ? "Capturando P1..." : capturedPoints.p1 ? `P1 (${capturedPoints.p1.x.toFixed(1)}, ${capturedPoints.p1.y.toFixed(1)})` : "Clic P1 — sup. izq."}
+                        </button>
+                        <button
+                          type="button"
+                          className="coord-tool__click-btn"
+                          onClick={() => {
+                            setAnomalyCaptureFromHotspot(savedCoordinateTargets.find((t) => t.id === selectedHotspotId));
+                            setClickCapture(null);
+                          }}
+                        >
+                          Auto
+                        </button>
+                        <button
+                          type="button"
+                          className={`coord-tool__click-btn ${clickCapture === "anomalyP2" ? "capturing" : ""}`}
+                          onClick={() => setClickCapture(clickCapture === "anomalyP2" ? null : "anomalyP2")}
+                        >
+                          {clickCapture === "anomalyP2" ? "Capturando P2..." : capturedPoints.p2 ? `P2 (${capturedPoints.p2.x.toFixed(1)}, ${capturedPoints.p2.y.toFixed(1)})` : "Clic P2 — inf. der."}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Result row */}
                   {editedHotspotData && (
                     <div className="coord-tool__result">
@@ -835,6 +990,8 @@ export function GMScreen() {
                           ? `cardX: ${editedHotspotData.cardX}, cardY: ${editedHotspotData.cardY}`
                           : drawMode === "discovery"
                             ? `discoveryCardX: ${editedHotspotData.discoveryCardX}, discoveryCardY: ${editedHotspotData.discoveryCardY}`
+                            : drawMode === "anomaly"
+                              ? `anomalyX: ${editedHotspotData.anomalyX}, anomalyY: ${editedHotspotData.anomalyY}, anomalyW: ${editedHotspotData.anomalyW}, anomalyH: ${editedHotspotData.anomalyH}`
                             : `x: ${editedHotspotData.x}, y: ${editedHotspotData.y}, w: ${editedHotspotData.w}, h: ${editedHotspotData.h}`}
                         {editedHotspotData.points && ` · ${editedHotspotData.points.length} pts`}
                       </code>
@@ -869,6 +1026,31 @@ export function GMScreen() {
               )}
             </div>
           </div>
+        )}
+      </div>
+
+      {/* ---- Organigrama tecnico de overlays ---- */}
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${technicalFlowExpanded ? "expanded" : ""}`}
+          onClick={() => setTechnicalFlowExpanded((v) => !v)}
+          aria-expanded={technicalFlowExpanded}
+        >
+          <span>Organigrama tecnico</span>
+          <span className="react-gm-monitors-toggle-badges">
+            <NBadge status={gameState?.flags?.almacenSalidaLista ? "success" : "info"}>
+              overlays A/B
+            </NBadge>
+            {gameState?.flags?.moduleSyncInserted && <NBadge status="success">modulo insertado</NBadge>}
+          </span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{technicalFlowExpanded ? "▲" : "▼"}</span>
+        </button>
+        {technicalFlowExpanded && (
+          <GMTechnicalFlowchart
+            remoteState={remoteState}
+            onRefresh={refresh}
+            onStatus={setStatusMessage}
+          />
         )}
       </div>
 
@@ -962,6 +1144,22 @@ export function GMScreen() {
 
         {/* ---- Cola de acciones + pulso ---- */}
         <NCard title="Cola de acciones" glow>
+          <div className="gm-pulse-scheduler">
+            <div>
+              <span>Proximo pulso</span>
+              <strong>{pulseState.status === "executing" ? "En ejecucion" : formatPulseCountdown(pulseSchedule.remainingMs)}</strong>
+            </div>
+            <div>
+              <span>Ventana auto</span>
+              <strong>
+                {Math.round((pulseState.schedule?.minMs || 40000) / 1000)}s - {Math.round((pulseState.schedule?.maxMs || 120000) / 1000)}s
+              </strong>
+            </div>
+            <div>
+              <span>Origen</span>
+              <strong>{pulseState.mode || "auto"}</strong>
+            </div>
+          </div>
           <ActionQueuePanel
             pulseState={pulseState}
             queuedActions={queuedActions}
@@ -974,9 +1172,18 @@ export function GMScreen() {
               onClick={handleStartPulse}
               disabled={isBusy || isPulseBusy || pulseState.status !== "idle"}
             >
-              {isPulseBusy ? "Pulso en curso" : "Comenzar pulso"}
+              {isPulseBusy ? "Pulso en curso" : "Lanzar pulso ahora"}
             </NButton>
-            <NButton variant="ghost" disabled>Auto pulso</NButton>
+            <NButton
+              variant="ghost"
+              disabled={session.status !== "in_game" || pulseState.status !== "idle"}
+              onClick={async () => {
+                await ensureNextPulseScheduled({ onStatus(message) { setStatusMessage(message); } });
+                await refresh();
+              }}
+            >
+              Programar auto
+            </NButton>
           </div>
         </NCard>
 

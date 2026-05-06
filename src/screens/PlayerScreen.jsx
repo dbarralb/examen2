@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { E2Logo, NBadge, NCard, NProgress, NTimer } from "../components/e2";
+import { E2Logo, NBadge, NCard, NTimer } from "../components/e2";
 import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
 import { cards, getCard, targets } from "../data/gameData.js";
 import { DEFAULT_SCENARIO_ID, getVariantBackground, getVariantImageAspect } from "../data/scenarioData.js";
-import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
+import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioPulseAnomalyTargetIds, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -24,27 +24,6 @@ const PLAYER_VIEW_STALE_MS = 15000;
 const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
 const ACTION_INFO_DELAY_MS = 500;
-
-function isResultOverlayActive(pulseState, scenarioId, variant) {
-  const overlay = pulseState?.resultOverlay;
-  if (!overlay?.visible || (overlay.endsAt && overlay.endsAt <= Date.now())) {
-    return false;
-  }
-
-  const sameScenario = !overlay.scenarioId || overlay.scenarioId === scenarioId;
-  const sameVariant = !overlay.variant || overlay.variant === variant;
-  return sameScenario && sameVariant;
-}
-
-function getOverlayProgress(pulseState) {
-  const overlay = pulseState?.resultOverlay;
-
-  if (!overlay?.startedAt || !overlay?.endsAt) {
-    return 0;
-  }
-
-  return ((Date.now() - overlay.startedAt) / (overlay.endsAt - overlay.startedAt)) * 100;
-}
 
 function getTargetStateSignature(targetId, gameState, boardTargets = targets, scenarioId = DEFAULT_SCENARIO_ID, variant = "A") {
   const target = boardTargets.find((item) => item.id === targetId);
@@ -150,7 +129,10 @@ export function PlayerScreen({ navigation, params }) {
   const boardAspect = getVariantImageAspect(boardScenarioId, boardVariant);
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
-  const overlayActive = isResultOverlayActive(pulseState, boardScenarioId, boardVariant);
+  const overlayActive = pulseState.status === "executing";
+  const pulseAnomalyTargetIds = overlayActive && pulseState.actionCount > 0
+    ? getScenarioPulseAnomalyTargetIds(gameState, boardScenarioId, boardVariant)
+    : [];
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
 
   function logEvent(msg) {
@@ -660,13 +642,8 @@ export function PlayerScreen({ navigation, params }) {
           variant={boardVariant}
           onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}
           deviceCommandResult={isGmMonitorView ? null : deviceCommandResult}
+          pulseAnomalyTargetIds={isGmMonitorView ? [] : pulseAnomalyTargetIds}
         />
-        {overlayActive && (
-          <aside className="react-result-overlay">
-            <strong>{pulseState.resultOverlay.message || "Accion resuelta."}</strong>
-            <NProgress value={getOverlayProgress(pulseState)} label="Resultado de pulso" />
-          </aside>
-        )}
         {!isGmMonitorView && (
           <div className="scene-action-zone">
             <div
