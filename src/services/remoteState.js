@@ -62,6 +62,7 @@ export function createInitialPulseState() {
     pulseChargeEndsAt: null,
     currentActionId: null,
     currentActionResult: null,
+    interferenceVariant: null,
     actionCount: 0,
     actionIndex: 0,
     resultOverlay: createEmptyResultOverlay(),

@@ -78,6 +78,23 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 9. `gameRules` delega a `scenarioContent`.
 10. Firebase recibe flags, feedback y log.
 
+## Eventos internos del pulso
+
+La onda de anomalia temporal debe emitir eventos internos solo en transicion, nunca en cada tick/render. Esto deja preparado el contrato para sonido y otros efectos posteriores.
+
+Flags/eventos reservados:
+
+- `pulse.signal.stable.enter`: la senal entra en fase estable.
+- `pulse.signal.unstable.enter`: la senal entra en fase inestable.
+- `pulse.signal.critical.enter`: la senal entra en fase critica.
+- `pulse.execution.start`: el pulso pasa a ejecucion.
+- `pulse.action.start`: cambia la accion actual del pulso.
+- `pulse.action.resolved`: aparece un resultado visible de accion.
+- `pulse.action.resultHidden`: desaparece el resultado visible de accion.
+- `pulse.execution.end`: el pulso termina y vuelve a idle con nuevo schedule.
+
+Regla de implementacion: comparar el snapshot anterior y el actual de `pulseState`; disparar solo cuando cambia `phase`, `status`, `currentActionId` o la visibilidad de `currentActionResult`. La logica visual puede refrescar con frecuencia, pero los eventos internos deben ser discretos e idempotentes por transicion.
+
 ## Archivos clave
 
 | Archivo | Responsabilidad |

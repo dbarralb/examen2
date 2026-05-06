@@ -12,6 +12,7 @@ import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
+import { getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
@@ -130,9 +131,21 @@ export function PlayerScreen({ navigation, params }) {
   const remoteInventorySlots = remoteState?.playerInventories?.[role.id]?.slots;
   const queuedForPlayer = findQueuedActionForCurrentPlayer(queuedActions, role.id);
   const overlayActive = pulseState.status === "executing";
-  const pulseAnomalyTargetIds = overlayActive && pulseState.actionCount > 0
+  const pulseSchedule = getPulseScheduleProgress(pulseState);
+  const pulseCriticalActive = !overlayActive && pulseSchedule.phase === "critical";
+  const pulseCriticalIntensity = !pulseCriticalActive
+    ? "off"
+    : pulseSchedule.proximity >= 0.96
+      ? "peak"
+      : pulseSchedule.proximity >= 0.9
+        ? "rising"
+        : "low";
+  const pulseAnomalyVisible = pulseCriticalActive || (overlayActive && pulseState.actionCount > 0);
+  const pulseAnomalyTargetIds = pulseAnomalyVisible
     ? getScenarioPulseAnomalyTargetIds(gameState, boardScenarioId, boardVariant)
     : [];
+  const pulseAnomalyMode = pulseCriticalActive ? "critical" : "active";
+  const interferenceVariant = pulseState.interferenceVariant || 1;
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
 
   function logEvent(msg) {
@@ -643,6 +656,10 @@ export function PlayerScreen({ navigation, params }) {
           onDeviceCommand={isGmMonitorView ? undefined : handleDeviceCommand}
           deviceCommandResult={isGmMonitorView ? null : deviceCommandResult}
           pulseAnomalyTargetIds={isGmMonitorView ? [] : pulseAnomalyTargetIds}
+          pulseAnomalyMode={pulseAnomalyMode}
+          pulseCriticalIntensity={isGmMonitorView ? "off" : pulseCriticalIntensity}
+          interferenceActive={!isGmMonitorView && overlayActive}
+          interferenceVariant={interferenceVariant}
         />
         {!isGmMonitorView && (
           <div className="scene-action-zone">

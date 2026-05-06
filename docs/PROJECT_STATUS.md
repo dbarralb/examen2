@@ -1,6 +1,6 @@
 # Estado del Proyecto - El Examen II
 
-**Fecha de ultima actualizacion:** 2026-05-05
+**Fecha de ultima actualizacion:** 2026-05-06
 **Rama activa:** `react-oficial`
 **Historico:** `docs/OLD`
 
@@ -45,6 +45,7 @@
 - [ ] Arte final de fondos por variante
 - [ ] Balancear y testear el puzzle completo del almacen
 - [ ] Convertir el pulso en ventana de visibilidad entre jugadores
+- [ ] Implementar eventos internos de onda temporal para sonido; contrato fijado en `docs/architecture.md` y deben dispararse solo en transicion
 - [ ] Refinar textos finales de tarjetas, feedback y consola
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario

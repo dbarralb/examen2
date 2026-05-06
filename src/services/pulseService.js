@@ -174,16 +174,9 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
   const pulseStartAt = Date.now();
   const pulseActions = await getReadyPulseActions(pulseStartAt);
   const nextSchedule = createPulseSchedule(range, pulseStartAt);
-
-  if (pulseActions.length === 0) {
-    const actionLog = normalizeRemoteList(await firebaseGet("actionLog"));
-    actionLog.unshift(`Pulso ${mode === "auto" ? "automatico" : "manual"} sin acciones listas. Siguiente pulso reprogramado.`);
-    await resetPulseToIdle(nextSchedule, { actionLog });
-    onStatus?.("Pulso sin acciones. Siguiente pulso programado.");
-    return;
-  }
-
-  const estimatedDurationMs = estimatePulseDurationMs(pulseActions);
+  const estimatedDurationMs = pulseActions.length > 0
+    ? estimatePulseDurationMs(pulseActions)
+    : PULSE_TIMING.actionExecutionSeconds * 1000;
   let pulseState = {
     ...createInitialPulseState(),
     status: "executing",
@@ -195,6 +188,7 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
     pulseEndsAt: pulseStartAt + estimatedDurationMs,
     currentActionId: null,
     currentActionResult: null,
+    interferenceVariant: Math.floor(Math.random() * 3) + 1,
     actionCount: pulseActions.length,
     actionIndex: 0,
     resultOverlay: createEmptyResultOverlay(),
@@ -208,11 +202,22 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
   }
 
   let actionLog = normalizeRemoteList(await firebaseGet("actionLog"));
-  actionLog.unshift(`Pulso ${mode === "auto" ? "automatico" : "manual"}: ${pulseActions.length} acciones entran en ejecucion.`);
+  actionLog.unshift(pulseActions.length > 0
+    ? `Pulso ${mode === "auto" ? "automatico" : "manual"}: ${pulseActions.length} acciones entran en ejecucion.`
+    : `Pulso ${mode === "auto" ? "automatico" : "manual"} sin acciones listas: la anomalia entra en ejecucion.`
+  );
   await firebasePatch("", { actionLog });
-  onStatus?.(`Pulso iniciado: ${pulseActions.length} acciones.`);
+  onStatus?.(pulseActions.length > 0 ? `Pulso iniciado: ${pulseActions.length} acciones.` : "Pulso iniciado sin acciones.");
 
   try {
+    if (pulseActions.length === 0) {
+      await waitMs(PULSE_TIMING.actionExecutionSeconds * 1000);
+      actionLog.unshift("Pulso sin acciones resuelto. Siguiente pulso programado.");
+      await resetPulseToIdle(nextSchedule, { actionLog });
+      onStatus?.("Pulso sin acciones resuelto. Siguiente pulso programado.");
+      return;
+    }
+
     const pendingItemUsage = (await firebaseGet("pendingItemUsage")) || {};
     const gameState = { ...createInitialGameState(), ...((await firebaseGet("gameState")) || {}) };
     const targetFeedback = { ...createInitialTargetFeedback(), ...((await firebaseGet("targetFeedback")) || {}) };

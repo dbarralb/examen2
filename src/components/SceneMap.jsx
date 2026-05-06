@@ -26,6 +26,11 @@ const PAN_INERTIA_MAX_DISTANCE = 110;
 const PAN_INERTIA_MIN_DISTANCE = 4;
 const PAN_INERTIA_DURATION_MS = 340;
 const PAN_INERTIA_LOOKAHEAD_MS = 210;
+const CRITICAL_CUBE_COUNTS = {
+  low: 8,
+  rising: 16,
+  peak: 28,
+};
 const PAN_EDGE_FAST_ZONE_WIDTH = 150;
 const PAN_EDGE_SLOW_ZONE_WIDTH = 150;
 const PAN_EDGE_FAST_SPEED = 420;
@@ -307,6 +312,40 @@ function CameraRecordingOverlay() {
   );
 }
 
+function PulseInterferenceOverlay({ visible = false, settling = false, variant = 1 }) {
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <div
+      className={`scene-interference scene-interference--v${variant} ${settling ? "scene-interference--settling" : ""}`}
+      aria-hidden="true"
+    >
+      <div className="scene-interference__static" />
+      <div className="scene-interference__bands" />
+      <div className="scene-interference__tear" />
+      <div className="scene-interference__settle-lines" />
+    </div>
+  );
+}
+
+function CriticalAnomalyCubes({ intensity = "off" }) {
+  const count = CRITICAL_CUBE_COUNTS[intensity] || 0;
+
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <div className={`scene-critical-cubes scene-critical-cubes--${intensity}`} aria-hidden="true">
+      {Array.from({ length: count }).map((_, index) => (
+        <span key={index} />
+      ))}
+    </div>
+  );
+}
+
 export function SceneMap({
   gameState,
   targetFeedback,
@@ -347,6 +386,10 @@ export function SceneMap({
   showInspectionDiscoveryPreview = false,
   showPulseAnomalyPreview = false,
   pulseAnomalyTargetIds = [],
+  pulseAnomalyMode = "active",
+  pulseCriticalIntensity = "off",
+  interferenceActive = false,
+  interferenceVariant = 1,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -370,7 +413,33 @@ export function SceneMap({
   const [edgePanSpeed, setEdgePanSpeed] = useState(0);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
   const [expandedSoftwareDrops, setExpandedSoftwareDrops] = useState({});
+  const [interferenceRenderState, setInterferenceRenderState] = useState({ visible: false, settling: false });
   const shouldDetectMouse = !isMonitorView && !showCoordinates;
+
+  useEffect(() => {
+    let timeoutId;
+
+    if (interferenceActive) {
+      setInterferenceRenderState({ visible: true, settling: false });
+      return undefined;
+    }
+
+    setInterferenceRenderState((current) => {
+      if (!current.visible) {
+        return current;
+      }
+      timeoutId = window.setTimeout(() => {
+        setInterferenceRenderState({ visible: false, settling: false });
+      }, 900);
+      return { visible: true, settling: true };
+    });
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [interferenceActive]);
 
   // Close device console when the selected target changes or closes
   useEffect(() => {
@@ -757,7 +826,7 @@ export function SceneMap({
   return (
     <div
       ref={viewportRef}
-      className={`scene-map-viewport ${isPanning ? "is-panning" : ""}`}
+      className={`scene-map-viewport ${isPanning ? "is-panning" : ""} ${interferenceActive ? `is-interference-active is-interference-v${interferenceVariant}` : ""} ${interferenceRenderState.settling ? "is-interference-settling" : ""}`}
       onPointerDown={handleViewportPointerDown}
       onPointerMove={handleViewportPointerMove}
       onPointerUp={finishPan}
@@ -974,7 +1043,7 @@ export function SceneMap({
           target.id === selectedTargetId || pulseAnomalyTargetIds.includes(target.id) ? (
             <PulseAnomalyVFX
               key={`${target.id}-pulse-anomaly-preview`}
-              className="scene-pulse-anomaly-preview"
+              className={`scene-pulse-anomaly-preview scene-pulse-anomaly-preview--${pulseAnomalyMode}`}
               style={getPulseAnomalyStyle(target)}
             />
           ) : null
@@ -1013,6 +1082,12 @@ export function SceneMap({
           </div>
         ) : null;
       })()}
+      <PulseInterferenceOverlay
+        visible={interferenceRenderState.visible}
+        settling={interferenceRenderState.settling}
+        variant={interferenceVariant}
+      />
+      <CriticalAnomalyCubes intensity={pulseCriticalIntensity} />
     </div>
   );
 }
