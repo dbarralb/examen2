@@ -201,23 +201,17 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
     throw new Error("Otro GM o pulso remoto ya controla la cola.");
   }
 
-  let actionLog = normalizeRemoteList(await firebaseGet("actionLog"));
-  actionLog.unshift(pulseActions.length > 0
-    ? `Pulso ${mode === "auto" ? "automatico" : "manual"}: ${pulseActions.length} acciones entran en ejecucion.`
-    : `Pulso ${mode === "auto" ? "automatico" : "manual"} sin acciones listas: la anomalia entra en ejecucion.`
-  );
-  await firebasePatch("", { actionLog });
   onStatus?.(pulseActions.length > 0 ? `Pulso iniciado: ${pulseActions.length} acciones.` : "Pulso iniciado sin acciones.");
 
   try {
     if (pulseActions.length === 0) {
       await waitMs(PULSE_TIMING.actionExecutionSeconds * 1000);
-      actionLog.unshift("Pulso sin acciones resuelto. Siguiente pulso programado.");
-      await resetPulseToIdle(nextSchedule, { actionLog });
+      await resetPulseToIdle(nextSchedule);
       onStatus?.("Pulso sin acciones resuelto. Siguiente pulso programado.");
       return;
     }
 
+    let actionLog = normalizeRemoteList(await firebaseGet("actionLog"));
     const pendingItemUsage = (await firebaseGet("pendingItemUsage")) || {};
     const gameState = { ...createInitialGameState(), ...((await firebaseGet("gameState")) || {}) };
     const targetFeedback = { ...createInitialTargetFeedback(), ...((await firebaseGet("targetFeedback")) || {}) };
@@ -259,12 +253,10 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
         updatedAt: startedAt,
       };
       lastRoleActions[liveAction.role] = createLastRoleAction(liveAction, "ejecutando");
-      actionLog.unshift(`Ejecutando ${index + 1}/${pulseActions.length}: ${getActionLabel(liveAction)} sobre ${liveAction.target}.`);
 
       await firebasePatch("", {
         [`queuedActions/${liveAction.id}`]: liveAction,
         pulseState,
-        actionLog,
         lastRoleActions,
       });
 
@@ -311,7 +303,6 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       deletes[`queuedActions/${action.id}`] = null;
       return deletes;
     }, {});
-    actionLog.unshift("Pulso resuelto. Las acciones tardias esperan al siguiente.");
 
     await resetPulseToIdle(nextSchedule, {
       gameState: context.gameState,

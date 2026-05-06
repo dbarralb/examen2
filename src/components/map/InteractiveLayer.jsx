@@ -1,7 +1,8 @@
 import { targets as allTargets } from "../../data/gameData.js";
 import { markDefinitions } from "../../data/mapData.js";
+import { memo } from "react";
 
-export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, hideHotspotChrome = false, onHotspotClick, children, visibleTargets }) {
+function InteractiveLayerComponent({ gameState, selectedTargetId, isMonitorView, hideHotspotChrome = false, onHotspotClick, children, visibleTargets }) {
   const targets = visibleTargets || allTargets;
   const visibleMarks = markDefinitions.filter((mark) => mark.visibleWhen(gameState));
 
@@ -67,3 +68,5 @@ export function InteractiveLayer({ gameState, selectedTargetId, isMonitorView, h
     </div>
   );
 }
+
+export const InteractiveLayer = memo(InteractiveLayerComponent);

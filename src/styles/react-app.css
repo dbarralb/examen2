@@ -2396,6 +2396,33 @@ a {
   pointer-events: none;
 }
 
+.player-resonance-counter {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(158, 211, 0, 0.5);
+  background: rgba(4, 12, 9, 0.68);
+  color: #9ED300;
+  box-shadow: 0 0 14px rgba(158, 211, 0, 0.18), inset 0 0 14px rgba(158, 211, 0, 0.08);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.player-resonance-counter span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.player-resonance-counter strong {
+  color: #9ED300;
+  font-size: 24px;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(158, 211, 0, 0.6);
+}
+
 .player-zone-nav {
   position: absolute;
   top: 62px;
@@ -2537,6 +2564,12 @@ a {
   object-fit: cover;
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.map-layer-background picture {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* === Map Layer System === */
@@ -2757,6 +2790,157 @@ a {
 .scene-critical-cubes span:nth-child(27) { --cube-x: 18%; --cube-y: 76%; --cube-size: 7px; --cube-delay: 0.95s; }
 .scene-critical-cubes span:nth-child(28) { --cube-x: 87%; --cube-y: 74%; --cube-size: 11px; --cube-delay: 0.15s; }
 
+.scene-resonance-spawn {
+  position: absolute;
+  z-index: 17;
+  width: 5.2%;
+  min-width: 64px;
+  max-width: 96px;
+  aspect-ratio: 1;
+  transform: translate(-50%, -58%);
+  pointer-events: auto;
+  cursor: crosshair;
+  mix-blend-mode: screen;
+  animation: scene-resonance-life 8s ease-in-out forwards;
+}
+
+.scene-resonance-spawn__rings,
+.scene-resonance-spawn__ring,
+.scene-resonance-spawn__square-mask,
+.scene-resonance-spawn__square-float,
+.scene-resonance-spawn__square,
+.scene-resonance-spawn__hover-ring,
+.scene-resonance-spawn__plus {
+  position: absolute;
+  pointer-events: none;
+}
+
+.scene-resonance-spawn__hover-ring {
+  left: 50%;
+  bottom: 9px;
+  width: 84px;
+  height: 32px;
+  border: 1px solid rgba(158, 211, 0, 0.52);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translateX(-50%) scale(0.68);
+  box-shadow:
+    0 0 8px rgba(158, 211, 0, 0.36),
+    inset 0 0 10px rgba(158, 211, 0, 0.24);
+}
+
+.scene-resonance-spawn__plus {
+  left: 50%;
+  bottom: 72px;
+  color: #9ED300;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+  opacity: 0;
+  text-shadow:
+    0 0 8px rgba(158, 211, 0, 0.92),
+    0 0 18px rgba(158, 211, 0, 0.48);
+  transform: translateX(-50%) translateY(8px);
+}
+
+.scene-resonance-spawn--charging .scene-resonance-spawn__hover-ring {
+  animation: scene-resonance-hover-charge 500ms linear forwards;
+}
+
+.scene-resonance-spawn--charging .scene-resonance-spawn__ring {
+  filter:
+    drop-shadow(0 0 6px rgba(195, 195, 195, 0.32))
+    drop-shadow(0 0 13px rgba(158, 211, 0, 0.46));
+}
+
+.scene-resonance-spawn--charging .scene-resonance-spawn__square-float {
+  filter:
+    brightness(1.26)
+    drop-shadow(0 0 13px rgba(158, 211, 0, 0.64));
+}
+
+.scene-resonance-spawn--collected {
+  cursor: default;
+  animation: scene-resonance-collected-life 1.5s ease-out forwards;
+}
+
+.scene-resonance-spawn--collected .scene-resonance-spawn__hover-ring {
+  animation: scene-resonance-collected-ring 1.5s ease-out forwards;
+}
+
+.scene-resonance-spawn--collected .scene-resonance-spawn__plus {
+  animation: scene-resonance-plus 1.5s ease-out forwards;
+}
+
+.scene-resonance-spawn__rings {
+  left: 50%;
+  bottom: 13px;
+  width: 76px;
+  height: 24px;
+  transform: translateX(-50%);
+}
+
+.scene-resonance-spawn__ring {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  filter:
+    drop-shadow(0 0 5px rgba(195, 195, 195, 0.24))
+    drop-shadow(0 0 9px rgba(158, 211, 0, 0.18));
+}
+
+.scene-resonance-spawn__ring--1 { animation: scene-resonance-ring-1 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--2 { animation: scene-resonance-ring-2 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--3 { animation: scene-resonance-ring-3 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--4 { animation: scene-resonance-ring-4 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--5 { animation: scene-resonance-ring-5 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--6 { animation: scene-resonance-ring-6 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--7 { animation: scene-resonance-ring-7 8s steps(1, end) forwards; }
+.scene-resonance-spawn__ring--8 { animation: scene-resonance-ring-8 8s steps(1, end) forwards; }
+
+.scene-resonance-spawn__square-mask {
+  left: 50%;
+  bottom: 22px;
+  width: 58px;
+  height: 62px;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.scene-resonance-spawn__square-float {
+  left: 50%;
+  bottom: -31px;
+  width: 42px;
+  height: 42px;
+  transform: translateX(-50%) translateY(32px);
+  animation:
+    scene-resonance-square-emerge 8s ease-in-out forwards,
+    scene-resonance-square-float 1.8s ease-in-out 3.4s infinite;
+}
+
+.scene-resonance-spawn__square {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+}
+
+.scene-resonance-spawn__square--1 {
+  animation: scene-resonance-square-a 8s ease-in-out forwards;
+}
+
+.scene-resonance-spawn__square--2 {
+  animation: scene-resonance-square-b 8s ease-in-out forwards;
+}
+
+.scene-resonance-spawn__square--3 {
+  animation: scene-resonance-square-c 8s ease-in-out forwards;
+}
+
 .scene-interference--settling::before,
 .scene-interference--settling::after,
 .scene-interference--settling .scene-interference__static,
@@ -2867,6 +3051,200 @@ a {
     opacity: 0.18;
     transform: translateY(2px) scale(0.86);
   }
+}
+
+@keyframes scene-resonance-life {
+  0% { opacity: 0; filter: brightness(0.9); }
+  8%,
+  82% { opacity: 1; filter: brightness(1); }
+  100% { opacity: 0; filter: brightness(0.72); }
+}
+
+@keyframes scene-resonance-hover-charge {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.68);
+  }
+  35% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+@keyframes scene-resonance-collected-life {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -58%) scale(1);
+  }
+  68% {
+    opacity: 0.42;
+    transform: translate(-50%, -64%) scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -69%) scale(0.9);
+  }
+}
+
+@keyframes scene-resonance-collected-ring {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.46);
+  }
+}
+
+@keyframes scene-resonance-plus {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  14% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.86;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-30px);
+  }
+}
+
+@keyframes scene-resonance-square-emerge {
+  0%,
+  34% { transform: translateX(-50%) translateY(32px) rotate(-8deg); }
+  54% { transform: translateX(-50%) translateY(-14px) rotate(10deg); }
+  82% { transform: translateX(-50%) translateY(-12px) rotate(10deg); }
+  100% { transform: translateX(-50%) translateY(-4px) rotate(10deg); }
+}
+
+@keyframes scene-resonance-square-float {
+  0%,
+  100% { margin-bottom: 0; }
+  50% { margin-bottom: 6px; }
+}
+
+@keyframes scene-resonance-square-a {
+  0%,
+  34% { opacity: 0; }
+  42%,
+  50% { opacity: 1; }
+  58%,
+  100% { opacity: 0; }
+}
+
+@keyframes scene-resonance-square-b {
+  0%,
+  47% { opacity: 0; }
+  56%,
+  67% { opacity: 0.86; }
+  76%,
+  100% { opacity: 0; }
+}
+
+@keyframes scene-resonance-square-c {
+  0%,
+  60% { opacity: 0; }
+  70%,
+  88% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+@keyframes scene-resonance-ring-1 {
+  0%,
+  6%,
+  72%,
+  78% { opacity: 0.72; }
+  7%,
+  71%,
+  79%,
+  100% { opacity: 0; }
+}
+
+@keyframes scene-resonance-ring-2 {
+  0%,
+  6%,
+  13%,
+  65%,
+  72%,
+  100% { opacity: 0; }
+  7%,
+  12%,
+  66%,
+  71% { opacity: 0.74; }
+}
+
+@keyframes scene-resonance-ring-3 {
+  0%,
+  13%,
+  20%,
+  58%,
+  65%,
+  100% { opacity: 0; }
+  14%,
+  19%,
+  59%,
+  64% { opacity: 0.76; }
+}
+
+@keyframes scene-resonance-ring-4 {
+  0%,
+  20%,
+  27%,
+  51%,
+  58%,
+  100% { opacity: 0; }
+  21%,
+  26%,
+  52%,
+  57% { opacity: 0.78; }
+}
+
+@keyframes scene-resonance-ring-5 {
+  0%,
+  27%,
+  34%,
+  44%,
+  51%,
+  100% { opacity: 0; }
+  28%,
+  33%,
+  45%,
+  50% { opacity: 0.8; }
+}
+
+@keyframes scene-resonance-ring-6 {
+  0%,
+  34%,
+  41%,
+  100% { opacity: 0; }
+  35%,
+  40% { opacity: 0.84; }
+}
+
+@keyframes scene-resonance-ring-7 {
+  0%,
+  41%,
+  48%,
+  100% { opacity: 0; }
+  42%,
+  47% { opacity: 0.88; }
+}
+
+@keyframes scene-resonance-ring-8 {
+  0%,
+  48%,
+  56%,
+  100% { opacity: 0; }
+  49%,
+  55% { opacity: 0.92; }
 }
 
 @keyframes scene-interference-settle-out {

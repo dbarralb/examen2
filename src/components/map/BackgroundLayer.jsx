@@ -1,11 +1,33 @@
 import mapBackgroundFallback from "../../../assets/Pantalla de juego/Background_Green.png";
 import { backgroundTiles } from "../../data/mapData.js";
+import { memo } from "react";
 
-export function BackgroundLayer({ backgroundSrc = null }) {
-  if (backgroundSrc) {
+function BackgroundLayerComponent({ backgroundSrc = null }) {
+  const src = typeof backgroundSrc === "string" ? backgroundSrc : backgroundSrc?.src;
+  const srcSet = typeof backgroundSrc === "object" ? backgroundSrc?.srcSet : null;
+  const sizes = typeof backgroundSrc === "object" ? backgroundSrc?.sizes : null;
+  const sources = typeof backgroundSrc === "object" && Array.isArray(backgroundSrc?.sources)
+    ? backgroundSrc.sources
+    : [];
+
+  if (src) {
     return (
       <div className="map-layer map-layer-background">
-        <img className="scene-map-background" src={backgroundSrc} alt="Tablero del jugador" draggable="false" />
+        <picture>
+          {sources.map((source) => (
+            <source key={source.type} type={source.type} srcSet={source.srcSet} sizes={sizes || undefined} />
+          ))}
+          <img
+            className="scene-map-background"
+            src={src}
+            srcSet={srcSet || undefined}
+            sizes={sizes || undefined}
+            alt="Tablero del jugador"
+            draggable="false"
+            decoding="async"
+            fetchPriority="high"
+          />
+        </picture>
       </div>
     );
   }
@@ -41,3 +63,5 @@ export function BackgroundLayer({ backgroundSrc = null }) {
     </div>
   );
 }
+
+export const BackgroundLayer = memo(BackgroundLayerComponent);

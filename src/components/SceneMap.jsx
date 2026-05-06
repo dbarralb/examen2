@@ -11,6 +11,17 @@ import { getContainerOpenState, getInspectionDiscovery, getTarget, getTargetImag
 import { getScenarioScopedTargetKey } from "../data/scenarioContent.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
+import resonanceRing1 from "../../assets/Pantalla de juego/Resonance/1.svg?url";
+import resonanceRing2 from "../../assets/Pantalla de juego/Resonance/2.svg?url";
+import resonanceRing3 from "../../assets/Pantalla de juego/Resonance/3.svg?url";
+import resonanceRing4 from "../../assets/Pantalla de juego/Resonance/4.svg?url";
+import resonanceRing5 from "../../assets/Pantalla de juego/Resonance/5.svg?url";
+import resonanceRing6 from "../../assets/Pantalla de juego/Resonance/6.svg?url";
+import resonanceRing7 from "../../assets/Pantalla de juego/Resonance/7.svg?url";
+import resonanceRing8 from "../../assets/Pantalla de juego/Resonance/8.svg?url";
+import resonanceSquareA from "../../assets/Pantalla de juego/Resonance/Square A.svg?url";
+import resonanceSquareB from "../../assets/Pantalla de juego/Resonance/Square B.svg?url";
+import resonanceSquareC from "../../assets/Pantalla de juego/Resonance/Square C.svg?url";
 
 const DEFAULT_MAP_ASPECT = 1826 / 1080;
 const MIN_SCALE = 0.8;
@@ -31,6 +42,17 @@ const CRITICAL_CUBE_COUNTS = {
   rising: 16,
   peak: 28,
 };
+const RESONANCE_RINGS = [
+  resonanceRing1,
+  resonanceRing2,
+  resonanceRing3,
+  resonanceRing4,
+  resonanceRing5,
+  resonanceRing6,
+  resonanceRing7,
+  resonanceRing8,
+];
+const RESONANCE_SQUARES = [resonanceSquareA, resonanceSquareB, resonanceSquareC];
 const PAN_EDGE_FAST_ZONE_WIDTH = 150;
 const PAN_EDGE_SLOW_ZONE_WIDTH = 150;
 const PAN_EDGE_FAST_SPEED = 420;
@@ -346,6 +368,48 @@ function CriticalAnomalyCubes({ intensity = "off" }) {
   );
 }
 
+function ResonanceSpawnVFX({
+  spawn = null,
+  collectState = "idle",
+  onHoverStart,
+  onHoverEnd,
+}) {
+  if (!spawn) {
+    return null;
+  }
+
+  return (
+    <div
+      key={spawn.id}
+      className={`scene-resonance-spawn scene-resonance-spawn--${collectState}`}
+      style={{
+        left: `${spawn.x}%`,
+        top: `${spawn.y}%`,
+      }}
+      role="button"
+      aria-label="Recoger resonancia"
+      onPointerEnter={onHoverStart}
+      onPointerLeave={onHoverEnd}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <span className="scene-resonance-spawn__hover-ring" aria-hidden="true" />
+      <div className="scene-resonance-spawn__rings">
+        {RESONANCE_RINGS.map((src, index) => (
+          <img key={src} src={src} alt="" className={`scene-resonance-spawn__ring scene-resonance-spawn__ring--${index + 1}`} draggable="false" />
+        ))}
+      </div>
+      <div className="scene-resonance-spawn__square-mask">
+        <div className="scene-resonance-spawn__square-float">
+          {RESONANCE_SQUARES.map((src, index) => (
+            <img key={src} src={src} alt="" className={`scene-resonance-spawn__square scene-resonance-spawn__square--${index + 1}`} draggable="false" />
+          ))}
+        </div>
+      </div>
+      <span className="scene-resonance-spawn__plus" aria-hidden="true">+1</span>
+    </div>
+  );
+}
+
 export function SceneMap({
   gameState,
   targetFeedback,
@@ -363,6 +427,7 @@ export function SceneMap({
   isMonitorView = false,
   externalCamera = null,
   onCameraChange,
+  onCameraCommit,
   showCoordinates = false,
   itemSeenState = {},
   dropZoneState = {},
@@ -390,6 +455,10 @@ export function SceneMap({
   pulseCriticalIntensity = "off",
   interferenceActive = false,
   interferenceVariant = 1,
+  resonanceSpawn = null,
+  resonanceCollectState = "idle",
+  onResonanceHoverStart,
+  onResonanceHoverEnd,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -679,7 +748,7 @@ export function SceneMap({
 
   function startPanInertia(pan) {
     if (!pan?.lastCamera || !layout.mapWidth || !layout.mapHeight) {
-      return;
+      return false;
     }
 
     const velocity = pan.velocity || { x: 0, y: 0 };
@@ -688,7 +757,7 @@ export function SceneMap({
     const projectedDistance = Math.sqrt(projectedX * projectedX + projectedY * projectedY);
 
     if (projectedDistance < PAN_INERTIA_MIN_DISTANCE) {
-      return;
+      return false;
     }
 
     const distanceScale = Math.min(1, PAN_INERTIA_MAX_DISTANCE / projectedDistance);
@@ -704,7 +773,7 @@ export function SceneMap({
     const clampedDistance = Math.sqrt(dx * dx + dy * dy);
 
     if (clampedDistance < PAN_INERTIA_MIN_DISTANCE) {
-      return;
+      return false;
     }
 
     stopPanInertia();
@@ -725,12 +794,14 @@ export function SceneMap({
         panInertiaRef.current.frameId = window.requestAnimationFrame(step);
       } else {
         panInertiaRef.current = null;
+        onCameraCommit?.(nextCamera);
       }
     }
 
     panInertiaRef.current = {
       frameId: window.requestAnimationFrame(step),
     };
+    return true;
   }
 
   function handleViewportPointerDown(event) {
@@ -805,7 +876,10 @@ export function SceneMap({
     panRef.current = null;
     setIsPanning(false);
     stopEdgePan();
-    startPanInertia(pan);
+    const inertiaStarted = startPanInertia(pan);
+    if (!inertiaStarted) {
+      onCameraCommit?.(pan.lastCamera || camera);
+    }
   }
 
   function cancelPan(event) {
@@ -816,6 +890,7 @@ export function SceneMap({
     panRef.current = null;
     setIsPanning(false);
     stopEdgePan();
+    onCameraCommit?.(camera);
   }
 
   function handleViewportPointerLeave() {
@@ -879,6 +954,12 @@ export function SceneMap({
         <BackgroundLayer backgroundSrc={backgroundSrc} />
         <StructureLayer gameState={gameState} />
         <CameraRecordingOverlay />
+        <ResonanceSpawnVFX
+          spawn={resonanceSpawn}
+          collectState={resonanceCollectState}
+          onHoverStart={onResonanceHoverStart}
+          onHoverEnd={onResonanceHoverEnd}
+        />
         {/* Dim layer: covers background/structure but sits below cards (same z-index as interactive, earlier in DOM) */}
         <div
           className={`scene-target-dim ${selectedTargetId && !isMonitorView ? "active" : ""}`}

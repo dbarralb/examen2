@@ -80,6 +80,7 @@ export function createInitialGameState() {
     alarmState: { level: 0, noise: 0, triggers: [] },
     discoveries: {},   // keyed by discovery ID, value: true
     flags: {},         // keyed by flag ID, value: true
+    resonance: { value: 0, spent: 0, discoveries: {} },
     gmSceneState: {
       activeVariant: "normal",
       activeEffects: [],
@@ -184,6 +185,15 @@ export function normalizeRemoteList(value) {
     const bTime = b && (b.loadedAt || b.createdAt) ? b.loadedAt || b.createdAt : 0;
     return aTime - bTime;
   });
+}
+
+export function isPulseHistoryMessage(message) {
+  const normalized = String(message || "").trim().toLowerCase();
+  return normalized.includes("pulso") || normalized.startsWith("ejecutando ");
+}
+
+export function filterActionHistory(value) {
+  return normalizeRemoteList(value).filter((message) => !isPulseHistoryMessage(message));
 }
 
 /** Get elapsed game seconds from the game timer object. */

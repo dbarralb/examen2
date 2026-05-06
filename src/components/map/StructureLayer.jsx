@@ -1,6 +1,7 @@
 import { rooms, structures } from "../../data/mapData.js";
+import { memo } from "react";
 
-export function StructureLayer({ gameState }) {
+function StructureLayerComponent({ gameState }) {
   return (
     <div className="map-layer map-layer-structure">
       <svg
@@ -45,3 +46,5 @@ export function StructureLayer({ gameState }) {
     </div>
   );
 }
+
+export const StructureLayer = memo(StructureLayerComponent);

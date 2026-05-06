@@ -14,7 +14,7 @@ import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } 
 import { getAlarmRecommendations } from "../services/gameRules.js";
 import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
 import { ensureNextPulseScheduled, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
-import { getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
+import { filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { formatPulseCountdown, getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 
 function getSessionBadgeStatus(status) {
@@ -125,7 +125,7 @@ export function GMScreen() {
   const pulseState = remoteState?.pulseState || { status: "idle" };
   const pulseSchedule = getPulseScheduleProgress(pulseState);
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
-  const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 8), [remoteState]);
+  const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 8), [remoteState]);
   const activeScenario = getScenario(sessionState.scenarioId || DEFAULT_SCENARIO_ID);
   const coordinateTargets = getScenarioHotspots(activeScenario.id, coordinateVariant);
   const coordinateBg = getVariantBackground(activeScenario.id, coordinateVariant);

@@ -14,10 +14,10 @@ import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
-import { createInitialGameState, createInitialTargetFeedback, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
-import { getSession, hasValidStoredSessionCode } from "../services/sessionAccess.js";
+import { createInitialGameState, createInitialTargetFeedback, filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
+import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
 import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
-import { firebasePatch } from "../services/firebaseClient.js";
+import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
 
 const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
 const SUCCESS_CLOSE_DELAY_MS = 2000;
@@ -25,6 +25,77 @@ const PLAYER_VIEW_STALE_MS = 15000;
 const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
 const ACTION_INFO_DELAY_MS = 500;
+const RESONANCE_BALLS_OPEN_REWARD = 3;
+const RESONANCE_BALLS_DISCOVERY_ID = "hotspot_open_balones";
+const RESONANCE_SPAWN_VISIBLE_MS = 8000;
+const RESONANCE_SPAWN_MIN_MS = 25000;
+const RESONANCE_SPAWN_MAX_MS = 40000;
+const RESONANCE_COLLECT_HOVER_MS = 500;
+const RESONANCE_COLLECT_FEEDBACK_MS = 1500;
+const PLAYER_VIEW_PUBLISH_DEBOUNCE_MS = 420;
+const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
+
+function stableRemoteSignature(state) {
+  return JSON.stringify(state || null);
+}
+
+function hasCameraMeaningfulChange(previousCamera, nextCamera) {
+  if (!previousCamera || !nextCamera) {
+    return previousCamera !== nextCamera;
+  }
+
+  return Math.abs((previousCamera.x || 0) - (nextCamera.x || 0)) >= PLAYER_VIEW_CAMERA_MIN_DELTA
+    || Math.abs((previousCamera.y || 0) - (nextCamera.y || 0)) >= PLAYER_VIEW_CAMERA_MIN_DELTA
+    || Math.abs((previousCamera.scale || 0) - (nextCamera.scale || 0)) >= 0.001;
+}
+
+async function getPlayerRemoteStateSlice(roleId) {
+  const [
+    session,
+    gameState,
+    pulseState,
+    targetFeedback,
+    queuedActions,
+    actionLog,
+    chatMessages,
+    lastRoleActions,
+    itemSeenState,
+    cardUsageForRole,
+    playerInventoryForRole,
+    playerBoardForRole,
+    hotspotOverrides,
+  ] = await Promise.all([
+    firebaseGet("session"),
+    firebaseGet("gameState"),
+    firebaseGet("pulseState"),
+    firebaseGet("targetFeedback"),
+    firebaseGet("queuedActions"),
+    firebaseGet("actionLog"),
+    firebaseGet("chatMessages"),
+    firebaseGet("lastRoleActions"),
+    firebaseGet("itemSeenState"),
+    firebaseGet(`cardUsage/${roleId}`),
+    firebaseGet(`playerInventories/${roleId}`),
+    firebaseGet(`playerBoards/${roleId}`),
+    firebaseGet("hotspotOverrides"),
+  ]);
+
+  return {
+    session,
+    gameState,
+    pulseState,
+    targetFeedback,
+    queuedActions,
+    actionLog,
+    chatMessages,
+    lastRoleActions,
+    itemSeenState,
+    cardUsage: { [roleId]: cardUsageForRole || {} },
+    playerInventories: { [roleId]: playerInventoryForRole || {} },
+    playerBoards: { [roleId]: playerBoardForRole || {} },
+    hotspotOverrides,
+  };
+}
 
 function getTargetStateSignature(targetId, gameState, boardTargets = targets, scenarioId = DEFAULT_SCENARIO_ID, variant = "A") {
   const target = boardTargets.find((item) => item.id === targetId);
@@ -88,6 +159,8 @@ export function PlayerScreen({ navigation, params }) {
   const [eventLog, setEventLog] = useState([]);
   const [eventLogVisible, setEventLogVisible] = useState(false);
   const [actionInfoState, setActionInfoState] = useState({ status: "idle", cardId: null, info: null });
+  const [resonanceSpawn, setResonanceSpawn] = useState(null);
+  const [resonanceCollectState, setResonanceCollectState] = useState("idle");
   const prevGameStateRef = useRef(null);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
@@ -96,13 +169,23 @@ export function PlayerScreen({ navigation, params }) {
   const actionInfoTimerRef = useRef(null);
   const latestCameraRef = useRef(null);
   const viewPublishTimerRef = useRef(null);
+  const resonanceSpawnTimerRef = useRef(null);
+  const resonanceDespawnTimerRef = useRef(null);
+  const resonanceCollectTimerRef = useRef(null);
+  const resonanceCollectFeedbackTimerRef = useRef(null);
+  const resonanceCollectPendingRef = useRef(false);
+  const resonanceRewardPendingRef = useRef(false);
+  const resonanceRewardClaimedRef = useRef(false);
+  const remoteStateSignatureRef = useRef("");
+  const lastPublishedCameraRef = useRef(null);
+  const lastPublishedViewSignatureRef = useRef("");
 
   const session = remoteState?.session || {};
   const gameState = { ...createInitialGameState(), ...(remoteState?.gameState || {}) };
   const remoteTargetFeedback = remoteState?.targetFeedback || {};
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
-  const actionLog = useMemo(() => normalizeRemoteList(remoteState?.actionLog).slice(0, 5), [remoteState]);
+  const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 5), [remoteState]);
   const chatMessages = useMemo(() => normalizeRemoteList(remoteState?.chatMessages).slice(-18), [remoteState]);
   const lastRoleAction = remoteState?.lastRoleActions?.[role.id];
   const mirroredView = isGmMonitorView ? remoteState?.playerViews?.[role.id] : null;
@@ -146,12 +229,78 @@ export function PlayerScreen({ navigation, params }) {
     : [];
   const pulseAnomalyMode = pulseCriticalActive ? "critical" : "active";
   const interferenceVariant = pulseState.interferenceVariant || 1;
+  const resonanceValue = Number(gameState.resonance?.value || 0);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
+
+  useEffect(() => {
+    resonanceRewardClaimedRef.current = Boolean(gameState.resonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]);
+  }, [gameState.resonance?.discoveries]);
 
   function logEvent(msg) {
     const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     setEventLog((prev) => [{ time, msg }, ...prev].slice(0, 80));
   }
+
+  const applyRemoteStateIfChanged = useCallback((nextState) => {
+    const nextSignature = stableRemoteSignature(nextState);
+
+    if (nextSignature === remoteStateSignatureRef.current) {
+      return false;
+    }
+
+    remoteStateSignatureRef.current = nextSignature;
+    setRemoteState(nextState);
+    return true;
+  }, []);
+
+  const scheduleResonanceSpawn = useCallback(() => {
+    window.clearTimeout(resonanceSpawnTimerRef.current);
+
+    if (isGmMonitorView || session.status !== "in_game") {
+      return;
+    }
+
+    const delay = Math.round(RESONANCE_SPAWN_MIN_MS + Math.random() * (RESONANCE_SPAWN_MAX_MS - RESONANCE_SPAWN_MIN_MS));
+    resonanceSpawnTimerRef.current = window.setTimeout(() => {
+      window.clearTimeout(resonanceCollectTimerRef.current);
+      window.clearTimeout(resonanceDespawnTimerRef.current);
+      resonanceCollectPendingRef.current = false;
+      setResonanceCollectState("idle");
+      setResonanceSpawn({
+        id: Date.now(),
+        x: +(12 + Math.random() * 76).toFixed(2),
+        y: +(56 + Math.random() * 32).toFixed(2),
+      });
+
+      resonanceDespawnTimerRef.current = window.setTimeout(() => {
+        setResonanceSpawn(null);
+        setResonanceCollectState("idle");
+        scheduleResonanceSpawn();
+      }, RESONANCE_SPAWN_VISIBLE_MS);
+    }, delay);
+  }, [isGmMonitorView, session.status]);
+
+  useEffect(() => {
+    if (isGmMonitorView || session.status !== "in_game") {
+      window.clearTimeout(resonanceSpawnTimerRef.current);
+      window.clearTimeout(resonanceDespawnTimerRef.current);
+      window.clearTimeout(resonanceCollectTimerRef.current);
+      window.clearTimeout(resonanceCollectFeedbackTimerRef.current);
+      resonanceCollectPendingRef.current = false;
+      setResonanceSpawn(null);
+      setResonanceCollectState("idle");
+      return undefined;
+    }
+
+    scheduleResonanceSpawn();
+
+    return () => {
+      window.clearTimeout(resonanceSpawnTimerRef.current);
+      window.clearTimeout(resonanceDespawnTimerRef.current);
+      window.clearTimeout(resonanceCollectTimerRef.current);
+      window.clearTimeout(resonanceCollectFeedbackTimerRef.current);
+    };
+  }, [isGmMonitorView, scheduleResonanceSpawn, session.status]);
 
   // Track all puzzle-relevant state changes and auto-log them
   useEffect(() => {
@@ -242,42 +391,37 @@ export function PlayerScreen({ navigation, params }) {
     intervalMs: 1000,
     task: async ({ isCancelled }) => {
       try {
+        const state = isGmMonitorView
+          ? await getRemoteState()
+          : await getPlayerRemoteStateSlice(role.id);
+
+        if (isCancelled()) {
+          return;
+        }
+
         if (!isGmMonitorView) {
-          const sessionState = await getSession();
-
-          if (isCancelled()) {
-            return;
-          }
-
-          if (!hasValidStoredSessionCode(sessionState)) {
+          if (!hasValidStoredSessionCode(state.session)) {
             navigation.go("access");
             return;
           }
 
-          if (sessionState.status !== "in_game") {
+          if (state.session?.status !== "in_game") {
             navigation.go("access");
             return;
           }
         }
 
-        const state = await getRemoteState();
+        if (pendingAction) {
+          const nextGameState = { ...createInitialGameState(), ...(state?.gameState || {}) };
+          const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState, boardTargets);
 
-        if (!isCancelled()) {
-          let cancelledRemoteLoad = false;
-
-          if (pendingAction) {
-            const nextGameState = { ...createInitialGameState(), ...(state?.gameState || {}) };
-            const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState, boardTargets);
-
-            if (pendingAction.targetStateSignature && nextSignature !== pendingAction.targetStateSignature) {
-              cancelledRemoteLoad = true;
-              setPendingAction(null);
-              setSelectedTargetId(pendingAction.target);
-            }
+          if (pendingAction.targetStateSignature && nextSignature !== pendingAction.targetStateSignature) {
+            setPendingAction(null);
+            setSelectedTargetId(pendingAction.target);
           }
-
-          setRemoteState(state);
         }
+
+        applyRemoteStateIfChanged(state);
       } catch (error) {
         // Error de red silencioso; el siguiente ciclo reintentara.
       }
@@ -365,7 +509,7 @@ export function PlayerScreen({ navigation, params }) {
     return Array.from({ length: 10 }, () => SOFTWARE_LOAD_DIRECTIONS[Math.floor(Math.random() * SOFTWARE_LOAD_DIRECTIONS.length)]);
   }
 
-  function queuePlayerViewPublish() {
+  function queuePlayerViewPublish({ force = false } = {}) {
     if (isGmMonitorView) {
       return;
     }
@@ -373,21 +517,50 @@ export function PlayerScreen({ navigation, params }) {
     window.clearTimeout(viewPublishTimerRef.current);
     viewPublishTimerRef.current = window.setTimeout(async () => {
       try {
+        const nextCamera = latestCameraRef.current;
+        const viewSignature = JSON.stringify({
+          selectedTargetId,
+          selectedCardId,
+          camera: nextCamera
+            ? {
+                x: Math.round(nextCamera.x || 0),
+                y: Math.round(nextCamera.y || 0),
+                scale: Number(nextCamera.scale || 0).toFixed(3),
+              }
+            : null,
+          pendingActionId: pendingAction?.id || null,
+          pendingActionStatus: pendingAction?.status || null,
+          pendingActionResult: pendingAction?.minigame?.result || null,
+        });
+
+        if (!force && viewSignature === lastPublishedViewSignatureRef.current) {
+          return;
+        }
+
         await updatePlayerView(role, {
           selectedTargetId,
           selectedCardId,
-          camera: latestCameraRef.current,
+          camera: nextCamera,
           pendingAction,
         });
+        lastPublishedCameraRef.current = nextCamera;
+        lastPublishedViewSignatureRef.current = viewSignature;
       } catch (error) {
         // La vista espejo es telemetria de GM; no debe bloquear al jugador.
       }
-    }, 120);
+    }, force ? 0 : PLAYER_VIEW_PUBLISH_DEBOUNCE_MS);
   }
 
   const handleCameraChange = useCallback((nextCamera) => {
     latestCameraRef.current = nextCamera;
-    queuePlayerViewPublish();
+    if (hasCameraMeaningfulChange(lastPublishedCameraRef.current, nextCamera)) {
+      queuePlayerViewPublish();
+    }
+  }, [isGmMonitorView, pendingAction, role, selectedCardId, selectedTargetId]);
+
+  const handleCameraCommit = useCallback((nextCamera) => {
+    latestCameraRef.current = nextCamera;
+    queuePlayerViewPublish({ force: true });
   }, [isGmMonitorView, pendingAction, role, selectedCardId, selectedTargetId]);
 
   useEffect(() => {
@@ -415,6 +588,87 @@ export function PlayerScreen({ navigation, params }) {
       type: result?.type || "system",
       nextFlow: result?.nextFlow,
     });
+  }
+
+  async function grantBalonesOpenResonance() {
+    if (isGmMonitorView || resonanceRewardPendingRef.current || resonanceRewardClaimedRef.current || gameState.resonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]) {
+      return;
+    }
+
+    resonanceRewardPendingRef.current = true;
+    resonanceRewardClaimedRef.current = true;
+    try {
+      const currentValue = Number(gameState.resonance?.value || 0);
+      const currentSpent = Number(gameState.resonance?.spent || 0);
+      await firebasePatch("", {
+        "gameState/resonance/value": currentValue + RESONANCE_BALLS_OPEN_REWARD,
+        "gameState/resonance/spent": currentSpent,
+        [`gameState/resonance/discoveries/${RESONANCE_BALLS_DISCOVERY_ID}`]: true,
+      });
+      logEvent(`resonancia +${RESONANCE_BALLS_OPEN_REWARD}: balones explorados`);
+    } catch (error) {
+      resonanceRewardClaimedRef.current = false;
+      throw error;
+    } finally {
+      resonanceRewardPendingRef.current = false;
+    }
+  }
+
+  async function collectAmbientResonance() {
+    if (isGmMonitorView || !resonanceSpawn || resonanceCollectPendingRef.current || resonanceCollectState === "collected") {
+      return;
+    }
+
+    resonanceCollectPendingRef.current = true;
+    window.clearTimeout(resonanceCollectTimerRef.current);
+    window.clearTimeout(resonanceDespawnTimerRef.current);
+    setResonanceCollectState("collected");
+
+    try {
+      const latestResonance = await firebaseGet("gameState/resonance") || gameState.resonance || {};
+      const currentValue = Number(latestResonance.value || 0);
+      const currentSpent = Number(latestResonance.spent || 0);
+      await firebasePatch("", {
+        "gameState/resonance/value": currentValue + 1,
+        "gameState/resonance/spent": currentSpent,
+      });
+      logEvent("resonancia +1: recogida ambiental");
+    } finally {
+      resonanceCollectFeedbackTimerRef.current = window.setTimeout(() => {
+        resonanceCollectPendingRef.current = false;
+        setResonanceSpawn(null);
+        setResonanceCollectState("idle");
+        scheduleResonanceSpawn();
+      }, RESONANCE_COLLECT_FEEDBACK_MS);
+    }
+  }
+
+  function handleResonanceHoverStart() {
+    if (isGmMonitorView || !resonanceSpawn || resonanceCollectPendingRef.current || resonanceCollectState === "collected") {
+      return;
+    }
+
+    window.clearTimeout(resonanceCollectTimerRef.current);
+    setResonanceCollectState("charging");
+    resonanceCollectTimerRef.current = window.setTimeout(() => {
+      collectAmbientResonance().catch(() => {});
+    }, RESONANCE_COLLECT_HOVER_MS);
+  }
+
+  function handleResonanceHoverEnd() {
+    if (resonanceCollectState !== "charging") {
+      return;
+    }
+
+    window.clearTimeout(resonanceCollectTimerRef.current);
+    setResonanceCollectState("idle");
+  }
+
+  function handleSelectTarget(targetId) {
+    setSelectedTargetId(targetId);
+    if (targetId === "balones") {
+      grantBalonesOpenResonance().catch(() => {});
+    }
   }
 
   function startLoad(cardId, targetId) {
@@ -527,8 +781,8 @@ export function PlayerScreen({ navigation, params }) {
     try {
       await enqueueLoadedAction(actionToQueue);
       incrementCardUsage(role.id, actionToQueue.card, cardUsage[actionToQueue.card] || 0).catch(() => {});
-      const state = await getRemoteState();
-      setRemoteState(state);
+      const state = await getPlayerRemoteStateSlice(role.id);
+      applyRemoteStateIfChanged(state);
       window.clearTimeout(successCloseTimerRef.current);
       successCloseTimerRef.current = window.setTimeout(() => {
         setPendingAction(null);
@@ -619,6 +873,12 @@ export function PlayerScreen({ navigation, params }) {
         <div className="player-topbar">
           <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
+          {!isGmMonitorView && (
+            <div className="player-resonance-counter" aria-label="Resonancia acumulada">
+              <span>Resonancia</span>
+              <strong>{resonanceValue}</strong>
+            </div>
+          )}
           <NTimer seconds={elapsedSeconds} />
         </div>
         <SceneMap
@@ -628,7 +888,7 @@ export function PlayerScreen({ navigation, params }) {
           pendingAction={effectivePendingAction}
           queuedForPlayer={queuedForPlayer}
           overlayActive={overlayActive}
-          onSelectTarget={setSelectedTargetId}
+          onSelectTarget={handleSelectTarget}
           onCloseTarget={() => {
             setSelectedTargetId(null);
             setDropZoneState({ cardId: null, itemId: null, targetId: null });
@@ -641,6 +901,7 @@ export function PlayerScreen({ navigation, params }) {
           isMonitorView={isGmMonitorView}
           externalCamera={effectiveCamera}
           onCameraChange={isGmMonitorView ? undefined : handleCameraChange}
+          onCameraCommit={isGmMonitorView ? undefined : handleCameraCommit}
           itemSeenState={itemSeenState}
           dropZoneState={isGmMonitorView ? {} : dropZoneState}
           onItemClick={isGmMonitorView ? undefined : handleItemClick}
@@ -660,6 +921,10 @@ export function PlayerScreen({ navigation, params }) {
           pulseCriticalIntensity={isGmMonitorView ? "off" : pulseCriticalIntensity}
           interferenceActive={!isGmMonitorView && overlayActive}
           interferenceVariant={interferenceVariant}
+          resonanceSpawn={isGmMonitorView ? null : resonanceSpawn}
+          resonanceCollectState={resonanceCollectState}
+          onResonanceHoverStart={isGmMonitorView ? undefined : handleResonanceHoverStart}
+          onResonanceHoverEnd={isGmMonitorView ? undefined : handleResonanceHoverEnd}
         />
         {!isGmMonitorView && (
           <div className="scene-action-zone">

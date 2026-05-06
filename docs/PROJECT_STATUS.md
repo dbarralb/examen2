@@ -35,6 +35,8 @@
 - [x] Cursor global custom con escala visual al 50%
 - [x] Cards de objeto reducidas un 20%
 - [x] `mouse_detection`: hotspots ocultos para jugadores y cursor animado por proximidad
+- [x] Resonancia ambiental local: contador en jugador, recompensa por abrir `balones`, spawn visual local y recogida por hover
+- [x] Optimizacion inicial web de jugador: mapas responsive, polling parcial, menos renders y menor frecuencia de `playerViews`
 - [x] HTML legacy archivado en `docs/OLD/html-legacy`
 - [x] Prototipos de minijuegos archivados en `docs/OLD/assets-legacy/minigames`
 - [x] Sistema de diseno activo unico: `El Examen 2 Design System`
@@ -50,10 +52,37 @@
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
 - [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
-  - [ ] Generar variantes WebP/AVIF o versiones responsive de los mapas `almacen_A/B`; ahora cada PNG pesa ~5-6 MB y se decodifica a ~24 MB por imagen 4096x1536
-  - [ ] Revisar polling de Firebase cada 1s para evitar leer `getRemoteState()` completo en todas las pantallas; priorizar lecturas parciales o suscripciones por rama de estado
+  - [x] Generar variantes WebP/AVIF responsive de los mapas `almacen_A/B` y conservar PNG como fallback
+  - [x] Revisar polling de Firebase cada 1s para evitar leer `getRemoteState()` completo en la web de jugador; quedan monitores GM con lectura completa
   - [ ] Medir memoria real en Chrome/Firefox con prueba de estres de jugador y GM con varios monitores abiertos
-  - [ ] Vigilar `mix-blend-mode` y animaciones globales del `SceneMap`; el efecto de camara actual es ligero, pero conviene validar FPS en portatiles de gama media
+  - [x] Vigilar coste pasivo del `SceneMap`: capas estables memoizadas y efectos VFX montados solo cuando estan activos
+
+---
+
+## Checklist reciente - Resonancia ambiental local
+
+- [x] Documentar v1 en estado de proyecto
+- [x] Mostrar contador de resonancia en pantalla de jugador con color `#9ED300`
+- [x] Sumar `+3` al abrir `balones` una sola vez
+- [x] Generar spawn ambiental local cada 25-40s
+- [x] Animar circulo `1 -> 8`, emergencia del cuadrado, flotacion y despawn suave
+- [x] Mantener v1 sin click/recogida antes de activar hover
+- [x] Implementar recogida de resonancia ambiental por hover de 0,5s con feedback luminoso y `+1`
+
+---
+
+## Checklist reciente - Optimizacion web de jugador
+
+- [x] Documentar objetivos: memoria de mapas, payload Firebase, renders por polling y coste visual del mapa
+- [x] Generar WebP/AVIF responsive para `almacen_A` y `almacen_B`
+- [x] Actualizar `BackgroundLayer` con `<picture>`, `srcSet`, `sizes` y PNG fallback
+- [x] Sustituir polling completo de jugador por lecturas parciales de ramas necesarias
+- [x] Evitar doble lectura de sesion en jugador durante polling
+- [x] Evitar `setRemoteState` si el estado relevante no cambia
+- [x] Reducir escrituras de `playerViews` con debounce mayor, umbral de camara y publicacion final tras pan
+- [x] Memoizar capas estables del mapa donde aplica
+- [x] Optimizar recogida de resonancia leyendo solo `gameState/resonance`
+- [ ] Medicion comparativa antes/despues con Chrome Task Manager: 1 jugador, 4 jugadores y GM con monitores
 
 ---
 
