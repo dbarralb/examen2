@@ -11,6 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import almacenA from "../../assets/Pantalla de juego/maps/almacen_A.png";
+import almacenB from "../../assets/Pantalla de juego/maps/almacen_B.png";
 
 export const SCENARIO_VARIANTS = ["A", "B", "C", "D"];
 export const DEFAULT_SCENARIO_ID = "almacen";
@@ -30,7 +31,7 @@ export const scenarios = [
     description: "Primer nivel: almacen del gimnasio fragmentado en realidades paralelas.",
     variants: {
       A: { label: "Almacen A", backgroundSrc: almacenA, imageAspect: 4096 / 1536 },
-      B: { label: "Almacen B", backgroundSrc: null, imageAspect: null },
+      B: { label: "Almacen B", backgroundSrc: almacenB, imageAspect: 4096 / 1536 },
       C: { label: "Almacen C", backgroundSrc: null, imageAspect: null },
       D: { label: "Almacen D", backgroundSrc: null, imageAspect: null },
     },

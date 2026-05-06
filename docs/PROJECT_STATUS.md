@@ -48,6 +48,11 @@
 - [ ] Refinar textos finales de tarjetas, feedback y consola
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
+- [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
+  - [ ] Generar variantes WebP/AVIF o versiones responsive de los mapas `almacen_A/B`; ahora cada PNG pesa ~5-6 MB y se decodifica a ~24 MB por imagen 4096x1536
+  - [ ] Revisar polling de Firebase cada 1s para evitar leer `getRemoteState()` completo en todas las pantallas; priorizar lecturas parciales o suscripciones por rama de estado
+  - [ ] Medir memoria real en Chrome/Firefox con prueba de estres de jugador y GM con varios monitores abiertos
+  - [ ] Vigilar `mix-blend-mode` y animaciones globales del `SceneMap`; el efecto de camara actual es ligero, pero conviene validar FPS en portatiles de gama media
 
 ---
 
@@ -56,6 +61,8 @@
 | Archivo | Para editar |
 |---|---|
 | `docs/INDEX.md` | Indice y mapa de busqueda de documentacion |
+| `docs/art-prompt-process.md` | Proceso para prompts de arte de puzzles, overlays, variantes y objetos independientes |
+| `docs/ECO Tech Props v1.md` | ADN visual ECO Tech Props para objetos industriales modulares |
 | `src/data/actionTypes.js` | Tipos atomicos de accion y descripciones genericas |
 | `docs/textos_juego.csv` | Inventario editable de textos del juego |
 | `scripts/export-texts.mjs` | Regenerar el inventario CSV de textos desde `src` |

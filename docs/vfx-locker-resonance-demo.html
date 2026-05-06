@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LOCKER_RESONANCE_PENDING VFX demo</title>
+    <style>
+      :root {
+        --anomaly-green: #9ed300;
+        --anomaly-magenta: #d41383;
+        --bg: #111723;
+        --panel: #171f2d;
+        --text: #d9e4df;
+        --muted: #8b9a9c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          linear-gradient(rgba(158, 211, 0, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(212, 19, 131, 0.035) 1px, transparent 1px),
+          var(--bg);
+        background-size: 44px 44px;
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      }
+
+      .demo-shell {
+        width: min(1080px, calc(100vw - 32px));
+        display: grid;
+        grid-template-columns: minmax(260px, 420px) minmax(260px, 1fr);
+        gap: 28px;
+        align-items: center;
+      }
+
+      .stage {
+        position: relative;
+        width: min(360px, 80vw);
+        margin: 0 auto;
+        padding: 24px;
+        border: 1px solid rgba(158, 211, 0, 0.18);
+        background:
+          radial-gradient(circle at 52% 48%, rgba(158, 211, 0, 0.09), transparent 36%),
+          #20262e;
+        overflow: hidden;
+      }
+
+      .locker-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 0.53;
+      }
+
+      .locker {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: saturate(1.04) contrast(1.04);
+      }
+
+      .resonance-vfx {
+        position: absolute;
+        left: 8%;
+        top: 2%;
+        width: 86%;
+        height: 96%;
+        pointer-events: none;
+        overflow: visible;
+        mix-blend-mode: screen;
+        filter: drop-shadow(0 0 8px rgba(158, 211, 0, 0.42))
+          drop-shadow(0 0 10px rgba(212, 19, 131, 0.36));
+      }
+
+      .resonance-vfx svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .vfx-glow {
+        opacity: 0.55;
+        stroke-width: 7;
+        filter: url("#softGlow");
+      }
+
+      .vfx-core {
+        opacity: 0.92;
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 22 28;
+        animation: currentFlow 1.8s linear infinite, breathe 2.6s ease-in-out infinite;
+      }
+
+      .vfx-thread {
+        opacity: 0.82;
+        stroke-width: 1.45;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 10 24;
+        animation: currentFlow 1.45s linear infinite reverse, flicker 2.2s steps(4) infinite;
+      }
+
+      .vfx-thread--slow {
+        opacity: 0.6;
+        stroke-width: 1.1;
+        stroke-dasharray: 7 20;
+        animation-duration: 2.2s, 3.1s;
+      }
+
+      .vfx-node {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: nodePulse 1.4s ease-in-out infinite;
+      }
+
+      .vfx-node--delay {
+        animation-delay: 0.45s;
+      }
+
+      .vfx-node--late {
+        animation-delay: 0.8s;
+      }
+
+      .vfx-spark {
+        opacity: 0;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        animation: sparkBlink 1.7s steps(1) infinite;
+      }
+
+      .vfx-spark:nth-of-type(2n) {
+        animation-delay: 0.55s;
+      }
+
+      .vfx-spark:nth-of-type(3n) {
+        animation-delay: 0.95s;
+      }
+
+      @keyframes currentFlow {
+        to {
+          stroke-dashoffset: -100;
+        }
+      }
+
+      @keyframes breathe {
+        0%,
+        100% {
+          opacity: 0.52;
+          filter: blur(0);
+        }
+        50% {
+          opacity: 1;
+          filter: blur(0.35px);
+        }
+      }
+
+      @keyframes flicker {
+        0%,
+        100% {
+          opacity: 0.28;
+        }
+        35% {
+          opacity: 0.88;
+        }
+        70% {
+          opacity: 0.48;
+        }
+      }
+
+      @keyframes nodePulse {
+        0%,
+        100% {
+          opacity: 0.4;
+          transform: scale(0.75);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.18);
+        }
+      }
+
+      @keyframes sparkBlink {
+        0%,
+        72%,
+        100% {
+          opacity: 0;
+        }
+        78%,
+        88% {
+          opacity: 0.9;
+        }
+      }
+
+      .notes {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 18px;
+        background: rgba(23, 31, 45, 0.92);
+      }
+
+      .notes h1 {
+        margin: 0 0 12px;
+        color: var(--anomaly-green);
+        font-size: 20px;
+        line-height: 1.15;
+      }
+
+      .notes p,
+      .notes li {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .notes code {
+        color: var(--text);
+      }
+
+      .legend {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .chip {
+        border: 1px solid currentColor;
+        padding: 5px 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+      }
+
+      .chip.green {
+        color: var(--anomaly-green);
+      }
+
+      .chip.magenta {
+        color: var(--anomaly-magenta);
+      }
+
+      @media (max-width: 820px) {
+        .demo-shell {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="demo-shell">
+      <section class="stage" aria-label="Maqueta del efecto sobre taquilla">
+        <div class="locker-wrap">
+          <img class="locker" src="../assets/objects/locker_closed.png" alt="Taquilla de referencia" />
+
+          <div class="resonance-vfx" aria-hidden="true">
+            <svg viewBox="0 0 100 220" preserveAspectRatio="none">
+              <defs>
+                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="2.8" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <linearGradient id="greenMagenta" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#9ED300" />
+                  <stop offset="42%" stop-color="#D41383" />
+                  <stop offset="70%" stop-color="#9ED300" />
+                  <stop offset="100%" stop-color="#D41383" />
+                </linearGradient>
+                <linearGradient id="magentaGreen" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#D41383" />
+                  <stop offset="46%" stop-color="#9ED300" />
+                  <stop offset="100%" stop-color="#D41383" />
+                </linearGradient>
+              </defs>
+
+              <path
+                class="vfx-glow"
+                d="M54 4 C26 30 84 48 54 78 C24 108 80 124 52 154 C26 184 68 198 40 216"
+                fill="none"
+                stroke="url(#greenMagenta)"
+              />
+              <path
+                class="vfx-glow"
+                d="M42 2 C74 34 22 62 52 90 C84 120 28 142 56 170 C82 196 44 206 60 218"
+                fill="none"
+                stroke="url(#magentaGreen)"
+              />
+
+              <path
+                class="vfx-core"
+                d="M54 4 C26 30 84 48 54 78 C24 108 80 124 52 154 C26 184 68 198 40 216"
+                fill="none"
+                stroke="url(#greenMagenta)"
+              />
+              <path
+                class="vfx-core"
+                d="M42 2 C74 34 22 62 52 90 C84 120 28 142 56 170 C82 196 44 206 60 218"
+                fill="none"
+                stroke="url(#magentaGreen)"
+              />
+
+              <path
+                class="vfx-thread"
+                d="M55 80 C66 76 72 82 76 93"
+                fill="none"
+                stroke="#9ED300"
+              />
+              <path
+                class="vfx-thread vfx-thread--slow"
+                d="M48 119 C34 116 27 126 20 139"
+                fill="none"
+                stroke="#D41383"
+              />
+              <path
+                class="vfx-thread"
+                d="M53 155 C66 150 78 154 86 166"
+                fill="none"
+                stroke="#9ED300"
+              />
+              <path
+                class="vfx-thread vfx-thread--slow"
+                d="M44 186 C31 186 22 194 16 207"
+                fill="none"
+                stroke="#D41383"
+              />
+
+              <line class="vfx-spark" x1="50" y1="76" x2="59" y2="68" stroke="#9ED300" />
+              <line class="vfx-spark" x1="55" y1="151" x2="66" y2="146" stroke="#D41383" />
+              <line class="vfx-spark" x1="40" y1="186" x2="31" y2="193" stroke="#9ED300" />
+
+              <circle class="vfx-node" cx="53" cy="78" r="2.4" fill="#9ED300" />
+              <circle class="vfx-node vfx-node--delay" cx="52" cy="154" r="3.4" fill="#ffffff" />
+              <circle class="vfx-node vfx-node--late" cx="43" cy="188" r="2.2" fill="#D41383" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="notes">
+        <h1>LOCKER_RESONANCE_PENDING</h1>
+        <p>
+          Maqueta CSS/SVG del efecto de resonancia. Es una capa independiente posicionada encima de
+          la taquilla, sin spritesheet ni imagen raster generada.
+        </p>
+        <ul>
+          <li>Colores: <code>#9ED300</code> y <code>#D41383</code>.</li>
+          <li>El VFX vive en <code>.resonance-vfx</code> y puede moverse/escalarse con CSS.</li>
+          <li>Las curvas son SVG, animadas con <code>stroke-dashoffset</code>, pulso y parpadeo.</li>
+          <li>Para React, convertir el bloque SVG en componente y montar sobre <code>SceneMap</code>.</li>
+        </ul>
+        <div class="legend">
+          <span class="chip green">anomaly green</span>
+          <span class="chip magenta">anomaly magenta</span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

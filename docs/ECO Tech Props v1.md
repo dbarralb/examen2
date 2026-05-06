@@ -115,16 +115,3 @@ Si fallas 2 → rehacer.
 ⚠️ REGLA DE ORO (la más importante)
 
 Si dudas entre añadir o quitar detalle → QUITA.
-
-Tu estilo no es realista.
-Es controlado y legible.
-
-🚀 SIGUIENTE NIVEL (cuando quieras escalar)
-
-Cuando tengas 4–5 assets hechos con esto:
-
-Podemos definir:
-
-biblioteca de materiales (metal, tela, plástico)
-kit modular (esquinas, tornillos, placas)
-iluminación global de escena

@@ -100,7 +100,24 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 
 ---
 
-## 5. Seguridad y despliegue Firebase
+## 5. Proceso de prompts de arte
+
+### `docs/art-prompt-process.md`
+
+**Uso principal:** redactar prompts de arte para assets jugables, variantes A/B, overlays de estado, detalles de inspeccion, objetos independientes y pistas visuales.
+
+**Lectura obligatoria asociada:** `docs/ECO Tech Props v1.md`.
+
+**Buscar aqui cuando necesites:**
+
+- Pedir arte para un puzzle sin romper consistencia entre estados.
+- Mantener un mismo objeto como overlay en diferentes fases.
+- Distinguir entre asset de estado y objeto independiente para editar despues.
+- Formular prompts que expliquen funcion jugable, referencia visual, diferencia exacta y resultado esperado.
+
+---
+
+## 6. Seguridad y despliegue Firebase
 
 ### `docs/firebase-security.md`
 
@@ -120,7 +137,7 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 
 ---
 
-## 6. Archivo historico
+## 7. Archivo historico
 
 ### `docs/OLD/`
 
@@ -171,7 +188,7 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 
 ---
 
-## 7. Mapa rapido de busqueda
+## 8. Mapa rapido de busqueda
 
 | Pregunta | Documento |
 |---|---|
@@ -182,13 +199,14 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 | Que roles y cartas existen? | `docs/game_design.md` |
 | Como debe comportarse el GM? | `docs/gm-operations.md` |
 | Donde se guardan los ajustes de hotspots? | `docs/architecture.md` y `docs/gm-operations.md` |
+| Como preparo prompts de arte para puzzles/overlays? | `docs/art-prompt-process.md` + `docs/ECO Tech Props v1.md` |
 | Como revisar seguridad de Firebase? | `docs/firebase-security.md` |
 | Donde busco ideas antiguas de narrativa o reglas? | `docs/OLD/` |
 | Donde busco prototipos HTML/minijuegos viejos? | `docs/OLD/html-legacy/` y `docs/OLD/assets-legacy/` |
 
 ---
 
-## 8. Matriz de cambios y actualizaciones asociadas
+## 9. Matriz de cambios y actualizaciones asociadas
 
 Esta tabla funciona como checklist de mantenimiento. Cuando un cambio de codigo toca una de estas areas, hay que revisar tambien los documentos o archivos asociados antes de darlo por cerrado.
 
@@ -202,13 +220,13 @@ Esta tabla funciona como checklist de mantenimiento. Cuando un cambio de codigo 
 | UI de jugador, drop zones, inventario, minijuego o affordances de interaccion | Componentes/CSS afectados, `docs/textos_juego.csv`, `docs/game_design.md` si cambia el significado jugable | La UI no es solo visual: comunica reglas de accion y narrativa de interferencia. | Rediseño de la zona de drop como "Cargar software" con comportamiento de hackeo. |
 | Estado remoto, Firebase, seed inicial o rutas compartidas | `src/services/remoteState.js`, `src/services/firebaseClient.js`, `docs/architecture.md`, `docs/firebase-security.md` si toca permisos, `docs/PROJECT_STATUS.md` | Evita que la documentacion diga una ruta o garantia distinta a la real. | Cambios en `queuedActions`, `hotspotOverrides`, `gameState` o reglas de seguridad. |
 | Nuevo documento, CSV, script de soporte o cambio de responsabilidad documental | `docs/INDEX.md`, `docs/PROJECT_STATUS.md` | El indice debe saber que existe y `PROJECT_STATUS` debe apuntar al archivo correcto. | Alta de `docs/textos_juego.csv` y `scripts/export-texts.mjs`. |
-| Arte, tabla de assets, nombres para desarrollo o variantes visuales | Tabla externa de assets/Notion si aplica, `docs/PROJECT_STATUS.md`, `docs/game_design.md` si afecta al puzzle, `src/data/scenarioContent.js` si cambia asset id | Arte necesita una lista sin duplicados y desarrollo necesita nombres estables. | Consolidacion de assets del almacen, candado/mecanismo A/B y overlays por estado. |
+| Arte, prompts de assets, tabla de assets, nombres para desarrollo o variantes visuales | `docs/art-prompt-process.md`, `docs/ECO Tech Props v1.md`, tabla externa de assets/Notion si aplica, `docs/PROJECT_STATUS.md`, `docs/game_design.md` si afecta al puzzle, `src/data/scenarioContent.js` si cambia asset id | Arte necesita continuidad visual, lista sin duplicados, prompts funcionales y nombres estables. | Consolidacion de assets del almacen, candado/mecanismo A/B y overlays por estado. |
 
 Regla practica: si el cambio altera lo que un jugador ve o lee, regenerar `docs/textos_juego.csv`. Si altera lo que el sistema hace, revisar `architecture` y `PROJECT_STATUS`. Si altera por que el puzzle tiene sentido, revisar `game_design`. Si altera como opera el GM, revisar `gm-operations`.
 
 ---
 
-## 9. Rutina recomendada antes de cambios
+## 10. Rutina recomendada antes de cambios
 
 1. Leer `docs/PROJECT_STATUS.md` para confirmar estado y pendientes.
 2. Leer el doc especifico del area: arquitectura, diseno, GM o Firebase.
@@ -216,4 +234,5 @@ Regla practica: si el cambio altera lo que un jugador ve o lee, regenerar `docs/
 4. Consultar `docs/OLD/` solo para contexto historico o inspiracion.
 5. Consultar la matriz de cambios de este indice para saber que docs o archivos secundarios deben actualizarse.
 6. Si cambia copy visible, ejecutar `node scripts/export-texts.mjs`.
-7. Actualizar este indice si se anade, mueve o cambia el rol de un documento.
+7. Si se preparan prompts de arte, leer `docs/art-prompt-process.md` y `docs/ECO Tech Props v1.md`.
+8. Actualizar este indice si se anade, mueve o cambia el rol de un documento.
