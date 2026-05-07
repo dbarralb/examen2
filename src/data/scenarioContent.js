@@ -41,6 +41,9 @@ const almacenHotspotsBase = [
     h: 16,
     family: "informacion",
     hotspotClass: "informacion",
+    ports: [
+      { id: "pizarra_info", type: "PORT_INFO", label: "Lectura" },
+    ],
   },
   {
     id: "taquillas",
@@ -51,6 +54,10 @@ const almacenHotspotsBase = [
     h: 22,
     family: "contenedor",
     hotspotClass: "contenedor",
+    ports: [
+      { id: "taquillas_info", type: "PORT_INFO", label: "Lectura" },
+      { id: "taquillas_mech", type: "PORT_MECH", label: "Mecanismo" },
+    ],
     discoveries: [
       {
         slotKey: "slot0",
@@ -79,6 +86,10 @@ const almacenHotspotsBase = [
     h: 12,
     family: "contenedor",
     hotspotClass: "contenedor",
+    ports: [
+      { id: "caja_info", type: "PORT_INFO", label: "Lectura" },
+      { id: "caja_mech", type: "PORT_MECH", label: "Mecanismo" },
+    ],
   },
   {
     id: "balones",
@@ -89,6 +100,9 @@ const almacenHotspotsBase = [
     h: 12,
     family: "objeto",
     hotspotClass: "objeto",
+    ports: [
+      { id: "balones_info", type: "PORT_INFO", label: "Lectura" },
+    ],
   },
   {
     id: "panel_salida",
@@ -99,6 +113,10 @@ const almacenHotspotsBase = [
     h: 18,
     family: "dispositivo",
     hotspotClass: "dispositivo",
+    ports: [
+      { id: "panel_info", type: "PORT_INFO", label: "Diagnostico" },
+      { id: "panel_mech", type: "PORT_MECH", label: "Control" },
+    ],
     deviceConfig: {
       deviceName: "Panel de salida",
       bootLines: [
@@ -145,6 +163,9 @@ const almacenHotspotsA = [
     h: 7,
     family: "objeto",
     hotspotClass: "objeto",
+    ports: [
+      { id: "llave_info", type: "PORT_INFO", label: "Lectura" },
+    ],
     discoveries: [
       {
         slotKey: "slot0",
@@ -166,6 +187,9 @@ const almacenHotspotsB = [
     h: 6,
     family: "objeto",
     hotspotClass: "objeto",
+    ports: [
+      { id: "horquilla_info", type: "PORT_INFO", label: "Lectura" },
+    ],
     discoveries: [
       {
         slotKey: "slot0",

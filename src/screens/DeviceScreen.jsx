@@ -3,6 +3,7 @@ import { firebaseGet } from "../services/firebaseClient.js";
 import { applyScenarioHotspotOverrides, getScenarioHotspots } from "../data/scenarioContent.js";
 import { DEFAULT_SCENARIO_ID } from "../data/scenarioData.js";
 import { cards } from "../data/gameData.js";
+import { ACTION_KINDS } from "../data/actionTypes.js";
 import { getRole } from "../data/roles.js";
 import { usePollingRefresh } from "../hooks/usePollingRefresh.js";
 import { createPendingAction, enqueueLoadedAction, incrementCardUsage } from "../services/playerService.js";
@@ -15,6 +16,13 @@ import {
 } from "../services/sessionAccess.js";
 import { NodeGraph } from "../components/NodeGraph.jsx";
 import { FusionMinigame } from "../components/FusionMinigame.jsx";
+import { NetworkCanvas } from "../components/NetworkCanvas.jsx";
+
+function getActionKindLabel(actionKind) {
+  if (actionKind === ACTION_KINDS.INSPECTION) return "Inspeccion";
+  if (actionKind === ACTION_KINDS.INTERACTION) return "Interaccion";
+  return "Accion";
+}
 
 async function getDeviceState(roleId) {
   const [
@@ -39,50 +47,6 @@ async function getDeviceState(roleId) {
   return { session, gameState, pulseState, queuedActions, playerBoard, hotspotOverrides, fusionSession, gmGraphType };
 }
 
-function HotspotMinimap({ targets, selectedTargetId, onSelectTarget }) {
-  return (
-    <svg
-      className="device-minimap"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="xMidYMid meet"
-      aria-label="Mapa de objetivos"
-      role="group"
-    >
-      <rect x="0" y="0" width="100" height="100" className="device-minimap-bg" />
-      {targets.map((target) => {
-        const isSelected = target.id === selectedTargetId;
-        return (
-          <g
-            key={target.id}
-            onClick={() => onSelectTarget(target.id)}
-            className={`device-minimap-hotspot device-minimap-hotspot--${target.hotspotClass || "generico"}${isSelected ? " device-minimap-hotspot--selected" : ""}`}
-            role="button"
-            aria-label={target.label}
-            aria-pressed={isSelected}
-          >
-            <rect
-              x={target.x}
-              y={target.y}
-              width={target.w}
-              height={target.h}
-              rx="1.5"
-              className="device-minimap-rect"
-            />
-            <text
-              x={target.x + target.w / 2}
-              y={target.y + target.h / 2}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              className="device-minimap-label"
-            >
-              {target.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
 
 export function DeviceScreen({ params }) {
   const roleIdParam = params.get("role") || "empollon";
@@ -93,7 +57,7 @@ export function DeviceScreen({ params }) {
   const [codeInput, setCodeInput] = useState(codeParam);
   const [codeError, setCodeError] = useState("");
   const [remoteState, setRemoteState] = useState(null);
-  const [selectedTargetId, setSelectedTargetId] = useState(null);
+  const [selectedPort, setSelectedPort] = useState(null); // { hotspotId, portType }
   const [queueStatus, setQueueStatus] = useState("idle"); // "idle" | "queuing" | "done" | "error"
   const [statusMsg, setStatusMsg] = useState("");
   const [nodeGraphActive, setNodeGraphActive] = useState(false);
@@ -191,7 +155,9 @@ export function DeviceScreen({ params }) {
   const overlayActive = pulseState.status === "executing";
   const fusionSession = remoteState?.fusionSession || null;
   const gmGraphType = remoteState?.gmGraphType || null;
-  const forcedGraphType = (gmGraphType && gmGraphType !== "random") ? gmGraphType : null;
+  const forcedGraphType = selectedPort
+    ? (selectedPort.portType === "PORT_INFO" ? "inspection" : "interaction")
+    : (gmGraphType && gmGraphType !== "random") ? gmGraphType : null;
 
   // Reset dismissed state when a new fusion session starts
   useEffect(() => {
@@ -211,7 +177,6 @@ export function DeviceScreen({ params }) {
     )
   ), [boardScenarioId, boardVariant, remoteState?.hotspotOverrides]);
 
-  const selectedTarget = boardTargets.find((t) => t.id === selectedTargetId);
   const queuedForMe = queuedActions.find(
     (a) => a.role === role.id && ["queued", "executing"].includes(a.status || "queued"),
   );
@@ -220,17 +185,24 @@ export function DeviceScreen({ params }) {
     && (boardVariant === "A" || boardVariant === "B")
     && !fusionDismissed;
 
+  function handlePortSelect(hotspotId, portType) {
+    if (overlayActive || !!queuedForMe || queueStatus === "queuing") return;
+    setSelectedPort({ hotspotId, portType });
+    setNodeGraphActive(true);
+  }
+
   async function handleNodeGraphResult({ actionKind }) {
     setNodeGraphActive(false);
+    const targetId = selectedPort?.hotspotId;
     const card = cards.find((c) => c.roles.includes(role.id) && c.actionKind === actionKind);
-    if (!card || !selectedTargetId) return;
+    if (!card || !targetId) return;
 
     setQueueStatus("queuing");
     setStatusMsg("");
     try {
       const pending = createPendingAction({
         card,
-        targetId: selectedTargetId,
+        targetId,
         roleId: role.id,
         scenarioId: boardScenarioId,
         variant: boardVariant,
@@ -238,7 +210,7 @@ export function DeviceScreen({ params }) {
       await enqueueLoadedAction(pending);
       incrementCardUsage(role.id, card.id, 0).catch(() => {});
       setQueueStatus("done");
-      setStatusMsg("Accion en cola para el siguiente pulso.");
+      setStatusMsg(`Chip creado: ${getActionKindLabel(actionKind)}. El pulso resolvera la accion.`);
     } catch {
       setQueueStatus("error");
       setStatusMsg("No se pudo encolar. Reintenta.");
@@ -312,65 +284,31 @@ export function DeviceScreen({ params }) {
             }}
           />
         </div>
+      ) : nodeGraphActive ? (
+        <>
+          <p className="device-graph-copy">El grafo decide el tipo de chip. El pulso resolvera la accion.</p>
+          <NodeGraph
+            timerSeconds={15}
+            forcedGraphType={forcedGraphType}
+            onResult={handleNodeGraphResult}
+            onCancel={() => { setNodeGraphActive(false); setSelectedPort(null); }}
+          />
+        </>
       ) : (
         <>
-          <section className="device-map-section">
-            <p className="device-section-title">Selecciona objetivo</p>
-            <HotspotMinimap
-              targets={boardTargets}
-              selectedTargetId={selectedTargetId}
-              onSelectTarget={(id) => {
-                setSelectedTargetId(id);
-                setNodeGraphActive(false);
-              }}
-            />
-          </section>
-
-          <section className="device-action-section">
-            {selectedTarget ? (
-              <>
-                <div className="device-target-row">
-                  <span className="device-target-label">Objetivo</span>
-                  <strong className="device-target-name">{selectedTarget.label}</strong>
-                </div>
-
-                {nodeGraphActive ? (
-                  <NodeGraph
-                    timerSeconds={15}
-                    forcedGraphType={forcedGraphType}
-                    onResult={handleNodeGraphResult}
-                    onCancel={() => setNodeGraphActive(false)}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="device-new-action-btn"
-                    disabled={overlayActive || !!queuedForMe || queueStatus === "queuing"}
-                    onClick={() => setNodeGraphActive(true)}
-                  >
-                    {queueStatus === "queuing"
-                      ? "Cargando..."
-                      : queuedForMe
-                        ? "En cola..."
-                        : overlayActive
-                          ? "Pulso activo"
-                          : "Nueva Accion →"}
-                  </button>
-                )}
-
-                {statusMsg && <p className="device-status-msg">{statusMsg}</p>}
-              </>
-            ) : (
-              <p className="device-action-hint">Toca un objetivo en el mapa para empezar</p>
-            )}
-
-            {queuedForMe && (
-              <div className="device-queued-info">
-                <span>En cola: {queuedForMe.card}</span>
-                <span>→ {boardTargets.find((t) => t.id === queuedForMe.target)?.label || queuedForMe.target}</span>
-              </div>
-            )}
-          </section>
+          <NetworkCanvas
+            targets={boardTargets}
+            selectedHotspotId={selectedPort?.hotspotId || null}
+            onPortSelect={handlePortSelect}
+            blocked={overlayActive || !!queuedForMe || queueStatus === "queuing"}
+          />
+          {queuedForMe && (
+            <div className="device-queued-info">
+              <span>En cola: {queuedForMe.card}</span>
+              <span>→ {boardTargets.find((t) => t.id === queuedForMe.target)?.label || queuedForMe.target}</span>
+            </div>
+          )}
+          {statusMsg && <p className="device-status-msg">{statusMsg}</p>}
         </>
       )}
     </main>
