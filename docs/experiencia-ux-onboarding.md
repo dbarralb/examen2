@@ -25,6 +25,25 @@ La intencion no es convertir el juego en un tutorial cerrado. El objetivo es evi
 
 ---
 
+## Sistema de tooltips en pantalla de jugador
+
+Los tooltips de la pantalla grande funcionan como entradas nuevas de Codex, no como mensajes permanentes encima de la escena. Cada mecanica tiene dos estados:
+
+- **Contraido:** aparece un icono pequeño en la zona superior derecha del frame del escenario. Si la mecanica es nueva y no leida, el icono muestra un punto rojo. El icono actual es placeholder (`</>`); deuda tecnica: sustituirlo por el icono final de Codex cuando exista la identidad visual del sistema.
+- **Desplegado:** al tocar el icono, aparece el texto con estilo de lineas de codigo escrito en pantalla. Ese toque cuenta como lectura real de la mecanica.
+
+Reglas de comportamiento:
+
+- Un tooltip solo se marca como leido cuando el jugador toca el icono, nunca por tiempo visible.
+- Al marcarse como leido, esa mecanica no vuelve a aparecer automaticamente en la pantalla de jugador durante esa sesion/rol/variante.
+- La mecanica leida debera poder consultarse en Codex cuando la interfaz completa exista.
+- Solo se muestra una entrada nueva cada vez, elegida por prioridad contextual.
+- El sistema no debe aparecer en vistas del GM ni en monitores.
+- Si Codex esta abierto, la capa de tooltip se oculta.
+- El estilo visual sigue siendo sutil: tipografia mono, brillo verde/cian, sin background de tarjeta sobre la escena.
+
+---
+
 ## Mecanicas que hay que ensenar
 
 ### 1. Exploracion del escenario (pantalla grande)
@@ -405,6 +424,8 @@ La timeline esta pensada para la primera partida de un jugador que no conoce el 
 ### Tooltips de primera vez
 
 Usarlos solo en la primera aparicion de una mecanica. Deben ser cortos, con una accion esperada clara.
+
+En pantalla de jugador no se muestran desplegados de entrada: primero aparece el icono de Codex con punto rojo. Solo al tocarlo se despliega el texto y se marca la mecanica como leida.
 
 Ejemplos:
 

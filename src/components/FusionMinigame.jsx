@@ -11,12 +11,18 @@ function getOtherKey(variant) {
   return variant === "A" ? "variantB" : "variantA";
 }
 
+function getFusionTargetLabel(fusionSession) {
+  if (fusionSession?.hotspot === "taquillas") return "Taquillas estabilizadas";
+  return "Realidad estabilizada";
+}
+
 export function FusionMinigame({ fusionSession, variant, onSuccess }) {
   const [step, setStep] = useState(0);           // 0..CHAIN_LENGTH tapped nodes
   const [status, setStatus] = useState("playing"); // "playing" | "waiting" | "success"
   const [writing, setWriting] = useState(false);
   const myKey = getMyKey(variant);
   const otherKey = getOtherKey(variant);
+  const fusionTargetLabel = getFusionTargetLabel(fusionSession);
   const onSuccessRef = useRef(onSuccess);
   onSuccessRef.current = onSuccess;
 
@@ -70,6 +76,8 @@ export function FusionMinigame({ fusionSession, variant, onSuccess }) {
       <div className="fusion-minigame fusion-minigame--success">
         <div className="fusion-success-glow" />
         <p className="fusion-result-text">FUSION<br />COMPLETADA</p>
+        <span className="fusion-result-subtext">{fusionTargetLabel}</span>
+        <span className="fusion-result-hint">Vuelve al tablero para continuar</span>
       </div>
     );
   }
@@ -78,6 +86,7 @@ export function FusionMinigame({ fusionSession, variant, onSuccess }) {
     <div className="fusion-minigame">
       <p className="fusion-title">FUSION DE REALIDADES</p>
       <p className="fusion-subtitle">VARIANTE {variant}</p>
+      <p className="fusion-instruction">Sincroniza esta realidad con la otra variante.</p>
 
       <div className="fusion-circuit">
         {Array.from({ length: CHAIN_LENGTH }, (_, i) => {
@@ -120,7 +129,7 @@ export function FusionMinigame({ fusionSession, variant, onSuccess }) {
           ) : (
             <>
               <div className="fusion-waiting-spinner" />
-              <p>Esperando Variante {variant === "A" ? "B" : "A"}…</p>
+              <p>Tu parte esta lista. Esperando Variante {variant === "A" ? "B" : "A"}...</p>
             </>
           )}
         </div>

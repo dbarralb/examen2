@@ -11,8 +11,11 @@
 | Estado compartido | Firebase Realtime Database |
 | Sincronizacion | Polling 1s |
 | Routing | URL search params (`?screen=player&role=empollon`) |
+| Deploy | SPA estatica en Netlify (`dist/`) |
 
 El sistema antiguo `Instituto Newton Design System` esta archivado en `docs/OLD/design-systems` y no debe usarse para nuevas pantallas.
+
+La guia de despliegue online esta en `docs/deployment.md`. Vite se usa para build, pero produccion sirve archivos estaticos y no depende de un servidor Vite.
 
 ## Escenarios y contenido
 

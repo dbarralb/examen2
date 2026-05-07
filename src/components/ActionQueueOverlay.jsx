@@ -33,7 +33,7 @@ export function ActionQueueOverlay({ actions, pulseState = {} }) {
       <div className="scene-pulse-signal-zone">
         <PulseSignalFrame pulseState={pulseState} />
       </div>
-      <aside className="scene-queue-overlay" aria-label="Cola de acciones">
+      <aside className="scene-queue-overlay" aria-label="Cola de chips">
         <div className="scene-queue-strip">
           <div className="scene-queue-memories">
             {chips.map((chip) => (
@@ -62,8 +62,8 @@ export function ActionQueueOverlay({ actions, pulseState = {} }) {
                 <article className="scene-queue-result-card scene-queue-result-card--pending">
                   <div>
                     <span>Pulso activo</span>
-                    <strong>Resolviendo accion</strong>
-                    <p>La senal esta procesando la cola.</p>
+                    <strong>Resolviendo chip</strong>
+                    <p>La senal esta procesando los chips.</p>
                   </div>
                 </article>
               )}

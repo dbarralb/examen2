@@ -91,6 +91,7 @@
 | Archivo | Para editar |
 |---|---|
 | `docs/INDEX.md` | Indice y mapa de busqueda de documentacion |
+| `docs/experiencia-ux-onboarding.md` | UX onboarding, mecanicas a ensenar y timeline de estimulos/tooltips |
 | `docs/art-prompt-process.md` | Proceso para prompts de arte de puzzles, overlays, variantes y objetos independientes |
 | `docs/ECO Tech Props v1.md` | ADN visual ECO Tech Props para objetos industriales modulares |
 | `src/data/actionTypes.js` | Tipos atomicos de accion y descripciones genericas |

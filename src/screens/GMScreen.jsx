@@ -14,24 +14,10 @@ import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } 
 import { ensureNextPulseScheduled, forceResetPulse, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
 import { filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { formatPulseCountdown, getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
+import { getDeviceUrl, getPlayerMonitorUrl, getRoleSessionCode } from "../services/urlService.js";
 
 function getSessionBadgeStatus(status) {
   return status === "in_game" ? "success" : "muted";
-}
-
-function getMonitorSrc(roleId) {
-  const params = new URLSearchParams({
-    screen: "player",
-    role: roleId,
-    view: "gm-monitor",
-  });
-
-  return `${window.location.pathname}?${params.toString()}`;
-}
-
-function getDeviceUrl(roleId) {
-  const params = new URLSearchParams({ screen: "device", role: roleId });
-  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 }
 
 function getActionSummary(action) {
@@ -713,7 +699,7 @@ export function GMScreen() {
                     <strong>{role.label}</strong>
                     <NBadge status={claim ? "success" : "muted"}>{claim ? "Conectado" : "Sin jugador"}</NBadge>
                   </header>
-                  <iframe title={`Monitor ${role.label}`} src={getMonitorSrc(role.id)} />
+                  <iframe title={`Monitor ${role.label}`} src={getPlayerMonitorUrl(role.id)} />
                   <footer>{getActionSummary(lastAction)}</footer>
                 </article>
               );
@@ -792,7 +778,7 @@ export function GMScreen() {
           <section className="gm-devices-panel" aria-label="URLs de dispositivos">
             {playerRoles.map((role) => {
               const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
-              const url = getDeviceUrl(role.id);
+              const url = getDeviceUrl(role.id, { code: getRoleSessionCode(session, role.id) });
               const queued = queuedActions.find(
                 (a) => a.role === role.id && ["queued", "executing"].includes(a.status || "queued"),
               );

@@ -79,6 +79,10 @@ export function createInitialGameState() {
     discoveries: {},   // keyed by discovery ID, value: true
     flags: {},         // keyed by flag ID, value: true
     resonance: { value: 0, spent: 0, discoveries: {} },
+    resonanceByVariant: {
+      A: { value: 0, spent: 0, discoveries: {} },
+      B: { value: 0, spent: 0, discoveries: {} },
+    },
   };
 }
 

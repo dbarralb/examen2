@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { E2Logo, NBadge, NCard, NTimer } from "../components/e2";
 import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
-import { PlayerActionCard } from "../components/PlayerActionCard.jsx";
+import { CodexGuideOverlay, HistoryGlyph, PlayerCodeTooltipLayer } from "../components/PlayerCodeTooltipLayer.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
-import { createSoftwareLoadMinigame } from "../components/SoftwareLoadMinigame.jsx";
-import { cards, getCard, targets } from "../data/gameData.js";
 import { DEFAULT_SCENARIO_ID, getVariantBackground, getVariantImageAspect } from "../data/scenarioData.js";
-import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioPulseAnomalyTargetIds, getScenarioTargetStateLabel, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
+import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioPulseAnomalyTargetIds, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
+import { PLAYER_TOOLTIPS, resolvePlayerTooltip } from "../data/playerTooltips.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
 import { getRole } from "../data/roles.js";
@@ -15,16 +15,14 @@ import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
-import { hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { createPendingAction, enqueueLoadedAction, findQueuedActionForCurrentPlayer, incrementCardUsage, markItemSeen, pickUpItem, sendPlayerChatMessage, setPendingItemUsage, updatePlayerView } from "../services/playerService.js";
+import { getStoredSessionCode, hasValidStoredSessionCode } from "../services/sessionAccess.js";
+import { findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, sendPlayerChatMessage, updatePlayerView } from "../services/playerService.js";
 import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
+import { getDeviceUrl, getRoleSessionCode } from "../services/urlService.js";
 
-const SOFTWARE_LOAD_DIRECTIONS = ["up", "down", "left", "right"];
-const SUCCESS_CLOSE_DELAY_MS = 2000;
 const PLAYER_VIEW_STALE_MS = 15000;
 const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
-const ACTION_INFO_DELAY_MS = 500;
 const RESONANCE_BALLS_OPEN_REWARD = 3;
 const RESONANCE_BALLS_DISCOVERY_ID = "hotspot_open_balones";
 const RESONANCE_SPAWN_VISIBLE_MS = 8000;
@@ -34,6 +32,7 @@ const RESONANCE_COLLECT_HOVER_MS = 500;
 const RESONANCE_COLLECT_FEEDBACK_MS = 1500;
 const PLAYER_VIEW_PUBLISH_DEBOUNCE_MS = 420;
 const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
+const PLAYER_TOOLTIP_STORAGE_PREFIX = "elExamen2.playerTooltips";
 
 function stableRemoteSignature(state) {
   return JSON.stringify(state || null);
@@ -49,6 +48,28 @@ function hasCameraMeaningfulChange(previousCamera, nextCamera) {
     || Math.abs((previousCamera.scale || 0) - (nextCamera.scale || 0)) >= 0.001;
 }
 
+function getPlayerTooltipStorageKey(scope) {
+  return `${PLAYER_TOOLTIP_STORAGE_PREFIX}:${scope}`;
+}
+
+function readSeenPlayerTooltips(scope) {
+  try {
+    const raw = window.localStorage.getItem(getPlayerTooltipStorageKey(scope));
+    const list = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(list) ? list : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function writeSeenPlayerTooltips(scope, seenIds) {
+  try {
+    window.localStorage.setItem(getPlayerTooltipStorageKey(scope), JSON.stringify([...seenIds]));
+  } catch (error) {
+    // Storage may fail in private browsing; the tooltip still works for this render.
+  }
+}
+
 async function getPlayerRemoteStateSlice(roleId) {
   const [
     session,
@@ -60,7 +81,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     chatMessages,
     lastRoleActions,
     itemSeenState,
-    cardUsageForRole,
     playerInventoryForRole,
     playerBoardForRole,
     hotspotOverrides,
@@ -75,7 +95,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     firebaseGet("chatMessages"),
     firebaseGet("lastRoleActions"),
     firebaseGet("itemSeenState"),
-    firebaseGet(`cardUsage/${roleId}`),
     firebaseGet(`playerInventories/${roleId}`),
     firebaseGet(`playerBoards/${roleId}`),
     firebaseGet("hotspotOverrides"),
@@ -92,7 +111,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     chatMessages,
     lastRoleActions,
     itemSeenState,
-    cardUsage: { [roleId]: cardUsageForRole || {} },
     playerInventories: { [roleId]: playerInventoryForRole || {} },
     playerBoards: { [roleId]: playerBoardForRole || {} },
     hotspotOverrides,
@@ -100,22 +118,8 @@ async function getPlayerRemoteStateSlice(roleId) {
   };
 }
 
-function getTargetStateSignature(targetId, gameState, boardTargets = targets, scenarioId = DEFAULT_SCENARIO_ID, variant = "A") {
-  const target = boardTargets.find((item) => item.id === targetId);
-
-  if (!target) {
-    return "";
-  }
-
-  return getScenarioTargetStateLabel(target, gameState, scenarioId, variant);
-}
-
 function getScopedTargetKey(scenarioId, variant, targetId) {
   return `${scenarioId || DEFAULT_SCENARIO_ID}_${variant || "A"}__${targetId}`;
-}
-
-function getScopedItemKey(scenarioId, variant, itemId) {
-  return `${scenarioId || DEFAULT_SCENARIO_ID}_${variant || "A"}__${itemId}`;
 }
 
 function getVisibleTargetFeedback(baseFeedback, remoteFeedback, scenarioId, variant) {
@@ -147,13 +151,9 @@ function getVisibleItemSeenState(remoteSeenState, scenarioId, variant) {
 export function PlayerScreen({ navigation, params }) {
   const role = getRole(params.get("role") || "empollon");
   const isGmMonitorView = params.get("view") === "gm-monitor";
-  const visibleCards = useMemo(() => cards.filter((card) => card.roles.includes(role.id)), [role.id]);
   const [remoteState, setRemoteState] = useState(null);
   const [selectedTargetId, setSelectedTargetId] = useState(null);
-  const [selectedCardId, setSelectedCardId] = useState("");
-  const [pendingAction, setPendingAction] = useState(null);
   const [chatDraft, setChatDraft] = useState("");
-  const [dropZoneState, setDropZoneState] = useState({ cardId: null, itemId: null, targetId: null });
   const [openedItem, setOpenedItem] = useState(null);
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const [isDraggingItem, setIsDraggingItem] = useState(false);
@@ -161,23 +161,32 @@ export function PlayerScreen({ navigation, params }) {
   const [deviceCommandResult, setDeviceCommandResult] = useState(null);
   const [eventLog, setEventLog] = useState([]);
   const [eventLogVisible, setEventLogVisible] = useState(false);
-  const [actionInfoState, setActionInfoState] = useState({ status: "idle", cardId: null, info: null });
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [unreadHistoryCount, setUnreadHistoryCount] = useState(0);
   const [resonanceSpawn, setResonanceSpawn] = useState(null);
   const [resonanceCollectState, setResonanceCollectState] = useState("idle");
   const [notifications, setNotifications] = useState([]);
   const [sparkVfxActive, setSparkVfxActive] = useState(false);
   const [fusionVfxActive, setFusionVfxActive] = useState(false);
+  const [codexGuideTooltip, setCodexGuideTooltip] = useState(null);
+  const [lastPlayerTooltip, setLastPlayerTooltip] = useState(PLAYER_TOOLTIPS.explore_hotspots);
+  const [expandedPlayerTooltip, setExpandedPlayerTooltip] = useState(null);
+  const [seenPlayerTooltipIds, setSeenPlayerTooltipIds] = useState(() => new Set());
+  const [recentResonanceGain, setRecentResonanceGain] = useState(false);
+  const [resonanceRewardFeedback, setResonanceRewardFeedback] = useState(null);
   const prevGameStateRef = useRef(null);
   const prevActionResultIdRef = useRef(null);
   const prevFusionStatusRef = useRef(null);
+  const prevResonanceValueRef = useRef(null);
+  const historyTopMessageRef = useRef(null);
   const sparkVfxTimerRef = useRef(null);
   const fusionVfxTimerRef = useRef(null);
+  const resonanceTooltipTimerRef = useRef(null);
+  const resonanceRewardFeedbackTimerRef = useRef(null);
   const notifDismissTimersRef = useRef([]);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
-  const successCloseTimerRef = useRef(null);
   const chatListRef = useRef(null);
-  const actionInfoTimerRef = useRef(null);
   const latestCameraRef = useRef(null);
   const viewPublishTimerRef = useRef(null);
   const resonanceSpawnTimerRef = useRef(null);
@@ -197,16 +206,14 @@ export function PlayerScreen({ navigation, params }) {
   const remoteTargetFeedback = remoteState?.targetFeedback || {};
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
-  const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 5), [remoteState]);
+  const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 20), [remoteState]);
   const chatMessages = useMemo(() => normalizeRemoteList(remoteState?.chatMessages).slice(-18), [remoteState]);
   const lastRoleAction = remoteState?.lastRoleActions?.[role.id];
   const mirroredView = isGmMonitorView ? remoteState?.playerViews?.[role.id] : null;
   const isMirrorFresh = Boolean(mirroredView?.updatedAt && Date.now() - mirroredView.updatedAt < PLAYER_VIEW_STALE_MS);
   const effectiveSelectedTargetId = isGmMonitorView ? (isMirrorFresh ? mirroredView.selectedTargetId : null) : selectedTargetId;
-  const effectivePendingAction = isGmMonitorView ? (isMirrorFresh ? mirroredView.pendingAction : null) : pendingAction;
   const effectiveCamera = isGmMonitorView && isMirrorFresh ? mirroredView.camera : null;
   const remoteItemSeenState = remoteState?.itemSeenState || {};
-  const cardUsage = remoteState?.cardUsage?.[role.id] || {};
   const playerBoard = remoteState?.playerBoards?.[role.id] || {};
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
@@ -241,12 +248,128 @@ export function PlayerScreen({ navigation, params }) {
     : [];
   const pulseAnomalyMode = pulseCriticalActive ? "critical" : "active";
   const interferenceVariant = pulseState.interferenceVariant || 1;
-  const resonanceValue = Number(gameState.resonance?.value || 0);
+  const variantResonance = gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
+  const resonanceValue = Number(variantResonance.value || 0);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
+  const deviceSessionCode = getRoleSessionCode(session, role.id) || getStoredSessionCode();
+  const playerDeviceUrl = getDeviceUrl(role.id, { code: deviceSessionCode });
+  const tooltipStorageScope = `${getStoredSessionCode() || session.accessCode || "local"}:${role.id}:${boardScenarioId}:${boardVariant}`;
+  const activePlayerTooltip = useMemo(() => {
+    if (isGmMonitorView || codexGuideTooltip) {
+      return null;
+    }
+
+    return resolvePlayerTooltip({
+      selectedTargetId,
+      queuedForPlayer,
+      overlayActive,
+      sparkVfxActive,
+      fusionSession,
+      fusionVfxActive,
+      gameState,
+      scenarioId: boardScenarioId,
+      variant: boardVariant,
+      resonanceGainActive: recentResonanceGain,
+      seenIds: seenPlayerTooltipIds,
+    });
+  }, [
+    boardScenarioId,
+    boardVariant,
+    codexGuideTooltip,
+    fusionSession,
+    fusionVfxActive,
+    gameState,
+    isGmMonitorView,
+    overlayActive,
+    queuedForPlayer,
+    recentResonanceGain,
+    seenPlayerTooltipIds,
+    selectedTargetId,
+    sparkVfxActive,
+  ]);
+  const availablePlayerTooltip = activePlayerTooltip || lastPlayerTooltip;
+  const visiblePlayerTooltip = codexGuideTooltip ? null : (expandedPlayerTooltip || availablePlayerTooltip);
+
+  const markPlayerTooltipSeen = useCallback((tooltipId) => {
+    if (!tooltipId) {
+      return;
+    }
+
+    setSeenPlayerTooltipIds((current) => {
+      if (current.has(tooltipId)) {
+        return current;
+      }
+
+      const next = new Set(current);
+      next.add(tooltipId);
+      writeSeenPlayerTooltips(tooltipStorageScope, next);
+      return next;
+    });
+  }, [tooltipStorageScope]);
+
+  const handlePlayerTooltipOpen = useCallback(() => {
+    const tooltipToOpen = activePlayerTooltip || lastPlayerTooltip;
+    if (!tooltipToOpen) {
+      return;
+    }
+
+    setExpandedPlayerTooltip(tooltipToOpen);
+    if (activePlayerTooltip) {
+      markPlayerTooltipSeen(activePlayerTooltip.id);
+    }
+  }, [activePlayerTooltip, lastPlayerTooltip, markPlayerTooltipSeen]);
+
+  const handleHistoryToggle = useCallback(() => {
+    setHistoryOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        setUnreadHistoryCount(0);
+      }
+      return nextOpen;
+    });
+  }, []);
 
   useEffect(() => {
-    resonanceRewardClaimedRef.current = Boolean(gameState.resonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]);
-  }, [gameState.resonance?.discoveries]);
+    resonanceRewardClaimedRef.current = Boolean(variantResonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]);
+  }, [variantResonance?.discoveries]);
+
+  useEffect(() => {
+    setSeenPlayerTooltipIds(readSeenPlayerTooltips(tooltipStorageScope));
+    setExpandedPlayerTooltip(null);
+  }, [tooltipStorageScope]);
+
+  useEffect(() => {
+    if (activePlayerTooltip) {
+      setLastPlayerTooltip(activePlayerTooltip);
+    }
+  }, [activePlayerTooltip]);
+
+  useEffect(() => {
+    setExpandedPlayerTooltip(null);
+  }, [
+    boardScenarioId,
+    boardVariant,
+    fusionSession?.status,
+    overlayActive,
+    queuedForPlayer?.id,
+    selectedTargetId,
+    sparkVfxActive,
+  ]);
+
+  useEffect(() => {
+    const previousValue = prevResonanceValueRef.current;
+    prevResonanceValueRef.current = resonanceValue;
+
+    if (previousValue === null || resonanceValue <= previousValue) {
+      return undefined;
+    }
+
+    window.clearTimeout(resonanceTooltipTimerRef.current);
+    setRecentResonanceGain(true);
+    resonanceTooltipTimerRef.current = window.setTimeout(() => setRecentResonanceGain(false), 7000);
+
+    return () => window.clearTimeout(resonanceTooltipTimerRef.current);
+  }, [resonanceValue]);
 
   function logEvent(msg) {
     const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -272,7 +395,9 @@ export function PlayerScreen({ navigation, params }) {
       return;
     }
 
-    const delay = Math.round(RESONANCE_SPAWN_MIN_MS + Math.random() * (RESONANCE_SPAWN_MAX_MS - RESONANCE_SPAWN_MIN_MS));
+    const minMs = resonanceValue === 0 ? RESONANCE_SPAWN_MIN_MS / 2 : RESONANCE_SPAWN_MIN_MS;
+    const maxMs = resonanceValue === 0 ? RESONANCE_SPAWN_MAX_MS / 2 : RESONANCE_SPAWN_MAX_MS;
+    const delay = Math.round(minMs + Math.random() * (maxMs - minMs));
     resonanceSpawnTimerRef.current = window.setTimeout(() => {
       window.clearTimeout(resonanceCollectTimerRef.current);
       window.clearTimeout(resonanceDespawnTimerRef.current);
@@ -290,7 +415,7 @@ export function PlayerScreen({ navigation, params }) {
         scheduleResonanceSpawn();
       }, RESONANCE_SPAWN_VISIBLE_MS);
     }, delay);
-  }, [isGmMonitorView, session.status]);
+  }, [isGmMonitorView, session.status, resonanceValue]);
 
   useEffect(() => {
     if (isGmMonitorView || session.status !== "in_game") {
@@ -318,7 +443,7 @@ export function PlayerScreen({ navigation, params }) {
   useEffect(() => {
     const prev = prevGameStateRef.current;
     if (!prev) {
-      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage };
+      prevGameStateRef.current = { gameState, actionLog };
       return;
     }
 
@@ -353,19 +478,31 @@ export function PlayerScreen({ navigation, params }) {
       actionLog.slice(prev.actionLog.length).forEach((entry) => logEvent(`acción: ${entry}`));
     }
 
-    // ── cardUsage — increases per role+card ──
-    const allUsage = remoteState?.cardUsage || {};
-    const prevAllUsage = prev.allCardUsage || {};
-    for (const [rId, roleUsage] of Object.entries(allUsage)) {
-      if (typeof roleUsage !== "object" || !roleUsage) continue;
-      for (const [cardId, count] of Object.entries(roleUsage)) {
-        const prevCount = prevAllUsage?.[rId]?.[cardId] ?? 0;
-        if (count > prevCount) logEvent(`card.${cardId} (${rId}): uso ${prevCount} → ${count}`);
-      }
+    prevGameStateRef.current = { gameState, actionLog, pulseState };
+  }); // intentionally no dep array — runs after every render to diff state
+
+  useEffect(() => {
+    if (!actionLog.length) {
+      historyTopMessageRef.current = null;
+      return;
     }
 
-    prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, pulseState };
-  }); // intentionally no dep array — runs after every render to diff state
+    const previousTopMessage = historyTopMessageRef.current;
+    const currentTopMessage = actionLog[0];
+    if (previousTopMessage === currentTopMessage) {
+      if (historyOpen) {
+        setUnreadHistoryCount(0);
+      }
+      return;
+    }
+
+    const newMessageCount = previousTopMessage
+      ? Math.max(1, actionLog.findIndex((message) => message === previousTopMessage))
+      : actionLog.length;
+
+    historyTopMessageRef.current = currentTopMessage;
+    setUnreadHistoryCount((current) => (historyOpen ? 0 : Math.min(99, current + newMessageCount)));
+  }, [actionLog, historyOpen]);
 
   // null = not a container; true = open; false = closed
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,16 +534,6 @@ export function PlayerScreen({ navigation, params }) {
           }
         }
 
-        if (pendingAction) {
-          const nextGameState = { ...createInitialGameState(), ...(state?.gameState || {}) };
-          const nextSignature = getTargetStateSignature(pendingAction.target, nextGameState, boardTargets);
-
-          if (pendingAction.targetStateSignature && nextSignature !== pendingAction.targetStateSignature) {
-            setPendingAction(null);
-            setSelectedTargetId(pendingAction.target);
-          }
-        }
-
         applyRemoteStateIfChanged(state);
       } catch (error) {
         // Error de red silencioso; el siguiente ciclo reintentara.
@@ -418,10 +545,11 @@ export function PlayerScreen({ navigation, params }) {
     function handleDragEnd() { setIsDraggingItem(false); }
     window.addEventListener("dragend", handleDragEnd);
     return () => {
-      window.clearTimeout(successCloseTimerRef.current);
       window.clearTimeout(viewPublishTimerRef.current);
       window.clearTimeout(sparkVfxTimerRef.current);
       window.clearTimeout(fusionVfxTimerRef.current);
+      window.clearTimeout(resonanceTooltipTimerRef.current);
+      window.clearTimeout(resonanceRewardFeedbackTimerRef.current);
       notifDismissTimersRef.current.forEach(clearTimeout);
       window.removeEventListener("dragend", handleDragEnd);
     };
@@ -508,31 +636,6 @@ export function PlayerScreen({ navigation, params }) {
     }
   }, [chatMessages]);
 
-  useEffect(() => () => window.clearTimeout(actionInfoTimerRef.current), []);
-
-  function handleActionInfoStart(cardId, info) {
-    window.clearTimeout(actionInfoTimerRef.current);
-    setActionInfoState({ status: "loading", cardId, info });
-    actionInfoTimerRef.current = window.setTimeout(() => {
-      setActionInfoState((current) => (
-        current.cardId === cardId
-          ? { status: "ready", cardId, info }
-          : current
-      ));
-    }, ACTION_INFO_DELAY_MS);
-  }
-
-  function handleActionInfoCancel(cardId) {
-    window.clearTimeout(actionInfoTimerRef.current);
-    setActionInfoState((current) => (
-      current.cardId === cardId ? { status: "idle", cardId: null, info: null } : current
-    ));
-  }
-
-  function createSoftwareLoadSequence() {
-    return Array.from({ length: 10 }, () => SOFTWARE_LOAD_DIRECTIONS[Math.floor(Math.random() * SOFTWARE_LOAD_DIRECTIONS.length)]);
-  }
-
   function queuePlayerViewPublish({ force = false } = {}) {
     if (isGmMonitorView) {
       return;
@@ -544,7 +647,6 @@ export function PlayerScreen({ navigation, params }) {
         const nextCamera = latestCameraRef.current;
         const viewSignature = JSON.stringify({
           selectedTargetId,
-          selectedCardId,
           camera: nextCamera
             ? {
                 x: Math.round(nextCamera.x || 0),
@@ -552,9 +654,6 @@ export function PlayerScreen({ navigation, params }) {
                 scale: Number(nextCamera.scale || 0).toFixed(3),
               }
             : null,
-          pendingActionId: pendingAction?.id || null,
-          pendingActionStatus: pendingAction?.status || null,
-          pendingActionResult: pendingAction?.minigame?.result || null,
         });
 
         if (!force && viewSignature === lastPublishedViewSignatureRef.current) {
@@ -563,9 +662,7 @@ export function PlayerScreen({ navigation, params }) {
 
         await updatePlayerView(role, {
           selectedTargetId,
-          selectedCardId,
           camera: nextCamera,
-          pendingAction,
         });
         lastPublishedCameraRef.current = nextCamera;
         lastPublishedViewSignatureRef.current = viewSignature;
@@ -580,16 +677,16 @@ export function PlayerScreen({ navigation, params }) {
     if (hasCameraMeaningfulChange(lastPublishedCameraRef.current, nextCamera)) {
       queuePlayerViewPublish();
     }
-  }, [isGmMonitorView, pendingAction, role, selectedCardId, selectedTargetId]);
+  }, [isGmMonitorView, role, selectedTargetId]);
 
   const handleCameraCommit = useCallback((nextCamera) => {
     latestCameraRef.current = nextCamera;
     queuePlayerViewPublish({ force: true });
-  }, [isGmMonitorView, pendingAction, role, selectedCardId, selectedTargetId]);
+  }, [isGmMonitorView, role, selectedTargetId]);
 
   useEffect(() => {
     queuePlayerViewPublish();
-  }, [selectedTargetId, selectedCardId, pendingAction?.id, pendingAction?.target, pendingAction?.card, pendingAction?.status, pendingAction?.minigame?.status, pendingAction?.minigame?.result]);
+  }, [selectedTargetId]);
 
   async function handleDeviceCommand(targetId, cmd) {
     logEvent(`cmd: ${targetId} -> ${cmd.name}${cmd.arg ? ` [${cmd.arg}]` : ""}`);
@@ -615,20 +712,53 @@ export function PlayerScreen({ navigation, params }) {
   }
 
   async function grantBalonesOpenResonance() {
-    if (isGmMonitorView || resonanceRewardPendingRef.current || resonanceRewardClaimedRef.current || gameState.resonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]) {
+    if (isGmMonitorView || resonanceRewardPendingRef.current || resonanceRewardClaimedRef.current || variantResonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]) {
       return;
     }
 
     resonanceRewardPendingRef.current = true;
     resonanceRewardClaimedRef.current = true;
     try {
-      const currentValue = Number(gameState.resonance?.value || 0);
-      const currentSpent = Number(gameState.resonance?.spent || 0);
+      const currentValue = Number(variantResonance?.value || 0);
+      const currentSpent = Number(variantResonance?.spent || 0);
       await firebasePatch("", {
-        "gameState/resonance/value": currentValue + RESONANCE_BALLS_OPEN_REWARD,
-        "gameState/resonance/spent": currentSpent,
-        [`gameState/resonance/discoveries/${RESONANCE_BALLS_DISCOVERY_ID}`]: true,
+        [`gameState/resonanceByVariant/${boardVariant}/value`]: currentValue + RESONANCE_BALLS_OPEN_REWARD,
+        [`gameState/resonanceByVariant/${boardVariant}/spent`]: currentSpent,
+        [`gameState/resonanceByVariant/${boardVariant}/discoveries/${RESONANCE_BALLS_DISCOVERY_ID}`]: true,
       });
+      setRemoteState((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          gameState: {
+            ...(current.gameState || {}),
+            resonanceByVariant: {
+              ...(current.gameState?.resonanceByVariant || {}),
+              [boardVariant]: {
+                ...(current.gameState?.resonanceByVariant?.[boardVariant] || {}),
+                value: currentValue + RESONANCE_BALLS_OPEN_REWARD,
+                spent: currentSpent,
+                discoveries: {
+                  ...(current.gameState?.resonanceByVariant?.[boardVariant]?.discoveries || {}),
+                  [RESONANCE_BALLS_DISCOVERY_ID]: true,
+                },
+              },
+            },
+          },
+        };
+      });
+      window.clearTimeout(resonanceRewardFeedbackTimerRef.current);
+      setResonanceRewardFeedback({
+        id: Date.now(),
+        targetId: "balones",
+        amount: RESONANCE_BALLS_OPEN_REWARD,
+      });
+      resonanceRewardFeedbackTimerRef.current = window.setTimeout(() => {
+        setResonanceRewardFeedback(null);
+      }, 3400);
       logEvent(`resonancia +${RESONANCE_BALLS_OPEN_REWARD}: balones explorados`);
     } catch (error) {
       resonanceRewardClaimedRef.current = false;
@@ -649,12 +779,12 @@ export function PlayerScreen({ navigation, params }) {
     setResonanceCollectState("collected");
 
     try {
-      const latestResonance = await firebaseGet("gameState/resonance") || gameState.resonance || {};
+      const latestResonance = await firebaseGet(`gameState/resonanceByVariant/${boardVariant}`) || variantResonance || {};
       const currentValue = Number(latestResonance.value || 0);
       const currentSpent = Number(latestResonance.spent || 0);
       await firebasePatch("", {
-        "gameState/resonance/value": currentValue + 1,
-        "gameState/resonance/spent": currentSpent,
+        [`gameState/resonanceByVariant/${boardVariant}/value`]: currentValue + 1,
+        [`gameState/resonanceByVariant/${boardVariant}/spent`]: currentSpent,
       });
       logEvent("resonancia +1: recogida ambiental");
     } finally {
@@ -695,61 +825,6 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
-  function startLoad(cardId, targetId) {
-    const card = getCard(cardId);
-
-    if (session.status !== "in_game" || overlayActive || !card || !card.roles.includes(role.id) || pendingAction || queuedForPlayer || (cardUsage[cardId] || 0) >= 3) {
-      return;
-    }
-
-    const minigame = createSoftwareLoadMinigame(createSoftwareLoadSequence());
-    setPendingAction({
-      ...createPendingAction({ card, targetId, roleId: role.id, minigame }),
-      scenarioId: boardScenarioId,
-      variant: boardVariant,
-      targetStateSignature: getTargetStateSignature(targetId, gameState, boardTargets, boardScenarioId, boardVariant),
-    });
-    setSelectedTargetId(targetId);
-  }
-
-  function handleDropZoneDrop(event, targetId) {
-    event.preventDefault();
-    if (overlayActive || pendingAction || queuedForPlayer) return;
-
-    const itemId = event.dataTransfer.getData("application/x-inv-item-id");
-    const cardId = event.dataTransfer.getData("application/x-card-id") || selectedCardId;
-
-    setDropZoneState((current) => ({
-      targetId,
-      cardId: cardId || current.cardId || null,
-      itemId: itemId || current.itemId || null,
-    }));
-    setSelectedTargetId(targetId);
-  }
-
-  function handleLoadConfirm(targetId, cancel = false) {
-    if (cancel) {
-      setDropZoneState({ cardId: null, itemId: null, targetId: null });
-      return;
-    }
-
-    const { cardId, itemId } = dropZoneState;
-    setDropZoneState({ cardId: null, itemId: null, targetId: null });
-
-    if (itemId && !cardId) {
-      // Item-only load — record pending item usage and skip action card
-      setPendingItemUsage(role.id, itemId, targetId).catch(() => {});
-      return;
-    }
-
-    if (cardId) {
-      if (itemId) {
-        setPendingItemUsage(role.id, itemId, targetId).catch(() => {});
-      }
-      startLoad(cardId, targetId);
-    }
-  }
-
   function handleItemClick(item) {
     setOpenedItem(item);
     if (!itemSeenState[item.id]?.seen) {
@@ -769,64 +844,6 @@ export function PlayerScreen({ navigation, params }) {
       await pickUpItem(role.id, itemId, slotIndex, boardScenarioId, boardVariant);
     } catch {
       setPlayerInventory(playerInventory);
-    }
-  }
-
-  function cancelPendingAction() {
-    if (pendingAction) {
-      setPendingAction(null);
-    }
-  }
-
-  function updatePendingMinigame(nextMinigame) {
-    setPendingAction((current) => current ? { ...current, minigame: nextMinigame } : current);
-  }
-
-  function retryPendingMinigame() {
-    setPendingAction((current) => {
-      if (!current?.minigame) {
-        return current;
-      }
-
-      return {
-        ...current,
-      minigame: createSoftwareLoadMinigame(current.minigame.sequence),
-      };
-    });
-  }
-
-  async function completePendingMinigame() {
-    const actionToQueue = pendingAction;
-
-    if (!actionToQueue) {
-      return;
-    }
-
-    try {
-      await enqueueLoadedAction(actionToQueue);
-      incrementCardUsage(role.id, actionToQueue.card, cardUsage[actionToQueue.card] || 0).catch(() => {});
-      const state = await getPlayerRemoteStateSlice(role.id);
-      applyRemoteStateIfChanged(state);
-      window.clearTimeout(successCloseTimerRef.current);
-      successCloseTimerRef.current = window.setTimeout(() => {
-        setPendingAction(null);
-        setSelectedTargetId(null);
-      }, SUCCESS_CLOSE_DELAY_MS);
-    } catch (error) {
-      setPendingAction((current) => {
-        if (!current?.minigame) {
-          return current;
-        }
-
-        return {
-          ...current,
-          minigame: {
-            ...current.minigame,
-            status: "failed",
-            result: "failed",
-          },
-        };
-      });
     }
   }
 
@@ -861,14 +878,17 @@ export function PlayerScreen({ navigation, params }) {
 
   return (
     <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
-      <section className="player-scene-preview player-scene-live">
+      <section className={`player-scene-preview player-scene-live ${visiblePlayerTooltip ? "has-player-tooltip" : ""} ${expandedPlayerTooltip ? "has-player-tooltip-expanded" : ""} ${historyOpen ? "has-player-history-open" : ""}`}>
         <div className="player-topbar">
           <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
           {!isGmMonitorView && (
-            <div className="player-resonance-counter" aria-label="Resonancia acumulada">
+            <div className={`player-resonance-counter ${resonanceRewardFeedback ? "player-resonance-counter--reward" : ""}`} aria-label="Resonancia acumulada">
               <span>Resonancia</span>
               <strong>{resonanceValue}</strong>
+              {resonanceRewardFeedback && (
+                <em key={resonanceRewardFeedback.id}>+{resonanceRewardFeedback.amount}</em>
+              )}
             </div>
           )}
           <NTimer seconds={elapsedSeconds} />
@@ -877,29 +897,17 @@ export function PlayerScreen({ navigation, params }) {
           gameState={gameState}
           targetFeedback={targetFeedback}
           selectedTargetId={effectiveSelectedTargetId}
-          pendingAction={effectivePendingAction}
           queuedForPlayer={queuedForPlayer}
           overlayActive={overlayActive}
           onSelectTarget={handleSelectTarget}
-          onCloseTarget={() => {
-            setSelectedTargetId(null);
-            setDropZoneState({ cardId: null, itemId: null, targetId: null });
-          }}
-          onDrop={handleDropZoneDrop}
-          onCancelPendingAction={cancelPendingAction}
-          onMinigameChange={updatePendingMinigame}
-          onMinigameRetry={retryPendingMinigame}
-          onMinigameSuccess={completePendingMinigame}
+          onCloseTarget={() => setSelectedTargetId(null)}
           isMonitorView={isGmMonitorView}
           externalCamera={effectiveCamera}
           onCameraChange={isGmMonitorView ? undefined : handleCameraChange}
           onCameraCommit={isGmMonitorView ? undefined : handleCameraCommit}
           itemSeenState={itemSeenState}
-          dropZoneState={isGmMonitorView ? {} : dropZoneState}
           onItemClick={isGmMonitorView ? undefined : handleItemClick}
           onItemDragStart={isGmMonitorView ? undefined : () => setIsDraggingItem(true)}
-          onDropZoneDrop={isGmMonitorView ? undefined : handleDropZoneDrop}
-          onLoadConfirm={isGmMonitorView ? undefined : handleLoadConfirm}
           revealedSlots={isGmMonitorView ? {} : revealedSlots}
           boardTargets={boardTargets}
           backgroundSrc={boardSrc}
@@ -915,9 +923,72 @@ export function PlayerScreen({ navigation, params }) {
           interferenceVariant={interferenceVariant}
           resonanceSpawn={isGmMonitorView ? null : resonanceSpawn}
           resonanceCollectState={resonanceCollectState}
+          resonanceRewardFeedback={isGmMonitorView ? null : resonanceRewardFeedback}
           onResonanceHoverStart={isGmMonitorView ? undefined : handleResonanceHoverStart}
           onResonanceHoverEnd={isGmMonitorView ? undefined : handleResonanceHoverEnd}
         />
+        {!isGmMonitorView && (
+          <div className="player-utility-rail" aria-label="Herramientas de escena">
+            <PlayerCodeTooltipLayer
+              tooltip={availablePlayerTooltip}
+              expanded={false}
+              unread={Boolean(activePlayerTooltip)}
+              onOpen={handlePlayerTooltipOpen}
+              onAbout={() => setCodexGuideTooltip(availablePlayerTooltip)}
+            />
+            <button
+              type="button"
+              className="player-utility-btn player-utility-btn--history"
+              onClick={handleHistoryToggle}
+              aria-expanded={historyOpen}
+              aria-label="Abrir historial"
+            >
+              <HistoryGlyph className="player-utility-icon" />
+              {unreadHistoryCount > 0 && (
+                <em aria-label={`${unreadHistoryCount} mensajes nuevos`}>
+                  {unreadHistoryCount > 9 ? "9+" : unreadHistoryCount}
+                </em>
+              )}
+            </button>
+          </div>
+        )}
+        {!isGmMonitorView && expandedPlayerTooltip && (
+          <PlayerCodeTooltipLayer
+            tooltip={expandedPlayerTooltip}
+            expanded
+            unread={false}
+            onOpen={handlePlayerTooltipOpen}
+            onAbout={() => setCodexGuideTooltip(expandedPlayerTooltip)}
+          />
+        )}
+        {!isGmMonitorView && (
+          <CodexGuideOverlay
+            tooltip={codexGuideTooltip}
+            onClose={() => setCodexGuideTooltip(null)}
+          />
+        )}
+        {!isGmMonitorView && historyOpen && (
+          <aside className={`player-history-overlay ${historyOpen ? "player-history-overlay--open" : ""}`}>
+            <section className="player-history-drawer" aria-label="Historial de mensajes">
+              <header>
+                <span>historial://mensajes</span>
+                <button type="button" onClick={() => setHistoryOpen(false)} aria-label="Cerrar historial">Cerrar</button>
+              </header>
+              <div className="player-history-list">
+                {actionLog.length === 0 ? (
+                  <p>Sin mensajes todavia.</p>
+                ) : (
+                  actionLog.map((message, index) => (
+                    <article key={`${message}-${index}`} className="player-history-entry">
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <p>{message}</p>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+          </aside>
+        )}
         {!isGmMonitorView && notifications.length > 0 && (
           <div className="player-notifications-stack" aria-live="polite" aria-atomic="false">
             {notifications.map((notif) => (
@@ -938,6 +1009,7 @@ export function PlayerScreen({ navigation, params }) {
           <div className="player-fusion-overlay" aria-live="assertive">
             <div className="player-fusion-glow" />
             <p className="player-fusion-text">REALIDADES<br />FUSIONADAS</p>
+            <span className="player-fusion-subtext">Taquillas estabilizadas</span>
             {Array.from({ length: 20 }).map((_, i) => {
               const angle = (i / 20) * 360;
               const dist = 80 + Math.random() * 80;
@@ -951,56 +1023,6 @@ export function PlayerScreen({ navigation, params }) {
                 />
               );
             })}
-          </div>
-        )}
-        {!isGmMonitorView && (
-          <div className="scene-action-zone">
-            <div
-              id="action-card-info-panel"
-              className={`action-info-popover ${actionInfoState.status}`}
-              role="tooltip"
-              aria-hidden={actionInfoState.status === "idle"}
-            >
-              {actionInfoState.status === "loading" ? (
-                <span className="action-info-loader" aria-label="Cargando informacion" />
-              ) : actionInfoState.info ? (
-                <>
-                  <strong>{actionInfoState.info.cardLabel}</strong>
-                  <span className="action-info-family">{actionInfoState.info.actionLabel}</span>
-                  <span className="action-info-description">{actionInfoState.info.description}</span>
-                </>
-              ) : null}
-            </div>
-            <div className="react-card-deck scene-action-deck" aria-label="Cartas de accion">
-              {visibleCards.map((card) => {
-                const isCharging = pendingAction?.card === card.id;
-                const uses = cardUsage[card.id] || 0;
-                const isExhausted = uses >= 3;
-                return (
-                  <PlayerActionCard
-                    key={card.id}
-                    card={card}
-                    usageCount={uses}
-                    isSelected={selectedCardId === card.id}
-                    isCharging={isCharging}
-                    isExhausted={isExhausted}
-                    onSelect={isExhausted ? undefined : setSelectedCardId}
-                    onInfoStart={handleActionInfoStart}
-                    onInfoCancel={handleActionInfoCancel}
-                    onDragStart={(event, draggedCard, charging) => {
-                      if (isCharging || isExhausted) {
-                        event.preventDefault();
-                        return;
-                      }
-
-                      setSelectedCardId(draggedCard.id);
-                      event.dataTransfer.setData("application/x-card-id", draggedCard.id);
-                      event.dataTransfer.effectAllowed = "copy";
-                    }}
-                  />
-                );
-              })}
-            </div>
           </div>
         )}
         {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} pulseState={pulseState} />}
@@ -1030,15 +1052,6 @@ export function PlayerScreen({ navigation, params }) {
         )}
       </section>
       {!isGmMonitorView && <aside className="player-hud-panel">
-        <NCard title="Historial" className="player-side-card">
-          <div className="react-list">
-            {actionLog.map((message, index) => (
-              <article key={`${message}-${index}`} className="react-list-item">
-                <span>{message}</span>
-              </article>
-            ))}
-          </div>
-        </NCard>
         <NCard title="Chat" className="player-side-card player-chat-card">
           <div ref={chatListRef} className="react-chat-list" aria-label="Mensajes de chat">
             {chatMessages.length === 0 ? (
@@ -1062,6 +1075,29 @@ export function PlayerScreen({ navigation, params }) {
             />
             <button type="submit" disabled={!chatDraft.trim()}>Enviar</button>
           </form>
+        </NCard>
+        <NCard title="Terminal movil" className="player-side-card player-device-qr-card">
+          <div className="player-device-qr">
+            <QRCodeSVG
+              value={playerDeviceUrl}
+              size={132}
+              level="M"
+              marginSize={2}
+              bgColor="transparent"
+              fgColor="#eafff2"
+            />
+          </div>
+          <code className="player-device-qr-url">{playerDeviceUrl}</code>
+          <button
+            type="button"
+            className="player-device-copy-btn"
+            onClick={() => navigator.clipboard?.writeText(playerDeviceUrl)}
+          >
+            Copiar URL
+          </button>
+          {!deviceSessionCode && (
+            <p className="player-device-qr-hint">Escanea y escribe el codigo de sesion.</p>
+          )}
         </NCard>
       </aside>}
       {!isGmMonitorView && (

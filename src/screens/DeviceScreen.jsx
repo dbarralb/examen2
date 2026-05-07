@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { firebaseGet } from "../services/firebaseClient.js";
+import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
 import { applyScenarioHotspotOverrides, getScenarioHotspots } from "../data/scenarioContent.js";
 import { DEFAULT_SCENARIO_ID } from "../data/scenarioData.js";
 import { cards } from "../data/gameData.js";
@@ -33,7 +33,6 @@ async function getDeviceState(roleId) {
     playerBoard,
     hotspotOverrides,
     fusionSession,
-    gmGraphType,
   ] = await Promise.all([
     firebaseGet("session"),
     firebaseGet("gameState"),
@@ -42,9 +41,8 @@ async function getDeviceState(roleId) {
     firebaseGet(`playerBoards/${roleId}`),
     firebaseGet("hotspotOverrides"),
     firebaseGet("fusionSession"),
-    firebaseGet(`deviceConfig/${roleId}/graphType`),
   ]);
-  return { session, gameState, pulseState, queuedActions, playerBoard, hotspotOverrides, fusionSession, gmGraphType };
+  return { session, gameState, pulseState, queuedActions, playerBoard, hotspotOverrides, fusionSession };
 }
 
 
@@ -151,13 +149,10 @@ export function DeviceScreen({ params }) {
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
-  const resonanceValue = Number(gameState.resonance?.value || 0);
+  const variantResonance = gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
+  const resonanceValue = Number(variantResonance.value || 0);
   const overlayActive = pulseState.status === "executing";
   const fusionSession = remoteState?.fusionSession || null;
-  const gmGraphType = remoteState?.gmGraphType || null;
-  const forcedGraphType = selectedPort
-    ? (selectedPort.portType === "PORT_INFO" ? "inspection" : "interaction")
-    : (gmGraphType && gmGraphType !== "random") ? gmGraphType : null;
 
   // Reset dismissed state when a new fusion session starts
   useEffect(() => {
@@ -185,17 +180,44 @@ export function DeviceScreen({ params }) {
     && (boardVariant === "A" || boardVariant === "B")
     && !fusionDismissed;
 
-  function handlePortSelect(hotspotId, portType) {
+  async function handlePortSelect(hotspotId, portType) {
     if (overlayActive || !!queuedForMe || queueStatus === "queuing") return;
-    setSelectedPort({ hotspotId, portType });
-    setNodeGraphActive(true);
+
+    if (resonanceValue < 1) {
+      setStatusMsg("Sin resonancia. Recoge bolas de resonancia en la pantalla del jugador.");
+      return;
+    }
+
+    setQueueStatus("queuing");
+    setStatusMsg("");
+    try {
+      await firebasePatch("", {
+        [`gameState/resonanceByVariant/${boardVariant}/value`]: resonanceValue - 1,
+        [`gameState/resonanceByVariant/${boardVariant}/spent`]: (Number(variantResonance.spent) || 0) + 1,
+      });
+      setSelectedPort({ hotspotId, portType });
+      setNodeGraphActive(true);
+    } catch {
+      setStatusMsg("Error al conectarse al puerto. Reintenta.");
+    } finally {
+      setQueueStatus("idle");
+    }
   }
 
-  async function handleNodeGraphResult({ actionKind }) {
+  async function handleNodeGraphResult({ charge, success }) {
     setNodeGraphActive(false);
+
+    if (!success) {
+      setStatusMsg("Conexion fallida. La resonancia fue consumida.");
+      setSelectedPort(null);
+      return;
+    }
+
     const targetId = selectedPort?.hotspotId;
+    const portType = selectedPort?.portType;
+    const actionKind = portType === "PORT_INFO" ? ACTION_KINDS.INSPECTION : ACTION_KINDS.INTERACTION;
     const card = cards.find((c) => c.roles.includes(role.id) && c.actionKind === actionKind);
-    if (!card || !targetId) return;
+    if (!card || !targetId) { setSelectedPort(null); return; }
 
     setQueueStatus("queuing");
     setStatusMsg("");
@@ -206,14 +228,17 @@ export function DeviceScreen({ params }) {
         roleId: role.id,
         scenarioId: boardScenarioId,
         variant: boardVariant,
+        charge,
       });
       await enqueueLoadedAction(pending);
       incrementCardUsage(role.id, card.id, 0).catch(() => {});
       setQueueStatus("done");
-      setStatusMsg(`Chip creado: ${getActionKindLabel(actionKind)}. El pulso resolvera la accion.`);
+      setStatusMsg(`Chip creado. Carga: ${charge}. ${getActionKindLabel(actionKind)}. El pulso resolvera la accion.`);
     } catch {
       setQueueStatus("error");
       setStatusMsg("No se pudo encolar. Reintenta.");
+    } finally {
+      setSelectedPort(null);
     }
   }
 
@@ -286,12 +311,15 @@ export function DeviceScreen({ params }) {
         </div>
       ) : nodeGraphActive ? (
         <>
-          <p className="device-graph-copy">El grafo decide el tipo de chip. El pulso resolvera la accion.</p>
+          <p className="device-graph-copy">Conecta START con la salida. Los nodos que toques determinan la carga del chip.</p>
           <NodeGraph
-            timerSeconds={15}
-            forcedGraphType={forcedGraphType}
+            timerSeconds={10}
             onResult={handleNodeGraphResult}
-            onCancel={() => { setNodeGraphActive(false); setSelectedPort(null); }}
+            onCancel={() => {
+              setNodeGraphActive(false);
+              setSelectedPort(null);
+              setStatusMsg("Conexion cancelada. La resonancia fue consumida.");
+            }}
           />
         </>
       ) : (

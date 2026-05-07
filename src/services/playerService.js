@@ -24,7 +24,7 @@ export function findQueuedActionForCurrentPlayer(queuedActions, roleId) {
   });
 }
 
-export function createPendingAction({ card, targetId, roleId, scenarioId = null, variant = null, minigame = null }) {
+export function createPendingAction({ card, targetId, roleId, scenarioId = null, variant = null, minigame = null, charge = null }) {
   const now = Date.now();
   const loadTimeSeconds = card.loadTimeSeconds || 5;
 
@@ -46,6 +46,7 @@ export function createPendingAction({ card, targetId, roleId, scenarioId = null,
     loadTimeSeconds,
     executionTimeSeconds: card.executionTimeSeconds || 3,
     minigame,
+    charge,
   };
 }
 

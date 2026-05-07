@@ -2,6 +2,7 @@ import { firebaseGet, firebasePatch, firebasePut } from "./firebaseClient.js";
 import { generateSessionAccessCode, getOrCreateClientId } from "./clientIdentity.js";
 import { buildInitialRemoteState } from "./remoteState.js";
 import { storeSessionCode } from "./sessionAccess.js";
+import { playerRoles } from "../data/roles.js";
 
 export async function getRemoteState() {
   const remoteState = await firebaseGet("");
@@ -18,12 +19,7 @@ export async function getRemoteState() {
 export async function startGame() {
   const now = Date.now();
   const accessCode = generateSessionAccessCode();
-  const playerCodes = {
-    jugador1: generateSessionAccessCode(),
-    jugador2: generateSessionAccessCode(),
-    jugador3: generateSessionAccessCode(),
-    jugador4: generateSessionAccessCode(),
-  };
+  const playerCodes = Object.fromEntries(playerRoles.map((role) => [role.id, generateSessionAccessCode()]));
   const gameTimer = {
     status: "idle",
     startedAt: null,

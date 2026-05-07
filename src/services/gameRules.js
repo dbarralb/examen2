@@ -18,21 +18,21 @@ import { LOCKER_STATES, RESONANCE_COSTS, getScenarioScopedTargetKey, resolveScen
 
 /** Build shared flags for the current pulse (e.g. combo detection). */
 export function buildPulseFlags(pulseActions = [], gameState = {}) {
-  const resonanceValue = Number(gameState.resonance?.value || 0);
   const lockerFusionActions = pulseActions.filter((action) => (
     action.target === "taquillas" && isInteractionAction(action)
   ));
-  const hasLockerFusionAction = lockerFusionActions.some((action) => {
+  const canFuseLocker = lockerFusionActions.some((action) => {
     const scenarioId = action.scenarioId || "almacen";
     const variant = action.variant || "A";
     const scopedLockerKey = getScenarioScopedTargetKey(scenarioId, variant, "taquillas");
     const lockerState = gameState.hotspotStates?.[scopedLockerKey] || LOCKER_STATES.LOCKED;
-    return lockerState === LOCKER_STATES.LOCKED;
+    if (lockerState !== LOCKER_STATES.LOCKED) return false;
+    const variantResonance = gameState.resonanceByVariant?.[variant] || gameState.resonance || {};
+    const resonanceValue = Number(variantResonance.value || 0);
+    return resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION;
   });
 
-  return {
-    canFuseLocker: hasLockerFusionAction && resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION,
-  };
+  return { canFuseLocker };
 }
 
 /** Resolve an item-card combo. Returns null until scenario logic is wired. */

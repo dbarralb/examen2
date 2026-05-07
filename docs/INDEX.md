@@ -100,7 +100,29 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 
 ---
 
-## 5. Proceso de prompts de arte
+## 5. Experiencia UX y onboarding
+
+### `docs/experiencia-ux-onboarding.md`
+
+**Uso principal:** definir que mecanicas se ensenan al jugador, en que orden aparecen y que tooltips, microcopy o estimulos digitales ayudan en la primera partida.
+
+**Organizacion:**
+
+- Principios UX para no convertir el juego en un tutorial cerrado.
+- Mecanicas que hay que ensenar: exploracion, object cards, movil, NodeGraph, cola, pulso, resonancia, variantes, fusion, dispositivos y progreso.
+- Timeline de onboarding con momento, situacion, mecanica nueva, estimulo recomendado y objetivo UX.
+- Recomendacion de implementacion por fases y riesgos a observar en test.
+
+**Buscar aqui cuando necesites:**
+
+- Decidir si una mecanica necesita tooltip, estimulo visual o feedback de estado.
+- Preparar el primer flujo de partida para jugadores nuevos.
+- Analizar por que un jugador toca el escenario sin entender el siguiente paso.
+- Priorizar mejoras de UX antes de cambiar reglas de puzzle.
+
+---
+
+## 6. Proceso de prompts de arte
 
 ### `docs/art-prompt-process.md`
 
@@ -117,7 +139,7 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 
 ---
 
-## 6. Seguridad y despliegue Firebase
+## 7. Seguridad y despliegue
 
 ### `docs/firebase-security.md`
 
@@ -135,9 +157,26 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 - Desplegar o comprobar reglas.
 - Separar seguridad real de la experiencia jugable con codigos.
 
+### `docs/deployment.md`
+
+**Uso principal:** publicar la app como SPA estatica en Netlify y revisar las URLs canonicas.
+
+**Organizacion:**
+
+- Configuracion de `netlify.toml`.
+- Variables `VITE_FIREBASE_*` y `VITE_PUBLIC_APP_URL`.
+- URLs de GM, jugadores y terminales moviles.
+- Validacion de redirects SPA.
+
+**Buscar aqui cuando necesites:**
+
+- Desplegar online sin servidor Vite.
+- Generar o revisar URLs/QR de jugador.
+- Comprobar que refrescar `?screen=...` no da 404.
+
 ---
 
-## 7. Archivo historico
+## 8. Archivo historico
 
 ### `docs/OLD/`
 
@@ -188,7 +227,7 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 
 ---
 
-## 8. Mapa rapido de busqueda
+## 9. Mapa rapido de busqueda
 
 | Pregunta | Documento |
 |---|---|
@@ -197,6 +236,8 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 | Como funciona el flujo jugador -> accion -> pulso? | `docs/architecture.md` |
 | Cual es el concepto jugable del almacen? | `docs/game_design.md` |
 | Que roles y cartas existen? | `docs/game_design.md` |
+| Como debe aprender el jugador las mecanicas iniciales? | `docs/experiencia-ux-onboarding.md` |
+| Que tooltips o estimulos necesita el primer flujo? | `docs/experiencia-ux-onboarding.md` |
 | Como debe comportarse el GM? | `docs/gm-operations.md` |
 | Donde se guardan los ajustes de hotspots? | `docs/architecture.md` y `docs/gm-operations.md` |
 | Como preparo prompts de arte para puzzles/overlays? | `docs/art-prompt-process.md` + `docs/ECO Tech Props v1.md` |
@@ -206,7 +247,7 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 
 ---
 
-## 9. Matriz de cambios y actualizaciones asociadas
+## 10. Matriz de cambios y actualizaciones asociadas
 
 Esta tabla funciona como checklist de mantenimiento. Cuando un cambio de codigo toca una de estas areas, hay que revisar tambien los documentos o archivos asociados antes de darlo por cerrado.
 
@@ -226,7 +267,7 @@ Regla practica: si el cambio altera lo que un jugador ve o lee, regenerar `docs/
 
 ---
 
-## 10. Rutina recomendada antes de cambios
+## 11. Rutina recomendada antes de cambios
 
 1. Leer `docs/PROJECT_STATUS.md` para confirmar estado y pendientes.
 2. Leer el doc especifico del area: arquitectura, diseno, GM o Firebase.

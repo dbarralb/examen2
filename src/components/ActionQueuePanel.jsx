@@ -24,7 +24,7 @@ export function ActionQueuePanel({
     <>
       <div className="gm-card-header-line">
         <NBadge status={getPulseBadgeStatus(pulseState.status)}>Pulso: {pulseState.status || "idle"}</NBadge>
-        <span>{queuedActionChips.length} acciones</span>
+        <span>{queuedActionChips.length} chips</span>
       </div>
       {pulseState.status !== "idle" && (
         <NProgress

@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { NBadge } from "./e2";
-import { SoftwareLoadMinigame } from "./SoftwareLoadMinigame.jsx";
 import { DeviceConsole } from "./DeviceConsole.jsx";
 import { PulseAnomalyVFX } from "./PulseAnomalyVFX.jsx";
 import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
@@ -398,27 +397,18 @@ export function SceneMap({
   gameState,
   targetFeedback,
   selectedTargetId,
-  pendingAction,
   queuedForPlayer,
   overlayActive,
   onSelectTarget,
   onCloseTarget,
-  onDrop,
-  onCancelPendingAction,
-  onMinigameChange,
-  onMinigameRetry,
-  onMinigameSuccess,
   isMonitorView = false,
   externalCamera = null,
   onCameraChange,
   onCameraCommit,
   showCoordinates = false,
   itemSeenState = {},
-  dropZoneState = {},
   onItemClick,
   onItemDragStart,
-  onDropZoneDrop,
-  onLoadConfirm,
   revealedSlots = {},
   activeZone = null,
   boardTargets = null,
@@ -441,6 +431,7 @@ export function SceneMap({
   interferenceVariant = 1,
   resonanceSpawn = null,
   resonanceCollectState = "idle",
+  resonanceRewardFeedback = null,
   onResonanceHoverStart,
   onResonanceHoverEnd,
 }) {
@@ -465,7 +456,6 @@ export function SceneMap({
   const [edgePanDirection, setEdgePanDirection] = useState(0);
   const [edgePanSpeed, setEdgePanSpeed] = useState(0);
   const [consoleOpenTargetId, setConsoleOpenTargetId] = useState(null);
-  const [expandedSoftwareDrops, setExpandedSoftwareDrops] = useState({});
   const [interferenceRenderState, setInterferenceRenderState] = useState({ visible: false, settling: false });
   const shouldDetectMouse = !isMonitorView && !showCoordinates;
 
@@ -500,10 +490,6 @@ export function SceneMap({
       setConsoleOpenTargetId(null);
     }
   }, [selectedTargetId, consoleOpenTargetId]);
-
-  useEffect(() => {
-    setExpandedSoftwareDrops({});
-  }, [selectedTargetId]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -604,10 +590,6 @@ export function SceneMap({
     card.style.setProperty("--object-shadow-y", "18px");
     card.style.setProperty("--object-glare-x", "50%");
     card.style.setProperty("--object-glare-y", "0%");
-  }
-
-  function expandSoftwareDrop(targetId) {
-    setExpandedSoftwareDrops((current) => current[targetId] ? current : { ...current, [targetId]: true });
   }
 
   function setMouseDetectionLevel(level) {
@@ -804,9 +786,7 @@ export function SceneMap({
     event.preventDefault();
     stopEdgePan();
     stopPanInertia();
-    if (!pendingAction) {
-      onCloseTarget?.();
-    }
+    onCloseTarget?.();
     const now = performance.now();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     panRef.current = {
@@ -969,10 +949,10 @@ export function SceneMap({
                 variant,
               )
               : inspectionDiscovery;
-            const hasActiveSoftwareDrop = pendingAction?.target === target.id
-              || queuedForPlayer?.target === target.id
-              || dropZoneState.targetId === target.id;
-            const isSoftwareDropExpanded = expandedSoftwareDrops[target.id] || hasActiveSoftwareDrop;
+            const queuedChipForTarget = queuedForPlayer?.target === target.id ? queuedForPlayer : null;
+            const resonanceRewardForTarget = resonanceRewardFeedback?.targetId === target.id
+              ? resonanceRewardFeedback
+              : null;
 
             return (
               <Fragment key={`${target.id}-cards`}>
@@ -994,6 +974,13 @@ export function SceneMap({
                   return <NBadge status={isDisabled ? "danger" : "info"}>Estado: {stateLabel}</NBadge>;
                 })()}
                 <p>{targetFeedback[target.id]}</p>
+                {resonanceRewardForTarget && (
+                  <div key={resonanceRewardForTarget.id} className="scene-object-resonance-reward" aria-live="polite">
+                    <span className="scene-object-resonance-reward__scan" aria-hidden="true" />
+                    <strong>+{resonanceRewardForTarget.amount} resonancia</strong>
+                    <span>Contradiccion detectada</span>
+                  </div>
+                )}
                 {target.hotspotClass === "dispositivo" && !isMonitorView && (
                   <button
                     type="button"
@@ -1032,72 +1019,23 @@ export function SceneMap({
                     </section>
                   );
                 })()}
-                <section
-                  className={`react-drop-slot ${isSoftwareDropExpanded ? "expanded" : ""} ${pendingAction?.target === target.id ? "loading" : ""} ${
-                    dropZoneState.targetId === target.id && !pendingAction ? "staged" : ""
-                  }`}
-                  tabIndex={isMonitorView ? undefined : 0}
-                  aria-label="Cargar software"
-                  onMouseEnter={() => expandSoftwareDrop(target.id)}
-                  onFocus={() => expandSoftwareDrop(target.id)}
-                  onDragEnter={() => expandSoftwareDrop(target.id)}
-                  onDragOver={(event) => {
-                    if (!isMonitorView) event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    if (!isMonitorView) {
-                      onDropZoneDrop?.(event, target.id);
-                    }
-                  }}
-                >
-                  {pendingAction?.target === target.id && isMonitorView ? (
-                    <div className="software-drop-body">
-                      <span className="software-drop-title">Cargar software</span>
-                      <strong>{formatCardLabel(pendingAction)} cargando</strong>
-                      <span>Vista espejo del jugador.</span>
-                    </div>
-                  ) : pendingAction?.target === target.id ? (
-                    <SoftwareLoadMinigame
-                      action={pendingAction}
-                      onChange={onMinigameChange}
-                      onSuccess={onMinigameSuccess}
-                      onRetry={onMinigameRetry}
-                      onCancel={onCancelPendingAction}
-                    />
-                  ) : queuedForPlayer?.target === target.id ? (
-                    <div className="software-drop-body">
-                      <span className="software-drop-title">Cargar software</span>
-                      <strong>{formatCardLabel(queuedForPlayer)} espera pulso</strong>
-                    </div>
-                  ) : dropZoneState.targetId === target.id && (dropZoneState.cardId || dropZoneState.itemId) ? (
-                    <div className="drop-zone-staged">
-                      <span className="software-drop-title">Software preparado</span>
-                      {dropZoneState.cardId && <span className="drop-zone-staged-card">{formatCardLabel({ card: dropZoneState.cardId })}</span>}
-                      {dropZoneState.itemId && <span className="drop-zone-staged-item">✋ {dropZoneState.itemId}</span>}
-                      <button
-                        type="button"
-                        className="drop-zone-confirm-btn"
-                        onClick={() => onLoadConfirm?.(target.id)}
-                      >
-                        Cargar software
-                      </button>
-                      <button
-                        type="button"
-                        className="drop-zone-cancel-btn"
-                        onClick={() => onLoadConfirm?.(target.id, true)}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
+                <section className={`scene-mobile-action-hint${queuedChipForTarget ? " scene-mobile-action-hint--queued" : ""}${overlayActive ? " scene-mobile-action-hint--pulse" : ""}`}>
+                  <span className="scene-mobile-action-hint__label">Accion</span>
+                  {queuedChipForTarget ? (
+                    <>
+                      <strong>Chip en cola: {formatCardLabel(queuedChipForTarget)}</strong>
+                      <span>El pulso resolvera esta accion.</span>
+                    </>
+                  ) : overlayActive ? (
+                    <>
+                      <strong>Pulso activo</strong>
+                      <span>Espera resolucion antes de preparar otro chip.</span>
+                    </>
                   ) : (
-                    <div className="software-drop-body">
-                      <span className="software-drop-title">Cargar software</span>
-                      <span className="software-drop-hint">
-                        {overlayActive ? "Resultado activo. Espera al pulso." : "Arrastra una accion a este puerto."}
-                      </span>
-                      <span className="software-drop-insert">Insertar aqui</span>
-                      <span className="software-drop-ghost" aria-hidden="true" />
-                    </div>
+                    <>
+                      <strong>Objetivo seleccionado</strong>
+                      <span>Prepara la accion desde tu dispositivo movil.</span>
+                    </>
                   )}
                 </section>
               </article>

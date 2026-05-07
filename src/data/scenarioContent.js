@@ -62,6 +62,7 @@ const almacenHotspotsBase = [
       {
         slotKey: "slot0",
         label: "Análisis del cierre",
+        chargeCost: 2,
         contentByVariant: {
           A: "El cierre tiene carcasa y arco, pero la zona de lectura esta incompleta. Hay una guia vacia donde deberia encajar un mecanismo interior.",
           B: "No ves la carcasa completa: ves el mecanismo interno. Las marcas verdes coinciden con la guia vacia de la otra realidad.",
@@ -70,6 +71,7 @@ const almacenHotspotsBase = [
       {
         slotKey: "slot1",
         label: "Fallo de mecanismo",
+        chargeCost: 3,
         contentByVariant: {
           A: "La llave encaja en la guia exterior, pero el mecanismo de rotacion interior no responde. Falta la pieza que lo activa desde dentro.",
           B: "La horquilla calza en el mecanismo interior, pero sin la carcasa exterior no hay estructura para girar el cierre.",
@@ -170,6 +172,7 @@ const almacenHotspotsA = [
       {
         slotKey: "slot0",
         label: "Análisis",
+        chargeCost: 2,
         description: "El pomo de la llave coincide con el cierre exterior de la taquilla, pero el mecanismo de rotacion no encaja completamente.",
       },
     ],
@@ -194,6 +197,7 @@ const almacenHotspotsB = [
       {
         slotKey: "slot0",
         label: "Análisis",
+        chargeCost: 2,
         description: "La forma de la horquilla calza perfectamente en el interior del mecanismo de la taquilla. Falta la pieza exterior para completar el cierre.",
       },
     ],
@@ -378,6 +382,7 @@ export function getScenarioHotspotDiscoveries(targetId, gameState = {}, scenario
       label: disc.label || "Analisis",
       description,
       unlocked,
+      chargeCost: disc.chargeCost || 0,
     };
   });
 }
@@ -513,6 +518,40 @@ function consumeResonance(gameState, amount) {
   return true;
 }
 
+function ensureVariantResonanceState(gameState, variant) {
+  if (!gameState.resonanceByVariant) {
+    // Migrate legacy resonance on first access
+    gameState.resonanceByVariant = {
+      A: { ...(gameState.resonance || { value: 0, spent: 0, discoveries: {} }) },
+      B: { value: 0, spent: 0, discoveries: {} },
+    };
+  }
+  if (!gameState.resonanceByVariant[variant] || typeof gameState.resonanceByVariant[variant] !== "object") {
+    gameState.resonanceByVariant[variant] = { value: 0, spent: 0, discoveries: {} };
+  }
+  const r = gameState.resonanceByVariant[variant];
+  if (!r.discoveries) r.discoveries = {};
+  r.value = Number(r.value || 0);
+  r.spent = Number(r.spent || 0);
+  return r;
+}
+
+function addVariantResonanceOnce(gameState, variant, discoveryId, amount) {
+  const resonance = ensureVariantResonanceState(gameState, variant);
+  if (resonance.discoveries[discoveryId]) return 0;
+  resonance.discoveries[discoveryId] = true;
+  resonance.value += amount;
+  return amount;
+}
+
+function consumeVariantResonance(gameState, variant, amount) {
+  const resonance = ensureVariantResonanceState(gameState, variant);
+  if (resonance.value < amount) return false;
+  resonance.value -= amount;
+  resonance.spent += amount;
+  return true;
+}
+
 function setAlmacenStateForBothVariants(gameState, targetId, state) {
   for (const variantId of ["A", "B"]) {
     gameState.hotspotStates[getScenarioScopedTargetKey("almacen", variantId, targetId)] = state;
@@ -535,7 +574,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
   if (!gameState.flags) gameState.flags = {};
   if (!gameState.hotspotStates) gameState.hotspotStates = {};
   if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
-  ensureResonanceState(gameState);
+  ensureVariantResonanceState(gameState, actionVariant);
   const lockerStateKey = getScenarioScopedTargetKey(scenarioId, actionVariant, "taquillas");
   const panelStateKey = getScenarioScopedTargetKey(scenarioId, actionVariant, "panel_salida");
   const doorStateKey = getScenarioScopedTargetKey(scenarioId, actionVariant, "puerta");
@@ -579,7 +618,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
         message = hasKey
           ? "La llave activa una reaccion anomala: chispas verdes y rosas aparecen en la taquilla."
           : "La horquilla detecta la anomalia temporal: chispas verdes y rosas aparecen en la taquilla.";
-      } else if (pulseFlags.canFuseLocker && consumeResonance(gameState, RESONANCE_COSTS.LOCKER_FUSION)) {
+      } else if (pulseFlags.canFuseLocker && consumeVariantResonance(gameState, actionVariant, RESONANCE_COSTS.LOCKER_FUSION)) {
         setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.FUSION);
         pulseFlags.lockerFusionResolvedThisPulse = true;
         gameState.flags.lockerFusionDone = true;
@@ -591,15 +630,28 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
         message = "La taquilla intenta fusionarse, pero falta resonancia.";
       }
     } else if (isInspection) {
-      const gained = addResonanceOnce(gameState, `contradiction_locker_mechanism_${actionVariant}`, 3);
-      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot0")] = true;
-      gameState.flags.contradiccionTaquillas = true;
-      feedback = gained > 0
-        ? "La taquilla confirma una contradiccion: A muestra el bloqueo, B muestra la logica mecanica. La resonancia aumenta."
-        : "La contradiccion de la taquilla ya esta detectada. Aun necesita un pulso con resonancia suficiente.";
-      message = gained > 0
-        ? "El grupo detecta una contradiccion resonante en la taquilla."
-        : "La taquilla sigue bloqueada hasta que se produzca una fusion.";
+      const actionCharge = Number(action.charge || 0);
+      const hotspotDefs = getScenarioTarget("taquillas", scenarioId, actionVariant);
+      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
+      const slot1Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot1")?.chargeCost || 3;
+
+      if (actionCharge >= slot0Cost) {
+        const gained = addVariantResonanceOnce(gameState, actionVariant, `contradiction_locker_mechanism_${actionVariant}`, 3);
+        gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot0")] = true;
+        gameState.flags.contradiccionTaquillas = true;
+        if (actionCharge >= slot1Cost) {
+          gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot1")] = true;
+        }
+        feedback = gained > 0
+          ? `La taquilla confirma una contradiccion: A muestra el bloqueo, B muestra la logica mecanica. Carga ${actionCharge}. La resonancia aumenta.`
+          : `La contradiccion de la taquilla ya esta detectada. Carga ${actionCharge}. Aun necesita un pulso con resonancia suficiente.`;
+        message = gained > 0
+          ? "El grupo detecta una contradiccion resonante en la taquilla."
+          : "La taquilla sigue bloqueada hasta que se produzca una fusion.";
+      } else {
+        feedback = `Carga insuficiente (${actionCharge}/${slot0Cost}). Conectate al puerto con mas nodos de datos para analizar la taquilla.`;
+        message = `${action.role} intenta analizar la taquilla pero la carga del chip es insuficiente.`;
+      }
     } else {
       feedback = "La taquilla no responde a esta accion. Primero conviene inspeccionarla o estabilizar su fusion.";
       message = "La taquilla sigue bloqueada.";
@@ -608,14 +660,23 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
 
   if (action.target === "llave_taquilla") {
     if (isInspection) {
-      const gained = addResonanceOnce(gameState, `inspection_llave_taquilla_${actionVariant}`, 2);
-      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "llave_taquilla", "slot0")] = true;
-      feedback = gained > 0
-        ? "La llave industrial revela su proposito: su pomo encaja en el cierre exterior de la taquilla, aunque algo falta para que funcione."
-        : "La llave ya habia sido analizada. El mecanismo incompleto sigue esperando.";
-      message = gained > 0
-        ? "El equipo analiza la llave industrial y detecta su conexion con la taquilla."
-        : "La llave ya fue analizada. Sigue siendo util.";
+      const actionCharge = Number(action.charge || 0);
+      const hotspotDefs = getScenarioTarget("llave_taquilla", scenarioId, actionVariant);
+      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
+
+      if (actionCharge >= slot0Cost) {
+        const gained = addVariantResonanceOnce(gameState, actionVariant, `inspection_llave_taquilla_${actionVariant}`, 2);
+        gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "llave_taquilla", "slot0")] = true;
+        feedback = gained > 0
+          ? "La llave industrial revela su proposito: su pomo encaja en el cierre exterior de la taquilla, aunque algo falta para que funcione."
+          : "La llave ya habia sido analizada. El mecanismo incompleto sigue esperando.";
+        message = gained > 0
+          ? "El equipo analiza la llave industrial y detecta su conexion con la taquilla."
+          : "La llave ya fue analizada. Sigue siendo util.";
+      } else {
+        feedback = `Carga insuficiente (${actionCharge}/${slot0Cost}). Necesitas mas nodos de datos para analizar la llave.`;
+        message = `${action.role} intenta analizar la llave pero la carga del chip es insuficiente.`;
+      }
     } else {
       feedback = "La llave necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
       message = `${action.role} examina la llave sin objetivo claro.`;
@@ -624,14 +685,23 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
 
   if (action.target === "horquilla") {
     if (isInspection) {
-      const gained = addResonanceOnce(gameState, `inspection_horquilla_${actionVariant}`, 2);
-      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "horquilla", "slot0")] = true;
-      feedback = gained > 0
-        ? "La horquilla reforzada calza perfectamente en el mecanismo interior de la taquilla. Falta la pieza exterior para completar el cierre."
-        : "La horquilla ya habia sido analizada. Sigue siendo la clave del mecanismo interior.";
-      message = gained > 0
-        ? "El equipo analiza la horquilla y detecta su conexion con el mecanismo interior de la taquilla."
-        : "La horquilla ya fue analizada. Sigue siendo util.";
+      const actionCharge = Number(action.charge || 0);
+      const hotspotDefs = getScenarioTarget("horquilla", scenarioId, actionVariant);
+      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
+
+      if (actionCharge >= slot0Cost) {
+        const gained = addVariantResonanceOnce(gameState, actionVariant, `inspection_horquilla_${actionVariant}`, 2);
+        gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "horquilla", "slot0")] = true;
+        feedback = gained > 0
+          ? "La horquilla reforzada calza perfectamente en el mecanismo interior de la taquilla. Falta la pieza exterior para completar el cierre."
+          : "La horquilla ya habia sido analizada. Sigue siendo la clave del mecanismo interior.";
+        message = gained > 0
+          ? "El equipo analiza la horquilla y detecta su conexion con el mecanismo interior de la taquilla."
+          : "La horquilla ya fue analizada. Sigue siendo util.";
+      } else {
+        feedback = `Carga insuficiente (${actionCharge}/${slot0Cost}). Necesitas mas nodos de datos para analizar la horquilla.`;
+        message = `${action.role} intenta analizar la horquilla pero la carga del chip es insuficiente.`;
+      }
     } else {
       feedback = "La horquilla necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
       message = `${action.role} examina la horquilla sin objetivo claro.`;
@@ -645,7 +715,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
   }
 
   if (action.target === "caja" && isInspection) {
-    const gained = addResonanceOnce(gameState, `contradiction_box_duplicate_${actionVariant}`, 2);
+    const gained = addVariantResonanceOnce(gameState, actionVariant, `contradiction_box_duplicate_${actionVariant}`, 2);
     gameState.flags.objetosDuplicadosDetectados = true;
     feedback = gained > 0
       ? "La caja confirma una contradiccion: un duplicado puede ser falso aunque parezca identico. La resonancia aumenta."
@@ -656,7 +726,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
   }
 
   if (action.target === "balones" && isInspection) {
-    const gained = addResonanceOnce(gameState, `contradiction_balls_count_${actionVariant}`, 3);
+    const gained = addVariantResonanceOnce(gameState, actionVariant, `contradiction_balls_count_${actionVariant}`, 3);
     gameState.flags.contradiccionBalones = true;
     feedback = gained > 0
       ? "Los balones dejan de cuadrar entre realidades. La contradiccion genera resonancia."
