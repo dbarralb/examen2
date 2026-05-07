@@ -11,7 +11,7 @@ import { applyScenarioHotspotOverrides, getScenarioHotspotOverrideKey, getScenar
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
-import { ensureNextPulseScheduled, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
+import { ensureNextPulseScheduled, forceResetPulse, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
 import { filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { formatPulseCountdown, getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 
@@ -35,7 +35,7 @@ function getDeviceUrl(roleId) {
 }
 
 function getActionSummary(action) {
-  if (!action) return "Sin accion registrada.";
+  if (!action) return "Sin chip registrado.";
   const target = targets.find((item) => item.id === action.target);
   return `${formatCardLabel(action)} -> ${target?.label || action.target || "objetivo"}`;
 }
@@ -611,6 +611,20 @@ export function GMScreen() {
     }
   }
 
+  async function handleForceResetPulse() {
+    setIsBusy(true);
+    setStatusMessage("Forzando reset del pulso...");
+    try {
+      await forceResetPulse();
+      await refresh();
+      setStatusMessage("Pulso reseteado. Estado listo.");
+    } catch {
+      setStatusMessage("No se pudo resetear el pulso.");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   /** Assign a scenario variant (A-D) to a specific player role. */
   async function handleSetVariant(roleId, variant) {
     try {
@@ -708,6 +722,50 @@ export function GMScreen() {
         )}
       </div>
 
+      {/* ---- Fusion de Realidades ---- */}
+      <section className="gm-fusion-zone gm-fusion-zone--standalone">
+        <h3>Fusion de Realidades</h3>
+        {remoteState?.fusionSession?.status === "pending" ? (
+          <div className="gm-fusion-status">
+            <span>Objetivo: <strong>{remoteState.fusionSession.hotspot}</strong></span>
+            <span className={remoteState.fusionSession.variantA?.ready ? "gm-fusion-ready" : ""}>
+              Variante A: {remoteState.fusionSession.variantA?.ready ? "Lista ✓" : "Esperando..."}
+            </span>
+            <span className={remoteState.fusionSession.variantB?.ready ? "gm-fusion-ready" : ""}>
+              Variante B: {remoteState.fusionSession.variantB?.ready ? "Lista ✓" : "Esperando..."}
+            </span>
+            <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
+              Cancelar Fusion
+            </button>
+          </div>
+        ) : remoteState?.fusionSession?.status === "success" ? (
+          <div className="gm-fusion-status">
+            <span className="gm-fusion-ready">Fusion completada: {remoteState.fusionSession.hotspot} ✓</span>
+            <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
+              Cerrar estado
+            </button>
+          </div>
+        ) : (
+          <div className="gm-fusion-controls">
+            <select
+              className="gm-fusion-select"
+              value={fusionHotspot}
+              onChange={(e) => setFusionHotspot(e.target.value)}
+            >
+              <option value="taquillas">Taquillas</option>
+            </select>
+            <button
+              type="button"
+              className="gm-fusion-start-btn"
+              disabled={!fusionHotspot || session.status !== "in_game"}
+              onClick={handleStartFusion}
+            >
+              Iniciar Fusion
+            </button>
+          </div>
+        )}
+      </section>
+
       {/* ---- Dispositivos de jugadores ---- */}
       <div className="react-gm-monitors-collapsible">
         <button
@@ -743,7 +801,7 @@ export function GMScreen() {
                   <div className="gm-device-card-header">
                     <strong>{role.label}</strong>
                     <NBadge status="muted">Realidad {variant}</NBadge>
-                    {queued && <NBadge status="success">Accion en cola</NBadge>}
+                    {queued && <NBadge status="success">Chip en cola</NBadge>}
                   </div>
                   <div className="gm-device-url-row">
                     <code className="gm-device-url">{url}</code>
@@ -766,7 +824,7 @@ export function GMScreen() {
                   </div>
                   {queued && (
                     <p className="gm-device-queued">
-                      {queued.card} → {queued.target}
+                      Chip en cola: {queued.card} → {queued.target}
                     </p>
                   )}
                   <div className="gm-device-graph-row">
@@ -785,50 +843,6 @@ export function GMScreen() {
               );
             })}
 
-            {/* ── Fusion de Realidades ── */}
-            <div className="gm-fusion-zone">
-              <h3>Fusion de Realidades</h3>
-              {remoteState?.fusionSession?.status === "pending" ? (
-                <div className="gm-fusion-status">
-                  <span>Objetivo: <strong>{remoteState.fusionSession.hotspot}</strong></span>
-                  <span className={remoteState.fusionSession.variantA?.ready ? "gm-fusion-ready" : ""}>
-                    Variante A: {remoteState.fusionSession.variantA?.ready ? "Lista ✓" : "Esperando..."}
-                  </span>
-                  <span className={remoteState.fusionSession.variantB?.ready ? "gm-fusion-ready" : ""}>
-                    Variante B: {remoteState.fusionSession.variantB?.ready ? "Lista ✓" : "Esperando..."}
-                  </span>
-                  <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
-                    Cancelar Fusion
-                  </button>
-                </div>
-              ) : remoteState?.fusionSession?.status === "success" ? (
-                <div className="gm-fusion-status">
-                  <span className="gm-fusion-ready">Fusion completada: {remoteState.fusionSession.hotspot} ✓</span>
-                  <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
-                    Resetear
-                  </button>
-                </div>
-              ) : (
-                <div className="gm-fusion-controls">
-                  <select
-                    className="gm-fusion-select"
-                    value={fusionHotspot}
-                    onChange={(e) => setFusionHotspot(e.target.value)}
-                  >
-                    <option value="taquillas">Taquillas</option>
-                    <option value="ordenador">Ordenador</option>
-                  </select>
-                  <button
-                    type="button"
-                    className="gm-fusion-start-btn"
-                    disabled={!fusionHotspot || session.status !== "in_game"}
-                    onClick={handleStartFusion}
-                  >
-                    Iniciar Fusion
-                  </button>
-                </div>
-              )}
-            </div>
           </section>
         )}
       </div>
@@ -869,7 +883,6 @@ export function GMScreen() {
                 gameState={remoteState?.gameState || {}}
                 targetFeedback={remoteState?.targetFeedback || {}}
                 selectedTargetId={selectedHotspotId || null}
-                pendingAction={null}
                 queuedForPlayer={null}
                 overlayActive={false}
                 showCoordinates
@@ -1281,8 +1294,8 @@ export function GMScreen() {
           </div>
         </NCard>
 
-        {/* ---- Cola de acciones + pulso ---- */}
-        <NCard title="Cola de acciones" glow>
+        {/* ---- Cola de chips + pulso ---- */}
+        <NCard title="Cola de chips" glow>
           <div className="gm-pulse-scheduler">
             <div>
               <span>Proximo pulso</span>
@@ -1302,8 +1315,8 @@ export function GMScreen() {
           <ActionQueuePanel
             pulseState={pulseState}
             queuedActions={queuedActions}
-            emptyMessage="No hay acciones esperando pulso."
-            ariaLabel="Cola de acciones del pulso"
+            emptyMessage="No hay chips esperando pulso."
+            ariaLabel="Cola de chips del pulso"
             stackClassName="gm"
           />
           <div className="button-row">
@@ -1323,6 +1336,15 @@ export function GMScreen() {
             >
               Programar auto
             </NButton>
+            {pulseState.status === "executing" && (
+              <NButton
+                variant="danger"
+                disabled={isBusy}
+                onClick={handleForceResetPulse}
+              >
+                Forzar reset
+              </NButton>
+            )}
           </div>
         </NCard>
 

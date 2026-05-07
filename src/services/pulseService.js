@@ -5,8 +5,8 @@ import { buildPulseFlags, createLastRoleAction, resolveActionWithResult } from "
 import { createEmptyResultOverlay, createInitialGameState, createInitialPulseState, createInitialTargetFeedback, normalizeRemoteList } from "./remoteState.js";
 
 export const PULSE_TIMING = {
-  actionExecutionSeconds: 3,
-  resultDisplaySeconds: 5,
+  actionExecutionSeconds: 1,
+  resultDisplaySeconds: 3,
   autoMinMs: 40000,
   autoMaxMs: 120000,
 };
@@ -167,6 +167,10 @@ export async function triggerAutoPulseIfDue({ onStatus, range } = {}) {
 
 export async function startManualPulse({ onStatus, range } = {}) {
   await executePulse({ mode: "manual", onStatus, range });
+}
+
+export async function forceResetPulse() {
+  await resetPulseToIdle(createPulseSchedule({}, Date.now()));
 }
 
 export async function executePulse({ mode = "manual", onStatus, range } = {}) {
