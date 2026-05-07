@@ -53,16 +53,29 @@ function useTypedLine(text, isActive, reducedMotion, delayMs = 0) {
   return text.slice(0, count);
 }
 
-export function CodexGuideOverlay({ tooltip, onClose }) {
+export function CodexGuideOverlay({ tooltip, onClose, confirmLabel = "Cerrar", durationMs = 10000 }) {
+  useEffect(() => {
+    if (!tooltip) return undefined;
+    const timerId = window.setTimeout(() => onClose?.(), durationMs);
+    return () => window.clearTimeout(timerId);
+  }, [durationMs, onClose, tooltip]);
+
   if (!tooltip) return null;
 
   return (
-    <div className="codex-guide-overlay" role="dialog" aria-modal="true" aria-labelledby="codex-guide-title">
+    <div
+      className="codex-guide-overlay"
+      role="status"
+      aria-live="polite"
+      aria-labelledby="codex-guide-title"
+      style={{ "--guide-duration": `${durationMs}ms` }}
+    >
       <div className="codex-guide-placeholder">
+        <div className="codex-guide-progress" aria-hidden="true" />
         <span className="codex-guide-kicker">codex://guia</span>
         <h2 id="codex-guide-title">{tooltip.title}</h2>
         <p>{tooltip.text}</p>
-        <button type="button" className="codex-guide-close" onClick={onClose}>Cerrar</button>
+        <button type="button" className="codex-guide-close" onClick={onClose}>{confirmLabel}</button>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
+import { LOCKER_STATES, RESONANCE_COSTS, getScenarioScopedTargetKey } from "../data/scenarioContent.js";
 
 const CHAIN_LENGTH = 3;
 
@@ -14,6 +15,34 @@ function getOtherKey(variant) {
 function getFusionTargetLabel(fusionSession) {
   if (fusionSession?.hotspot === "taquillas") return "Taquillas estabilizadas";
   return "Realidad estabilizada";
+}
+
+async function applyFusionSuccess(fusionSession) {
+  if (fusionSession?.hotspot !== "taquillas") {
+    await firebasePatch("fusionSession", { status: "success", completedAt: Date.now() });
+    return;
+  }
+
+  const now = Date.now();
+  const scenarioId = fusionSession.scenarioId || "almacen";
+  const patch = {
+    "fusionSession/status": "success",
+    "fusionSession/completedAt": now,
+    [`gameState/hotspotStates/${getScenarioScopedTargetKey(scenarioId, "A", "taquillas")}`]: LOCKER_STATES.FUSION,
+    [`gameState/hotspotStates/${getScenarioScopedTargetKey(scenarioId, "B", "taquillas")}`]: LOCKER_STATES.FUSION,
+    "gameState/flags/lockerFusionDone": true,
+    "gameState/flags/mecanismoFisicoLocalizado": true,
+  };
+
+  if (!fusionSession.debug) {
+    const sharedResonance = (await firebaseGet("gameState/sharedResonance")) || {};
+    const currentValue = Number(sharedResonance.value || 0);
+    const spent = Number(sharedResonance.spent || 0);
+    patch["gameState/sharedResonance/value"] = Math.max(0, currentValue - RESONANCE_COSTS.LOCKER_FUSION);
+    patch["gameState/sharedResonance/spent"] = spent + Math.min(currentValue, RESONANCE_COSTS.LOCKER_FUSION);
+  }
+
+  await firebasePatch("", patch);
 }
 
 export function FusionMinigame({ fusionSession, variant, onSuccess }) {
@@ -60,7 +89,7 @@ export function FusionMinigame({ fusionSession, variant, onSuccess }) {
       const session = await firebaseGet("fusionSession");
       const other = session?.[otherKey];
       if (other?.ready) {
-        await firebasePatch("fusionSession", { status: "success" });
+        await applyFusionSuccess(session);
       }
     } catch {
       // Firebase write failed — let GM handle it; stay in waiting

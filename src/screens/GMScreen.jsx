@@ -690,13 +690,14 @@ export function GMScreen() {
       await firebasePatch("fusionSession", {
         id,
         hotspot: fusionHotspot,
+        debug: true,
         status: "pending",
         variantA: { ready: false, completedAt: null },
         variantB: { ready: false, completedAt: null },
         createdAt: Date.now(),
         expiresAt: Date.now() + 120000,
       });
-      setStatusMessage(`Fusion iniciada: ${fusionHotspot}.`);
+      setStatusMessage(`Fusion debug iniciada: ${fusionHotspot}.`);
       await refresh();
     } catch {
       setStatusMessage("No se pudo iniciar la fusion.");
@@ -760,9 +761,12 @@ export function GMScreen() {
         )}
       </div>
 
-      {/* ---- Fusion de Realidades ---- */}
+      {/* ---- Fusion de Realidades debug ---- */}
       <section className="gm-fusion-zone gm-fusion-zone--standalone">
-        <h3>Fusion de Realidades</h3>
+        <h3>Fusion de Realidades · debug</h3>
+        <p className="gm-fusion-debug-note">
+          Flujo canonico: los jugadores activan la fusion desde el movil. Este control queda para pruebas.
+        </p>
         {remoteState?.fusionSession?.status === "pending" ? (
           <div className="gm-fusion-status">
             <span>Objetivo: <strong>{remoteState.fusionSession.hotspot}</strong></span>
@@ -798,7 +802,7 @@ export function GMScreen() {
               disabled={!fusionHotspot || session.status !== "in_game"}
               onClick={handleStartFusion}
             >
-              Iniciar Fusion
+              Iniciar Fusion debug
             </button>
           </div>
         )}

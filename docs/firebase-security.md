@@ -36,4 +36,11 @@ Tambien puedes pegarlas manualmente desde Realtime Database > Rules usando el co
 
 ## Nota importante
 
-Estas reglas eliminan el acceso anonimo no autenticado, que es el primer problema que Firebase marca como inseguro. Para una app publica real, el siguiente paso seria separar permisos de GM y jugadores con usuarios reales, custom claims o Cloud Functions. Los codigos de partida actuales sirven para la experiencia de juego, pero no sustituyen una autorizacion fuerte del lado de Firebase.
+Estas reglas eliminan el acceso anonimo no autenticado, que es el primer problema que Firebase marca como inseguro. Para una app publica real, el siguiente paso seria separar permisos de GM y jugadores con usuarios reales, custom claims o Cloud Functions.
+
+Los codigos actuales son barreras de experiencia, no autorizacion fuerte:
+
+- El codigo GM temporal (`delfin`) vive en cliente y desbloquea la ruta `?screen=gm` solo en `sessionStorage`.
+- Los codigos numericos de jugador limitan el flujo de lobby/rol, pero no separan permisos reales en Firebase.
+
+Antes de publicar una prueba abierta, mover el codigo GM a configuracion como minimo; antes de una publicacion real, sustituirlo por autorizacion de servidor.

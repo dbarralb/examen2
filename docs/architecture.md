@@ -45,6 +45,16 @@ El panel GM puede ajustar hotspots por escenario y variante. Esos overrides se g
 - `playerBoards.manitas.variant = "B"`
 - `playerBoards.mistica.variant = "B"`
 
+## Acceso y sesion
+
+La pantalla `access` es la entrada canonica.
+
+- Jugadores: introducen un codigo numerico de 6 digitos generado por `Abrir lobby`. La app guarda el codigo en `sessionStorage` bajo `elExamen2.sessionCode`.
+- GM: introduce un codigo manual unico (`delfin` temporalmente). La app guarda esa validacion en `sessionStorage` bajo `elExamen2.gmSessionCode`.
+- Router: `src/App.jsx` redirige `?screen=gm` a `access` si no hay codigo GM valido en la sesion local.
+
+`session.accessCode` sigue existiendo como codigo numerico GM interno de la partida. `session.playerCodes` contiene codigos neutrales de jugador; el rol real se decide despues en `lobby.roleClaims`.
+
 ## Firebase
 
 Las reglas viven en `database.rules.json`. El procedimiento de configuracion y despliegue esta en `docs/firebase-security.md`.
@@ -71,15 +81,18 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 ## Flujo de turno
 
 1. GM abre lobby.
-2. Jugadores reclaman rol.
+2. Jugadores entran con codigos neutrales y reclaman rol.
 3. La partida arranca automaticamente cuando los roles estan completos, o manualmente desde GM con al menos 1 jugador preparado.
 4. Cada jugador ve su variante del almacen.
 5. Jugador abre hotspot, arrastra `Accion_Inspeccion`, `Accion_Interaccion` o item y completa minijuego.
-6. La accion entra en `queuedActions`.
-7. GM inicia pulso.
-8. `pulseService` ejecuta acciones y llama a `resolveActionWithResult()`.
-9. `gameRules` delega a `scenarioContent`.
-10. Firebase recibe flags, feedback y log.
+6. La accion entra en `queuedActions` con su carga.
+7. Si el objetivo es fusionable, como `taquillas`, los jugadores pueden iniciar `fusionSession` desde el movil; el GM solo conserva boton debug.
+8. GM inicia pulso para chips normales.
+9. `pulseService` ejecuta acciones y llama a `resolveActionWithResult()`.
+10. `gameRules` delega a `scenarioContent`.
+11. `scenarioContent` aplica carga acumulada, resonancia compartida, flags, feedback y log.
+
+Las guias de jugador se resuelven en `src/data/playerTooltips.js` y se presentan desde `PlayerScreen` con una cola local: cada guia se marca como vista al entrar en cola, se muestra como overlay superior no bloqueante durante 10s y deja al menos 3s antes de mostrar la siguiente.
 
 ## Eventos internos del pulso
 
@@ -110,12 +123,14 @@ Regla de implementacion: comparar el snapshot anterior y el actual de `pulseStat
 | `src/data/roles.js` | Roles activos |
 | `src/screens/PlayerScreen.jsx` | Pantalla del jugador |
 | `src/screens/GMScreen.jsx` | Panel GM |
+| `src/screens/AccessScreen.jsx` | Acceso de jugadores y formulario de codigo GM |
 | `src/components/SceneMap.jsx` | Tablero paneable con escala fija |
 | `src/components/map/*` | Capas del mapa y overlay de coordenadas |
 | `src/components/DeviceConsole.jsx` | Consola generica de dispositivo |
 | `src/services/pulseService.js` | Ciclo del pulso |
 | `src/services/gameRules.js` | Alarma y dispatch de resolucion |
 | `src/services/remoteState.js` | Estado inicial de Firebase |
+| `src/services/sessionAccess.js` | Codigos locales de sesion, validacion GM y helpers de acceso |
 
 ## Archivado
 

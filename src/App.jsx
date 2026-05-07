@@ -6,6 +6,7 @@ import { PlayerScreen } from "./screens/PlayerScreen.jsx";
 import { GMScreen } from "./screens/GMScreen.jsx";
 import { DeviceScreen } from "./screens/DeviceScreen.jsx";
 import { GameCursor } from "./components/GameCursor.jsx";
+import { hasValidStoredGmSessionCode } from "./services/sessionAccess.js";
 
 const routes = {
   access: AccessScreen,
@@ -30,7 +31,10 @@ export default function App() {
     screen: getInitialRoute(),
     params: getInitialParams(),
   }));
-  const Screen = routes[locationState.screen] || AccessScreen;
+  const requestedScreen = locationState.screen === "gm" && !hasValidStoredGmSessionCode()
+    ? "access"
+    : locationState.screen;
+  const Screen = routes[requestedScreen] || AccessScreen;
 
   const navigation = useMemo(
     () => ({

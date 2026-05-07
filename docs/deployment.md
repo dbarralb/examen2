@@ -36,11 +36,19 @@ Si `VITE_PUBLIC_APP_URL` existe, la app lo usa como base para URLs y QR. Si no e
 
 ## URLs canonicas
 
+Entrada principal:
+
+```text
+/?screen=access
+```
+
 GM:
 
 ```text
 /?screen=gm
 ```
+
+La URL de GM solo abre el panel si el navegador ya valido el codigo GM en `access`. Si no, la app vuelve a la pantalla de acceso. Codigo temporal actual: `delfin`.
 
 Pantallas de jugador:
 

@@ -34,6 +34,17 @@ const PLAYER_VIEW_PUBLISH_DEBOUNCE_MS = 420;
 const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
 const PLAYER_TOOLTIP_STORAGE_PREFIX = "elExamen2.playerTooltips";
 const PLAYER_TOOLTIP_HISTORY_PREFIX = "elExamen2.playerTooltipHistory";
+const PLAYER_TOOLTIP_VISIBLE_MS = 10000;
+const PLAYER_TOOLTIP_GAP_MS = 3000;
+const TOOLTIP_CONFIRM_LABELS = [
+  "Vale, okeey",
+  "Lo tengo fichado",
+  "Otra vez? VALE.",
+  "Si, si, lo apunto",
+  "Ok, cerebro en marcha",
+  "Recibido, no prometo nada",
+  "Vale, siguiente misterio",
+];
 
 function stableRemoteSignature(state) {
   return JSON.stringify(state || null);
@@ -192,6 +203,10 @@ export function PlayerScreen({ navigation, params }) {
   const [sparkVfxActive, setSparkVfxActive] = useState(false);
   const [fusionVfxActive, setFusionVfxActive] = useState(false);
   const [codexGuideTooltip, setCodexGuideTooltip] = useState(null);
+  const [activeGuideTooltip, setActiveGuideTooltip] = useState(null);
+  const [queuedGuideTooltips, setQueuedGuideTooltips] = useState([]);
+  const [tooltipCooldown, setTooltipCooldown] = useState(false);
+  const [tooltipConfirmIndex, setTooltipConfirmIndex] = useState(0);
   const [tooltipHistory, setTooltipHistory] = useState([]);
   const [tooltipDrawerOpen, setTooltipDrawerOpen] = useState(false);
   const [unreadTooltipCount, setUnreadTooltipCount] = useState(0);
@@ -222,6 +237,7 @@ export function PlayerScreen({ navigation, params }) {
   const resonanceCollectPendingRef = useRef(false);
   const resonanceRewardPendingRef = useRef(false);
   const resonanceRewardClaimedRef = useRef(false);
+  const tooltipCooldownTimerRef = useRef(null);
   const remoteStateSignatureRef = useRef("");
   const lastPublishedCameraRef = useRef(null);
   const lastPublishedViewSignatureRef = useRef("");
@@ -351,6 +367,16 @@ export function PlayerScreen({ navigation, params }) {
     });
   }, []);
 
+  const closeActiveGuideTooltip = useCallback(() => {
+    setActiveGuideTooltip(null);
+    setTooltipConfirmIndex((index) => index + 1);
+    setTooltipCooldown(true);
+    window.clearTimeout(tooltipCooldownTimerRef.current);
+    tooltipCooldownTimerRef.current = window.setTimeout(() => {
+      setTooltipCooldown(false);
+    }, PLAYER_TOOLTIP_GAP_MS);
+  }, []);
+
   useEffect(() => {
     resonanceRewardClaimedRef.current = Boolean(variantResonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]);
   }, [variantResonance?.discoveries]);
@@ -359,16 +385,36 @@ export function PlayerScreen({ navigation, params }) {
     setSeenPlayerTooltipIds(readSeenPlayerTooltips(tooltipStorageScope));
     setTooltipHistory(readTooltipHistory(tooltipStorageScope));
     setTooltipDrawerOpen(false);
+    setActiveGuideTooltip(null);
+    setQueuedGuideTooltips([]);
+    setTooltipCooldown(false);
+    window.clearTimeout(tooltipCooldownTimerRef.current);
     setUnreadTooltipCount(0);
     setExpandedTooltipKey(null);
   }, [tooltipStorageScope]);
 
   useEffect(() => {
     if (!activePlayerTooltip) return;
+    markPlayerTooltipSeen(activePlayerTooltip.id);
     setTooltipHistory((prev) => [...prev, activePlayerTooltip]);
     setUnreadTooltipCount((prev) => prev + 1);
-    markPlayerTooltipSeen(activePlayerTooltip.id);
+    setTooltipDrawerOpen(false);
+    setQueuedGuideTooltips((prev) => {
+      if (prev.some((tooltip) => tooltip.id === activePlayerTooltip.id)) return prev;
+      return [...prev, activePlayerTooltip];
+    });
   }, [activePlayerTooltip, markPlayerTooltipSeen]);
+
+  useEffect(() => {
+    if (activeGuideTooltip || tooltipCooldown || queuedGuideTooltips.length === 0) return;
+    const [nextTooltip, ...rest] = queuedGuideTooltips;
+    setActiveGuideTooltip(nextTooltip);
+    setQueuedGuideTooltips(rest);
+  }, [activeGuideTooltip, queuedGuideTooltips, tooltipCooldown]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(tooltipCooldownTimerRef.current);
+  }, []);
 
   useEffect(() => {
     writeTooltipHistory(tooltipStorageScope, tooltipHistory);
@@ -984,8 +1030,10 @@ export function PlayerScreen({ navigation, params }) {
         )}
         {!isGmMonitorView && (
           <CodexGuideOverlay
-            tooltip={codexGuideTooltip}
-            onClose={() => setCodexGuideTooltip(null)}
+            tooltip={activeGuideTooltip || codexGuideTooltip}
+            durationMs={activeGuideTooltip ? PLAYER_TOOLTIP_VISIBLE_MS : 10000}
+            confirmLabel={activeGuideTooltip ? TOOLTIP_CONFIRM_LABELS[tooltipConfirmIndex % TOOLTIP_CONFIRM_LABELS.length] : "Cerrar"}
+            onClose={activeGuideTooltip ? closeActiveGuideTooltip : () => setCodexGuideTooltip(null)}
           />
         )}
         {!isGmMonitorView && tooltipDrawerOpen && (

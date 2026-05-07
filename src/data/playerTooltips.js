@@ -30,8 +30,18 @@ export const PLAYER_TOOLTIPS = {
   },
   locker_discovery_slots: {
     id: "locker_discovery_slots",
-    title: "Analisis por capas",
-    text: "Algunos objetivos revelan informacion en varios pasos.",
+    title: "Taquilla bloqueada",
+    text: "La taquilla se abre con la llave, pero ahora mismo el cierre existe partido entre dos realidades. Primero hay que fusionarla.",
+  },
+  locker_ready_to_fuse: {
+    id: "locker_ready_to_fuse",
+    title: "Fusion disponible",
+    text: "Ya hay resonancia suficiente. Activa la fusion desde el terminal movil de la taquilla; el GM solo observa.",
+  },
+  locker_open_with_key: {
+    id: "locker_open_with_key",
+    title: "Usa la llave",
+    text: "La taquilla ya esta fusionada. Ahora si: usa la llave sobre ella para abrirla.",
   },
   discovery_unlocked: {
     id: "discovery_unlocked",
@@ -109,6 +119,10 @@ function hasDiscoverySlots(targetId, gameState, scenarioId, variant) {
   return getScenarioHotspotDiscoveries(targetId, gameState, scenarioId, variant).length > 0;
 }
 
+function getScopedTargetKey(scenarioId, variant, targetId) {
+  return `${scenarioId || "almacen"}_${variant || "A"}__${targetId}`;
+}
+
 export function resolvePlayerTooltip({
   selectedTargetId,
   queuedForPlayer,
@@ -124,6 +138,8 @@ export function resolvePlayerTooltip({
 }) {
   const seen = seenIds || new Set();
   const flags = gameState?.flags || {};
+  const sharedResonance = gameState?.sharedResonance || gameState?.resonance || {};
+  const resonanceValue = Number(sharedResonance.value || 0);
 
   if (fusionVfxActive) {
     return null;
@@ -172,7 +188,13 @@ export function resolvePlayerTooltip({
     }
 
     if (selectedTargetId === "taquillas") {
-      if (hasUnlockedDiscovery(selectedTargetId, gameState, scenarioId, variant)) {
+      const lockerState = gameState?.hotspotStates?.[getScopedTargetKey(scenarioId, variant, "taquillas")];
+
+      if (lockerState === "LOCKER_FUSION") {
+        selectedCandidates.push("locker_open_with_key");
+      } else if (resonanceValue >= 6 && flags.contradiccionTaquillas) {
+        selectedCandidates.push("locker_ready_to_fuse");
+      } else if (hasUnlockedDiscovery(selectedTargetId, gameState, scenarioId, variant)) {
         selectedCandidates.push("discovery_unlocked");
       } else if (hasDiscoverySlots(selectedTargetId, gameState, scenarioId, variant)) {
         selectedCandidates.push("locker_discovery_slots");

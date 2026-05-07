@@ -1,6 +1,6 @@
 # Indice de documentacion - El Examen II
 
-**Ultima actualizacion:** 2026-05-05  
+**Ultima actualizacion:** 2026-05-07
 **Entrada recomendada:** `docs/PROJECT_STATUS.md`
 
 Este indice resume que documentacion existe, para que sirve y donde buscar cada tipo de respuesta. Los documentos de la raiz de `docs/` son la referencia activa. `docs/OLD/` es archivo historico: util para recuperar ideas, pero no debe tomarse como estado actual sin contrastarlo con codigo y `PROJECT_STATUS.md`.
@@ -16,6 +16,7 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 **Organizacion:**
 
 - Estado actual: define la rama activa, el nivel activo y el marco general.
+- Flujo de sesion: acceso GM, lobby, codigos neutrales de jugador y partida parcial.
 - Que esta listo: checklist de funcionalidades ya integradas.
 - Pendiente: backlog corto de deudas y trabajo proximo.
 - Archivos clave: tabla de modulos donde editar cada parte.
@@ -42,6 +43,7 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 - Estado inicial: variantes A/B por rol y escenario activo.
 - Firebase: mapa de rutas remotas (`session`, `gameState`, `pulseState`, `hotspotOverrides`, etc.).
 - Flujo de turno: de lobby a acciones, pulso y resolucion.
+- Acceso y sesion: diferencia entre codigo GM local, codigo numerico GM interno y codigos neutrales de jugador.
 - Archivos clave: responsabilidades por modulo.
 - Archivado: recuerda que lo antiguo vive en `docs/OLD`.
 
@@ -87,6 +89,7 @@ Este indice resume que documentacion existe, para que sirve y donde buscar cada 
 **Organizacion:**
 
 - Inicio de partida: diferencia entre abrir lobby e iniciar partida.
+- Acceso GM: validacion local con codigo temporal y limites de seguridad.
 - Regla de partida parcial: iniciar con al menos 1 rol preparado.
 - Herramienta de coordenadas: ajuste de hotspots por variante.
 - Reset de hotspot: borra override remoto y vuelve a `scenarioContent`.
@@ -239,6 +242,7 @@ Sistemas de diseno archivados. El sistema activo es `El Examen 2 Design System/`
 | Como debe aprender el jugador las mecanicas iniciales? | `docs/experiencia-ux-onboarding.md` |
 | Que tooltips o estimulos necesita el primer flujo? | `docs/experiencia-ux-onboarding.md` |
 | Como debe comportarse el GM? | `docs/gm-operations.md` |
+| Como se entra como GM o jugador? | `docs/gm-operations.md`, `docs/architecture.md`, `docs/deployment.md` |
 | Donde se guardan los ajustes de hotspots? | `docs/architecture.md` y `docs/gm-operations.md` |
 | Como preparo prompts de arte para puzzles/overlays? | `docs/art-prompt-process.md` + `docs/ECO Tech Props v1.md` |
 | Como revisar seguridad de Firebase? | `docs/firebase-security.md` |
@@ -258,6 +262,7 @@ Esta tabla funciona como checklist de mantenimiento. Cuando un cambio de codigo 
 | Flujo de pulso, resonancia, fusion, resolucion de puzzle o estados de objetos | `src/services/pulseService.js`, `src/services/gameRules.js`, `src/data/scenarioContent.js`, `docs/architecture.md`, `docs/game_design.md`, `docs/PROJECT_STATUS.md` | Toca comportamiento sistemico y reglas narrativas; debe quedar explicado para futuras decisiones. | Fusion de taquilla tras resonancia y apertura posterior con accion de interaccion. |
 | Escenario, hotspots, variantes A/B, items, hallazgos o contenido del almacen | `src/data/scenarioData.js`, `src/data/scenarioContent.js`, `docs/game_design.md`, `docs/PROJECT_STATUS.md`, `docs/textos_juego.csv` si hay copy | Cambia lo que existe en la sala y lo que arte/diseno deben entender. | Hallazgo adyacente de inspeccion en taquillas con texto A/B y placeholder de asset. |
 | Herramientas del GM, mapa de coordenadas, overrides o monitores | `src/screens/GMScreen.jsx`, `src/components/SceneMap.jsx`, `docs/gm-operations.md`, `docs/architecture.md`, `docs/PROJECT_STATUS.md` | El GM necesita reglas operativas claras y el estado remoto debe seguir siendo trazable. | Editor GM de `discoveryCardX/discoveryCardY` para la ventana adyacente. |
+| Acceso, lobby, codigos de sesion, rutas `?screen=...` o QR | `src/screens/AccessScreen.jsx`, `src/services/sessionAccess.js`, `src/services/gmService.js`, `src/services/urlService.js`, `docs/architecture.md`, `docs/gm-operations.md`, `docs/deployment.md`, `docs/firebase-security.md`, `docs/PROJECT_STATUS.md` | Cambia quien puede entrar, que URL se considera canonica y que garantias de seguridad existen realmente. | Codigo GM temporal `delfin` y codigos neutrales de jugador. |
 | UI de jugador, drop zones, inventario, minijuego o affordances de interaccion | Componentes/CSS afectados, `docs/textos_juego.csv`, `docs/game_design.md` si cambia el significado jugable | La UI no es solo visual: comunica reglas de accion y narrativa de interferencia. | Rediseño de la zona de drop como "Cargar software" con comportamiento de hackeo. |
 | Estado remoto, Firebase, seed inicial o rutas compartidas | `src/services/remoteState.js`, `src/services/firebaseClient.js`, `docs/architecture.md`, `docs/firebase-security.md` si toca permisos, `docs/PROJECT_STATUS.md` | Evita que la documentacion diga una ruta o garantia distinta a la real. | Cambios en `queuedActions`, `hotspotOverrides`, `gameState` o reglas de seguridad. |
 | Nuevo documento, CSV, script de soporte o cambio de responsabilidad documental | `docs/INDEX.md`, `docs/PROJECT_STATUS.md` | El indice debe saber que existe y `PROJECT_STATUS` debe apuntar al archivo correcto. | Alta de `docs/textos_juego.csv` y `scripts/export-texts.mjs`. |

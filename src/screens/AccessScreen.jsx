@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { E2Logo, NBadge, NButton, NCard } from "../components/e2";
-import { getActiveSessionCode, getSession, normalizeSessionCode, storeSessionCode } from "../services/sessionAccess.js";
+import {
+  GM_SESSION_ACCESS_CODE,
+  getActiveSessionCode,
+  getSession,
+  normalizeGmSessionCode,
+  normalizeSessionCode,
+  storeGmSessionCode,
+  storeSessionCode,
+} from "../services/sessionAccess.js";
 
 export function AccessScreen({ navigation }) {
   const [code, setCode] = useState("");
+  const [gmCode, setGmCode] = useState("");
   const [status, setStatus] = useState("Esperando código...");
+  const [gmStatus, setGmStatus] = useState("Acceso GM pendiente.");
   const [isChecking, setIsChecking] = useState(false);
 
   async function handleSubmit(event) {
@@ -45,6 +55,20 @@ export function AccessScreen({ navigation }) {
     }
   }
 
+  function handleGmSubmit(event) {
+    event.preventDefault();
+    const normalizedCode = normalizeGmSessionCode(gmCode);
+
+    if (normalizedCode !== GM_SESSION_ACCESS_CODE) {
+      setGmStatus("Codigo GM incorrecto.");
+      return;
+    }
+
+    storeGmSessionCode(normalizedCode);
+    setGmStatus("Acceso GM autorizado.");
+    navigation.go("gm");
+  }
+
   return (
     <main className="react-screen react-access-screen">
       <NCard className="access-console" glow>
@@ -67,9 +91,18 @@ export function AccessScreen({ navigation }) {
           <NButton type="submit" disabled={isChecking}>{isChecking ? "Comprobando" : "Entrar"}</NButton>
         </form>
         <p className="react-status" role="status" aria-live="polite">{status}</p>
-        <button className="react-link-button" type="button" onClick={() => navigation.go("gm")}>
-          Entrar como Game Master
-        </button>
+        <form className="react-form gm-access-form" onSubmit={handleGmSubmit}>
+          <label htmlFor="gm-session-code">Codigo Game Master</label>
+          <input
+            id="gm-session-code"
+            autoComplete="off"
+            placeholder="codigo GM"
+            value={gmCode}
+            onChange={(event) => setGmCode(event.target.value)}
+          />
+          <NButton type="submit" variant="secondary">Entrar como GM</NButton>
+        </form>
+        <p className="react-status" role="status" aria-live="polite">{gmStatus}</p>
       </NCard>
     </main>
   );

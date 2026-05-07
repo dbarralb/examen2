@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
-import { applyScenarioHotspotOverrides, getScenarioHotspots } from "../data/scenarioContent.js";
+import {
+  LOCKER_STATES,
+  RESONANCE_COSTS,
+  applyScenarioHotspotOverrides,
+  getScenarioHotspots,
+  getScenarioScopedTargetKey,
+} from "../data/scenarioContent.js";
 import { DEFAULT_SCENARIO_ID } from "../data/scenarioData.js";
 import { cards } from "../data/gameData.js";
 import { ACTION_KINDS } from "../data/actionTypes.js";
@@ -154,6 +160,8 @@ export function DeviceScreen({ params }) {
   const resonanceValue = Number(sharedResonance.value || 0);
   const overlayActive = pulseState.status === "executing";
   const fusionSession = remoteState?.fusionSession || null;
+  const lockerState = gameState.hotspotStates?.[getScenarioScopedTargetKey(boardScenarioId, boardVariant, "taquillas")]
+    || LOCKER_STATES.LOCKED;
 
   // Reset dismissed state when a new fusion session starts
   useEffect(() => {
@@ -184,6 +192,11 @@ export function DeviceScreen({ params }) {
   async function handlePortSelect(hotspotId, portType) {
     if (overlayActive || !!queuedForMe || queueStatus === "queuing") return;
 
+    if (hotspotId === "taquillas" && portType === "PORT_MECH" && lockerState === LOCKER_STATES.LOCKED) {
+      await handleStartPlayerFusion();
+      return;
+    }
+
     if (resonanceValue < 1) {
       setStatusMsg("Sin resonancia. Recoge bolas de resonancia en la pantalla del jugador.");
       return;
@@ -200,6 +213,43 @@ export function DeviceScreen({ params }) {
       setNodeGraphActive(true);
     } catch {
       setStatusMsg("Error al conectarse al puerto. Reintenta.");
+    } finally {
+      setQueueStatus("idle");
+    }
+  }
+
+  async function handleStartPlayerFusion() {
+    if (fusionSession?.status === "pending") {
+      setFusionDismissed(false);
+      setStatusMsg("Fusion ya iniciada. Sincroniza tu variante.");
+      return;
+    }
+
+    if (resonanceValue < RESONANCE_COSTS.LOCKER_FUSION) {
+      setStatusMsg(`La taquilla necesita fusion antes de abrirse. Resonancia necesaria: ${RESONANCE_COSTS.LOCKER_FUSION}.`);
+      return;
+    }
+
+    setQueueStatus("queuing");
+    setStatusMsg("Activando fusion de taquillas...");
+    try {
+      const now = Date.now();
+      await firebasePatch("fusionSession", {
+        id: `player-fusion-${now}`,
+        hotspot: "taquillas",
+        scenarioId: boardScenarioId,
+        status: "pending",
+        initiatedBy: role.id,
+        initiatedFrom: boardVariant,
+        variantA: { ready: false, completedAt: null },
+        variantB: { ready: false, completedAt: null },
+        createdAt: now,
+        expiresAt: now + 120000,
+      });
+      setFusionDismissed(false);
+      setStatusMsg("Fusion activada. Sincroniza esta realidad con la otra variante.");
+    } catch {
+      setStatusMsg("No se pudo activar la fusion. Reintenta.");
     } finally {
       setQueueStatus("idle");
     }

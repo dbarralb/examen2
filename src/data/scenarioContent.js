@@ -640,13 +640,16 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     if (lockerState === LOCKER_STATES.OPEN) {
       feedback = "La taquilla fusionada ya esta abierta. Su contenido puede revisarse sin forzar nada mas.";
       message = "La taquilla permanece abierta tras la fusion.";
-    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction && !pulseFlags.lockerFusionResolvedThisPulse) {
+    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction && action.itemId === "llave_taquilla" && !pulseFlags.lockerFusionResolvedThisPulse) {
       setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.OPEN);
       gameState.flags.mecanismoFisicoLocalizado = true;
       gameState.flags.mecanismoFisicoLiberado = true;
       gameState.flags.moduleSyncAvailable = true;
-      feedback = "La taquilla fusionada se abre: el cierre de A y el mecanismo de B encajan por fin en una sola realidad.";
-      message = "La taquilla se abre y deja disponible el modulo de sincronizacion.";
+      feedback = "La llave gira por fin: la taquilla fusionada se abre y deja ver el modulo de sincronizacion.";
+      message = "La llave abre la taquilla fusionada y deja disponible el modulo de sincronizacion.";
+    } else if (lockerState === LOCKER_STATES.FUSION && isInteraction && action.itemId !== "llave_taquilla") {
+      feedback = "La fusion ya esta hecha. Ahora hace falta usar la llave sobre la taquilla para abrir el cierre.";
+      message = "La taquilla fusionada espera la llave.";
     } else if (lockerState === LOCKER_STATES.FUSION && isInteraction) {
       feedback = "La taquilla acaba de estabilizarse en este pulso. Necesita una nueva interaccion para abrirse.";
       message = "La taquilla queda fusionada, pendiente de apertura.";
@@ -663,16 +666,9 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
         message = hasKey
           ? "La llave activa una reaccion anomala: chispas verdes y rosas aparecen en la taquilla."
           : "La horquilla detecta la anomalia temporal: chispas verdes y rosas aparecen en la taquilla.";
-      } else if (pulseFlags.canFuseLocker && consumeVariantResonance(gameState, actionVariant, RESONANCE_COSTS.LOCKER_FUSION)) {
-        setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.FUSION);
-        pulseFlags.lockerFusionResolvedThisPulse = true;
-        gameState.flags.lockerFusionDone = true;
-        gameState.flags.mecanismoFisicoLocalizado = true;
-        feedback = "El pulso consume resonancia y fusiona la taquilla. Ahora el cierre existe de forma estable y puede abrirse.";
-        message = "El pulso fusiona la taquilla entre A y B.";
       } else {
-        feedback = "La taquilla vibra con el pulso, pero no hay resonancia suficiente para estabilizar la fusion.";
-        message = "La taquilla intenta fusionarse, pero falta resonancia.";
+        feedback = "La taquilla no se fusiona desde el pulso. Activad la fusion desde el terminal movil de la taquilla.";
+        message = "La taquilla sigue bloqueada: la fusion debe activarse desde el movil.";
       }
     } else if (isInspection) {
       const actionCharge = Number(action.charge || 0);

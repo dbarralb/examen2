@@ -1,6 +1,6 @@
 # Estado del Proyecto - El Examen II
 
-**Fecha de ultima actualizacion:** 2026-05-06
+**Fecha de ultima actualizacion:** 2026-05-07
 **Rama activa:** `react-oficial`
 **Historico:** `docs/OLD`
 
@@ -9,6 +9,8 @@
 ## Estado actual
 
 **Nivel 1 activo: Almacen.** La app React ya apunta al primer escenario real. `sandbox` queda solo como fallback tecnico.
+
+**Flujo actual de sesion:** el GM entra desde `access` con codigo unico (`delfin` por ahora), abre lobby, reparte codigos neutrales de jugador y puede iniciar partida con al menos 1 rol preparado.
 
 ### Que esta listo
 
@@ -19,6 +21,8 @@
 - [x] Contenido inicial por escenario en `src/data/scenarioContent.js`
 - [x] Resolver inicial por escenario conectado a `gameRules.js`
 - [x] Panel GM con asignacion de variantes por jugador
+- [x] Acceso GM protegido por codigo local de sesion antes de abrir `?screen=gm`
+- [x] Codigos neutrales de jugador generados por lobby (`jugador1`-`jugador4`), no ligados a rol hasta reclamarlo
 - [x] Herramienta GM de coordenadas/hotspots por variante
 - [x] Overrides de hotspots persistidos en Firebase y aplicados a jugadores
 - [x] Escalado del mapa de coordenadas alineado con la vista de jugador
@@ -36,6 +40,13 @@
 - [x] Cards de objeto reducidas un 20%
 - [x] `mouse_detection`: hotspots ocultos para jugadores y cursor animado por proximidad
 - [x] Resonancia ambiental local: contador en jugador, recompensa por abrir `balones`, spawn visual local y recogida por hover
+- [x] Resonancia compartida centralizada en `gameState.sharedResonance`
+- [x] Carga acumulada por hotspot/variante para desbloquear descubrimientos por pasos
+- [x] UI de bateria/carga en chips y panel GM
+- [x] Historial de tooltips de jugador con iconos de notificacion
+- [x] Tooltips convertidos en overlays superiores no bloqueantes con confirmacion, autocierre y barra de progreso
+- [x] Fusion de taquillas activada por jugadores desde movil; boton GM mantenido como debug
+- [x] Apertura de taquilla fusionada exige usar la llave
 - [x] Optimizacion inicial web de jugador: mapas responsive, polling parcial, menos renders y menor frecuencia de `playerViews`
 - [x] HTML legacy archivado en `docs/OLD/html-legacy`
 - [x] Prototipos de minijuegos archivados en `docs/OLD/assets-legacy/minigames`
@@ -50,6 +61,8 @@
 - [ ] Implementar eventos internos de onda temporal para sonido; contrato fijado en `docs/architecture.md` y deben dispararse solo en transicion
 - [ ] Refinar textos finales de tarjetas, feedback y consola
 - [ ] Semilla reproducible de Firebase para pruebas repetibles
+- [ ] Mover el codigo GM (`delfin`) a variable de entorno/configuracion antes de una prueba publica
+- [ ] Revisar seguridad real por rol si el proyecto sale de una prueba controlada; los codigos actuales son UX, no permisos fuertes
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
 - [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
   - [x] Generar variantes WebP/AVIF responsive de los mapas `almacen_A/B` y conservar PNG como fallback
@@ -68,6 +81,42 @@
 - [x] Animar circulo `1 -> 8`, emergencia del cuadrado, flotacion y despawn suave
 - [x] Mantener v1 sin click/recogida antes de activar hover
 - [x] Implementar recogida de resonancia ambiental por hover de 0,5s con feedback luminoso y `+1`
+
+---
+
+## Checklist reciente - Acceso GM y codigos de sesion
+
+- [x] Sustituir el boton directo "Entrar como Game Master" por formulario de codigo GM
+- [x] Validar `delfin` como codigo GM temporal
+- [x] Guardar autorizacion GM en `sessionStorage` con clave separada de jugadores
+- [x] Bloquear acceso directo a `?screen=gm` si no existe codigo GM valido en sesion
+- [x] Mantener acceso de jugadores con codigos numericos generados por el lobby
+- [x] Documentar que el codigo GM no sustituye seguridad fuerte de Firebase
+
+---
+
+## Checklist reciente - Carga acumulada, resonancia y guias
+
+- [x] Documentar `gameState.sharedResonance` como bolsa compartida de resonancia
+- [x] Documentar `gameState.accumulatedCharge` como carga persistente por hotspot/variante
+- [x] Mostrar carga en chips/cola para que GM y jugadores entiendan el peso de cada accion
+- [x] Convertir excedente de carga en resonancia cuando el hotspot ya esta analizado
+- [x] Mostrar contador de resonancia compartida en jugador
+- [x] Guardar historial de tooltips por sesion/rol/escenario/variante
+- [x] Mostrar cada guia como overlay superior bajo la onda de anomalia sin congelar interaccion
+- [x] Encolar guias con al menos 3s de separacion entre una y otra
+- [x] Autocerrar cada guia tras 10s con barra de progreso decreciente
+- [x] Usar textos de confirmacion rotativos como `Vale, recibido`
+
+---
+
+## Checklist reciente - Objetivo taquilla
+
+- [x] Aclarar en guia que la taquilla se abre con llave
+- [x] Aclarar que antes de la llave hay que fusionar la taquilla
+- [x] Activar fusion desde el movil al entrar en el puerto mecanico de taquillas con resonancia suficiente
+- [x] Completar fusion con sincronizacion A/B de jugadores
+- [x] Mantener boton GM solo como herramienta debug
 
 ---
 
@@ -103,6 +152,7 @@
 | `src/services/gameRules.js` | Alarma + delegacion al resolver de escenario |
 | `src/services/pulseService.js` | Ciclo completo del pulso |
 | `src/services/remoteState.js` | Estado inicial de Firebase |
+| `src/services/sessionAccess.js` | Codigos de sesion de jugadores y acceso local GM |
 | `src/services/firebaseClient.js` | Lectura/escritura REST de Firebase |
 | `src/components/SceneMap.jsx` | Tablero paneable con escala fija |
 | `src/components/map/*` | Capas visuales e interactivas del mapa |
