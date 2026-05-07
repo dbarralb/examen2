@@ -174,6 +174,7 @@ export function PlayerScreen({ navigation, params }) {
   const [seenPlayerTooltipIds, setSeenPlayerTooltipIds] = useState(() => new Set());
   const [recentResonanceGain, setRecentResonanceGain] = useState(false);
   const [resonanceRewardFeedback, setResonanceRewardFeedback] = useState(null);
+  const [playerConnectionIssue, setPlayerConnectionIssue] = useState(false);
   const prevGameStateRef = useRef(null);
   const prevActionResultIdRef = useRef(null);
   const prevFusionStatusRef = useRef(null);
@@ -534,9 +535,10 @@ export function PlayerScreen({ navigation, params }) {
           }
         }
 
+        setPlayerConnectionIssue(false);
         applyRemoteStateIfChanged(state);
       } catch (error) {
-        // Error de red silencioso; el siguiente ciclo reintentara.
+        setPlayerConnectionIssue(true);
       }
     },
   });
@@ -874,6 +876,23 @@ export function PlayerScreen({ navigation, params }) {
     } catch (error) {
       // Error de red silencioso.
     }
+  }
+
+  if (!isGmMonitorView && !remoteState) {
+    return (
+      <main className="react-screen react-player-screen react-player-functional">
+        <section className="player-scene-preview player-scene-live">
+          <div className="scene-frame">
+            <E2Logo compact />
+            <p className="react-status" role="status" aria-live="polite">
+              {playerConnectionIssue
+                ? "No se pudo conectar con Firebase. Reintentando..."
+                : "Conectando con la partida..."}
+            </p>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (

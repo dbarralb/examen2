@@ -13,11 +13,20 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+function hasUsableFirebaseConfigValue(value) {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = String(value).trim();
+  return normalized !== "..." && normalized !== "undefined" && normalized !== "null";
+}
+
 const hasFirebaseAuthConfig =
-  firebaseConfig.apiKey &&
-  firebaseConfig.authDomain &&
-  firebaseConfig.projectId &&
-  firebaseConfig.appId;
+  hasUsableFirebaseConfigValue(firebaseConfig.apiKey) &&
+  hasUsableFirebaseConfigValue(firebaseConfig.authDomain) &&
+  hasUsableFirebaseConfigValue(firebaseConfig.projectId) &&
+  hasUsableFirebaseConfigValue(firebaseConfig.appId);
 
 let authUserPromise = null;
 
@@ -31,8 +40,14 @@ async function getFirebaseAuthToken() {
     authUserPromise = signInAnonymously(getAuth(app)).then(({ user }) => user);
   }
 
-  const user = await authUserPromise;
-  return user.getIdToken();
+  try {
+    const user = await authUserPromise;
+    return user.getIdToken();
+  } catch (error) {
+    authUserPromise = null;
+    console.warn("Firebase anonymous auth failed; falling back to public REST access.", error);
+    return null;
+  }
 }
 
 export function firebaseUrl(path = "", authToken = null) {

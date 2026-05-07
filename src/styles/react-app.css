@@ -2007,11 +2007,32 @@ a {
 }
 
 .player-code-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-weight: 700;
   color: var(--fg-secondary);
   text-transform: uppercase;
-  min-width: 62px;
+  min-width: 96px;
+  max-width: 150px;
+}
+
+.player-code-label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-code-label .n-badge {
+  padding: 2px 6px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.player-code-label .n-badge > span {
+  width: 5px;
+  height: 5px;
 }
 
 .player-code-value {

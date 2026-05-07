@@ -20,6 +20,28 @@ function getSessionBadgeStatus(status) {
   return status === "in_game" ? "success" : "muted";
 }
 
+function findRole(roleId) {
+  return playerRoles.find((role) => role.id === roleId) || null;
+}
+
+function getPlayerCodeDisplay(label, code, lobby) {
+  const roleFromCodeKey = findRole(label);
+  const roleClaimEntries = Object.entries(lobby?.roleClaims || {});
+  const matchedClaimEntry =
+    roleClaimEntries.find(([, claim]) => claim?.sessionCode === code) ||
+    roleClaimEntries.find(([roleId]) => roleId === label);
+  const [claimedRoleId, claim] = matchedClaimEntry || [];
+  const role = findRole(claimedRoleId) || roleFromCodeKey;
+  const player = claim?.clientId ? lobby?.players?.[claim.clientId] : null;
+  const playerName = claim?.name || player?.customName || label;
+
+  return {
+    playerName,
+    role,
+    hasJoined: Boolean(claim || player),
+  };
+}
+
 function getActionSummary(action) {
   if (!action) return "Sin chip registrado.";
   const target = targets.find((item) => item.id === action.target);
@@ -1213,20 +1235,33 @@ export function GMScreen() {
           </p>
           {session.playerCodes && (
             <div className="player-codes-grid">
-              {Object.entries(session.playerCodes).map(([label, code]) => (
-                <div key={label} className="player-code-item">
-                  <span className="player-code-label">{label}</span>
-                  <span className="player-code-value">{code}</span>
-                  <button
-                    className="session-code-copy"
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(code)}
-                    title={`Copiar codigo ${label}`}
-                  >
-                    Copiar
-                  </button>
-                </div>
-              ))}
+              {Object.entries(session.playerCodes).map(([label, code]) => {
+                const codeDisplay = getPlayerCodeDisplay(label, code, remoteState?.lobby);
+                const labelText = codeDisplay.hasJoined ? codeDisplay.playerName : label;
+                const copyLabel = codeDisplay.role ? `${labelText} - ${codeDisplay.role.label}` : labelText;
+
+                return (
+                  <div key={label} className="player-code-item">
+                    <span className="player-code-label">
+                      <span>{labelText}</span>
+                      {codeDisplay.role && (
+                        <NBadge status={codeDisplay.hasJoined ? codeDisplay.role.status : "muted"}>
+                          {codeDisplay.role.label}
+                        </NBadge>
+                      )}
+                    </span>
+                    <span className="player-code-value">{code}</span>
+                    <button
+                      className="session-code-copy"
+                      type="button"
+                      onClick={() => navigator.clipboard.writeText(code)}
+                      title={`Copiar codigo ${copyLabel}`}
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
           <NTimer seconds={elapsedSeconds} />
