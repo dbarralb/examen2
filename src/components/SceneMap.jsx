@@ -7,7 +7,7 @@ import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
 import { getContainerOpenState, getHotspotDiscoveries, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
-import { getScenarioScopedTargetKey } from "../data/scenarioContent.js";
+import { getScenarioScopedTargetKey, getAccChargeKey } from "../data/scenarioContent.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import resonanceRing1 from "../../assets/Pantalla de juego/Resonance/1.svg?url";
@@ -40,6 +40,27 @@ const PAN_EDGE_FAST_ZONE_WIDTH = 150;
 const PAN_EDGE_SLOW_ZONE_WIDTH = 150;
 const PAN_EDGE_FAST_SPEED = 420;
 const PAN_EDGE_SLOW_SPEED = 150;
+
+function ChargeBattery({ accumulated = 0, cost = 1 }) {
+  const cellCount = Math.min(cost, 10);
+  const filledCount = Math.min(accumulated, cost);
+  const filledCells = Math.round((filledCount / cost) * cellCount);
+
+  return (
+    <div className="scene-discovery-battery" aria-label={`Carga acumulada: ${accumulated} de ${cost}`}>
+      <div className="scene-discovery-battery__cells">
+        {Array.from({ length: cellCount }).map((_, i) => (
+          <span
+            key={i}
+            className={`scene-discovery-battery__cell ${i < filledCells ? "scene-discovery-battery__cell--filled" : ""}`}
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <span className="scene-discovery-battery__label">{accumulated}/{cost}</span>
+    </div>
+  );
+}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -1004,6 +1025,8 @@ export function SceneMap({
                 {(() => {
                   const discoverySlots = getHotspotDiscoveries(target.id, gameState, scenarioId, variant);
                   if (!discoverySlots.length) return null;
+                  const accKey = getAccChargeKey(scenarioId, variant, target.id);
+                  const accumulated = Number(gameState.accumulatedCharge?.[accKey] || 0);
                   return (
                     <section className="scene-object-card-discoveries">
                       {discoverySlots.map((slot) => (
@@ -1011,8 +1034,15 @@ export function SceneMap({
                           <span className="scene-discovery-slot-label">
                             {slot.unlocked ? slot.label : "Analisis bloqueado"}
                           </span>
-                          {slot.unlocked && (
+                          {slot.unlocked ? (
                             <p className="scene-discovery-slot-content">{slot.description}</p>
+                          ) : (
+                            <>
+                              <ChargeBattery accumulated={accumulated} cost={slot.chargeCost} />
+                              <p className="scene-discovery-slot-cost">
+                                Requiere carga <strong>{slot.chargeCost}</strong> en la accion de inspeccion
+                              </p>
+                            </>
                           )}
                         </div>
                       ))}

@@ -118,8 +118,10 @@ export function buildQueuedActionChipModel(action) {
     statusAccentClassName: statusBlueprint.accentClassName,
     statusIcon: statusBlueprint.icon,
     playerLabel: action?.player || action?.role || "Jugador",
+    roleId: action?.role || null,
     cardLabel: formatCardLabel(card || action),
     targetId: action?.target || "generic",
+    charge: action?.charge ?? null,
     label: `${formatCardLabel(card || action)} sobre ${target?.label || targetBlueprint.label}`,
   };
 }

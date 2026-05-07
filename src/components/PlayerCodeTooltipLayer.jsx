@@ -70,19 +70,25 @@ export function CodexGuideOverlay({ tooltip, onClose }) {
 
 export function TooltipGlyph({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      <path d="M24 8C15.7 8 9 13.4 9 20.2c0 4.7 3.2 8.8 8 10.8l-1.2 6.4 6.5-5.1c.6.1 1.1.1 1.7.1 8.3 0 15-5.4 15-12.2S32.3 8 24 8Z" />
-      <path d="M17.8 20.3 22 16.1M22 24.5l-4.2-4.2M30.2 16.1 26 20.3l4.2 4.2" />
-    </svg>
+    <img
+      src="/icons/icono_tooltip.png"
+      className={className}
+      aria-hidden="true"
+      draggable="false"
+      alt=""
+    />
   );
 }
 
 export function HistoryGlyph({ className = "" }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      <path d="M12 13h24M12 24h24M12 35h16" />
-      <path d="M10 8h28c2 0 3 1 3 3v26c0 2-1 3-3 3H10c-2 0-3-1-3-3V11c0-2 1-3 3-3Z" />
-    </svg>
+    <img
+      src="/icons/icono_historial.png"
+      className={className}
+      aria-hidden="true"
+      draggable="false"
+      alt=""
+    />
   );
 }
 
@@ -95,40 +101,42 @@ export function PlayerCodeTooltipLayer({ tooltip, expanded = false, unread = fal
   const typedDescription = useTypedLine(descriptionLine, titleDone, reducedMotion, 120);
   const descriptionDone = typedDescription.length >= descriptionLine.length;
 
-  if (!tooltip) return null;
-
   if (!expanded) {
     return (
       <button
         type="button"
-        className="player-utility-btn player-utility-btn--tooltip"
+        className={`player-utility-btn player-utility-btn--tooltip${unread ? " has-unread" : ""}`}
         onClick={onOpen}
-        aria-label={`Leer ayuda: ${tooltip.title}`}
+        aria-label="Ver guias"
       >
-        {/* TODO: replace this bespoke SVG placeholder with the final Codex icon asset. */}
-        <TooltipGlyph className="player-utility-icon" />
         {unread && <i aria-hidden="true" />}
+        <TooltipGlyph className="player-utility-icon" />
       </button>
     );
   }
 
+  if (!tooltip) return null;
+
   return (
     <aside className="player-code-tooltip player-code-tooltip--expanded" aria-label={`${tooltip.title}. ${tooltip.text}`}>
-      <p className="player-code-tooltip__line player-code-tooltip__line--title" aria-hidden="true">
-        <span>{typedTitle}</span>
-        {!titleDone && <span className="player-code-tooltip__cursor" />}
-      </p>
-      <p className="player-code-tooltip__line player-code-tooltip__line--description" aria-hidden="true">
-        <span>{typedDescription}</span>
-        {titleDone && !descriptionDone && <span className="player-code-tooltip__cursor" />}
-      </p>
-      <button
-        type="button"
-        className={`player-code-tooltip__about ${descriptionDone ? "is-visible" : ""}`}
-        onClick={onAbout}
-      >
-        [ Acerca de... ]
-      </button>
+      <div className="player-code-tooltip__image-placeholder" aria-hidden="true" />
+      <div className="player-code-tooltip__body">
+        <p className="player-code-tooltip__line player-code-tooltip__line--title" aria-hidden="true">
+          <span>{typedTitle}</span>
+          {!titleDone && <span className="player-code-tooltip__cursor" />}
+        </p>
+        <p className="player-code-tooltip__line player-code-tooltip__line--description" aria-hidden="true">
+          <span>{typedDescription}</span>
+          {titleDone && !descriptionDone && <span className="player-code-tooltip__cursor" />}
+        </p>
+        <button
+          type="button"
+          className={`player-code-tooltip__about ${descriptionDone ? "is-visible" : ""}`}
+          onClick={onAbout}
+        >
+          [ Acerca de... ]
+        </button>
+      </div>
     </aside>
   );
 }

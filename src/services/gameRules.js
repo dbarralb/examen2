@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import { isInteractionAction } from "../data/actionTypes.js";
-import { LOCKER_STATES, RESONANCE_COSTS, getScenarioScopedTargetKey, resolveScenarioAction } from "../data/scenarioContent.js";
+import { LOCKER_STATES, RESONANCE_COSTS, getScenarioScopedTargetKey, resolveScenarioAction, ensureSharedResonance } from "../data/scenarioContent.js";
 
 // ---------------------------------------------------------------------------
 // 1. Pulse helpers
@@ -27,8 +27,8 @@ export function buildPulseFlags(pulseActions = [], gameState = {}) {
     const scopedLockerKey = getScenarioScopedTargetKey(scenarioId, variant, "taquillas");
     const lockerState = gameState.hotspotStates?.[scopedLockerKey] || LOCKER_STATES.LOCKED;
     if (lockerState !== LOCKER_STATES.LOCKED) return false;
-    const variantResonance = gameState.resonanceByVariant?.[variant] || gameState.resonance || {};
-    const resonanceValue = Number(variantResonance.value || 0);
+    const sharedResonance = ensureSharedResonance(gameState);
+    const resonanceValue = Number(sharedResonance.value || 0);
     return resonanceValue >= RESONANCE_COSTS.LOCKER_FUSION;
   });
 

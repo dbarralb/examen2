@@ -83,6 +83,8 @@ export function createInitialGameState() {
       A: { value: 0, spent: 0, discoveries: {} },
       B: { value: 0, spent: 0, discoveries: {} },
     },
+    sharedResonance: { value: 0, spent: 0, discoveries: {} },
+    accumulatedCharge: {},
   };
 }
 

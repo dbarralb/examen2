@@ -33,6 +33,7 @@ const RESONANCE_COLLECT_FEEDBACK_MS = 1500;
 const PLAYER_VIEW_PUBLISH_DEBOUNCE_MS = 420;
 const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
 const PLAYER_TOOLTIP_STORAGE_PREFIX = "elExamen2.playerTooltips";
+const PLAYER_TOOLTIP_HISTORY_PREFIX = "elExamen2.playerTooltipHistory";
 
 function stableRemoteSignature(state) {
   return JSON.stringify(state || null);
@@ -67,6 +68,28 @@ function writeSeenPlayerTooltips(scope, seenIds) {
     window.localStorage.setItem(getPlayerTooltipStorageKey(scope), JSON.stringify([...seenIds]));
   } catch (error) {
     // Storage may fail in private browsing; the tooltip still works for this render.
+  }
+}
+
+function getTooltipHistoryKey(scope) {
+  return `${PLAYER_TOOLTIP_HISTORY_PREFIX}:${scope}`;
+}
+
+function readTooltipHistory(scope) {
+  try {
+    const raw = window.localStorage.getItem(getTooltipHistoryKey(scope));
+    const ids = raw ? JSON.parse(raw) : [];
+    return Array.isArray(ids) ? ids.map((id) => PLAYER_TOOLTIPS[id]).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeTooltipHistory(scope, tooltips) {
+  try {
+    window.localStorage.setItem(getTooltipHistoryKey(scope), JSON.stringify(tooltips.map((t) => t.id)));
+  } catch {
+    // ignore
   }
 }
 
@@ -169,8 +192,10 @@ export function PlayerScreen({ navigation, params }) {
   const [sparkVfxActive, setSparkVfxActive] = useState(false);
   const [fusionVfxActive, setFusionVfxActive] = useState(false);
   const [codexGuideTooltip, setCodexGuideTooltip] = useState(null);
-  const [lastPlayerTooltip, setLastPlayerTooltip] = useState(PLAYER_TOOLTIPS.explore_hotspots);
-  const [expandedPlayerTooltip, setExpandedPlayerTooltip] = useState(null);
+  const [tooltipHistory, setTooltipHistory] = useState([]);
+  const [tooltipDrawerOpen, setTooltipDrawerOpen] = useState(false);
+  const [unreadTooltipCount, setUnreadTooltipCount] = useState(0);
+  const [expandedTooltipKey, setExpandedTooltipKey] = useState(null);
   const [seenPlayerTooltipIds, setSeenPlayerTooltipIds] = useState(() => new Set());
   const [recentResonanceGain, setRecentResonanceGain] = useState(false);
   const [resonanceRewardFeedback, setResonanceRewardFeedback] = useState(null);
@@ -249,8 +274,9 @@ export function PlayerScreen({ navigation, params }) {
     : [];
   const pulseAnomalyMode = pulseCriticalActive ? "critical" : "active";
   const interferenceVariant = pulseState.interferenceVariant || 1;
-  const variantResonance = gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
-  const resonanceValue = Number(variantResonance.value || 0);
+  const sharedResonance = gameState.sharedResonance || gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
+  const variantResonance = sharedResonance;
+  const resonanceValue = Number(sharedResonance.value || 0);
   const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
   const deviceSessionCode = getRoleSessionCode(session, role.id) || getStoredSessionCode();
   const playerDeviceUrl = getDeviceUrl(role.id, { code: deviceSessionCode });
@@ -288,8 +314,7 @@ export function PlayerScreen({ navigation, params }) {
     selectedTargetId,
     sparkVfxActive,
   ]);
-  const availablePlayerTooltip = activePlayerTooltip || lastPlayerTooltip;
-  const visiblePlayerTooltip = codexGuideTooltip ? null : (expandedPlayerTooltip || availablePlayerTooltip);
+  const hasUnreadTooltips = unreadTooltipCount > 0;
 
   const markPlayerTooltipSeen = useCallback((tooltipId) => {
     if (!tooltipId) {
@@ -308,17 +333,13 @@ export function PlayerScreen({ navigation, params }) {
     });
   }, [tooltipStorageScope]);
 
-  const handlePlayerTooltipOpen = useCallback(() => {
-    const tooltipToOpen = activePlayerTooltip || lastPlayerTooltip;
-    if (!tooltipToOpen) {
-      return;
-    }
-
-    setExpandedPlayerTooltip(tooltipToOpen);
-    if (activePlayerTooltip) {
-      markPlayerTooltipSeen(activePlayerTooltip.id);
-    }
-  }, [activePlayerTooltip, lastPlayerTooltip, markPlayerTooltipSeen]);
+  const handleTooltipIconClick = useCallback(() => {
+    setTooltipDrawerOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) setUnreadTooltipCount(0);
+      return nextOpen;
+    });
+  }, []);
 
   const handleHistoryToggle = useCallback(() => {
     setHistoryOpen((open) => {
@@ -336,26 +357,22 @@ export function PlayerScreen({ navigation, params }) {
 
   useEffect(() => {
     setSeenPlayerTooltipIds(readSeenPlayerTooltips(tooltipStorageScope));
-    setExpandedPlayerTooltip(null);
+    setTooltipHistory(readTooltipHistory(tooltipStorageScope));
+    setTooltipDrawerOpen(false);
+    setUnreadTooltipCount(0);
+    setExpandedTooltipKey(null);
   }, [tooltipStorageScope]);
 
   useEffect(() => {
-    if (activePlayerTooltip) {
-      setLastPlayerTooltip(activePlayerTooltip);
-    }
-  }, [activePlayerTooltip]);
+    if (!activePlayerTooltip) return;
+    setTooltipHistory((prev) => [...prev, activePlayerTooltip]);
+    setUnreadTooltipCount((prev) => prev + 1);
+    markPlayerTooltipSeen(activePlayerTooltip.id);
+  }, [activePlayerTooltip, markPlayerTooltipSeen]);
 
   useEffect(() => {
-    setExpandedPlayerTooltip(null);
-  }, [
-    boardScenarioId,
-    boardVariant,
-    fusionSession?.status,
-    overlayActive,
-    queuedForPlayer?.id,
-    selectedTargetId,
-    sparkVfxActive,
-  ]);
+    writeTooltipHistory(tooltipStorageScope, tooltipHistory);
+  }, [tooltipHistory, tooltipStorageScope]);
 
   useEffect(() => {
     const previousValue = prevResonanceValueRef.current;
@@ -721,12 +738,12 @@ export function PlayerScreen({ navigation, params }) {
     resonanceRewardPendingRef.current = true;
     resonanceRewardClaimedRef.current = true;
     try {
-      const currentValue = Number(variantResonance?.value || 0);
-      const currentSpent = Number(variantResonance?.spent || 0);
+      const currentValue = Number(sharedResonance?.value || 0);
+      const currentSpent = Number(sharedResonance?.spent || 0);
       await firebasePatch("", {
-        [`gameState/resonanceByVariant/${boardVariant}/value`]: currentValue + RESONANCE_BALLS_OPEN_REWARD,
-        [`gameState/resonanceByVariant/${boardVariant}/spent`]: currentSpent,
-        [`gameState/resonanceByVariant/${boardVariant}/discoveries/${RESONANCE_BALLS_DISCOVERY_ID}`]: true,
+        "gameState/sharedResonance/value": currentValue + RESONANCE_BALLS_OPEN_REWARD,
+        "gameState/sharedResonance/spent": currentSpent,
+        [`gameState/sharedResonance/discoveries/${RESONANCE_BALLS_DISCOVERY_ID}`]: true,
       });
       setRemoteState((current) => {
         if (!current) {
@@ -737,16 +754,13 @@ export function PlayerScreen({ navigation, params }) {
           ...current,
           gameState: {
             ...(current.gameState || {}),
-            resonanceByVariant: {
-              ...(current.gameState?.resonanceByVariant || {}),
-              [boardVariant]: {
-                ...(current.gameState?.resonanceByVariant?.[boardVariant] || {}),
-                value: currentValue + RESONANCE_BALLS_OPEN_REWARD,
-                spent: currentSpent,
-                discoveries: {
-                  ...(current.gameState?.resonanceByVariant?.[boardVariant]?.discoveries || {}),
-                  [RESONANCE_BALLS_DISCOVERY_ID]: true,
-                },
+            sharedResonance: {
+              ...(current.gameState?.sharedResonance || {}),
+              value: currentValue + RESONANCE_BALLS_OPEN_REWARD,
+              spent: currentSpent,
+              discoveries: {
+                ...(current.gameState?.sharedResonance?.discoveries || {}),
+                [RESONANCE_BALLS_DISCOVERY_ID]: true,
               },
             },
           },
@@ -781,12 +795,12 @@ export function PlayerScreen({ navigation, params }) {
     setResonanceCollectState("collected");
 
     try {
-      const latestResonance = await firebaseGet(`gameState/resonanceByVariant/${boardVariant}`) || variantResonance || {};
+      const latestResonance = await firebaseGet("gameState/sharedResonance") || sharedResonance || {};
       const currentValue = Number(latestResonance.value || 0);
       const currentSpent = Number(latestResonance.spent || 0);
       await firebasePatch("", {
-        [`gameState/resonanceByVariant/${boardVariant}/value`]: currentValue + 1,
-        [`gameState/resonanceByVariant/${boardVariant}/spent`]: currentSpent,
+        "gameState/sharedResonance/value": currentValue + 1,
+        "gameState/sharedResonance/spent": currentSpent,
       });
       logEvent("resonancia +1: recogida ambiental");
     } finally {
@@ -897,7 +911,7 @@ export function PlayerScreen({ navigation, params }) {
 
   return (
     <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
-      <section className={`player-scene-preview player-scene-live ${visiblePlayerTooltip ? "has-player-tooltip" : ""} ${expandedPlayerTooltip ? "has-player-tooltip-expanded" : ""} ${historyOpen ? "has-player-history-open" : ""}`}>
+      <section className={`player-scene-preview player-scene-live ${tooltipDrawerOpen ? "has-player-tooltip" : ""} ${historyOpen ? "has-player-history-open" : ""}`}>
         <div className="player-topbar">
           <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
@@ -949,42 +963,72 @@ export function PlayerScreen({ navigation, params }) {
         {!isGmMonitorView && (
           <div className="player-utility-rail" aria-label="Herramientas de escena">
             <PlayerCodeTooltipLayer
-              tooltip={availablePlayerTooltip}
-              expanded={false}
-              unread={Boolean(activePlayerTooltip)}
-              onOpen={handlePlayerTooltipOpen}
-              onAbout={() => setCodexGuideTooltip(availablePlayerTooltip)}
+              unread={hasUnreadTooltips}
+              onOpen={handleTooltipIconClick}
             />
             <button
               type="button"
-              className="player-utility-btn player-utility-btn--history"
+              className={`player-utility-btn player-utility-btn--history${unreadHistoryCount > 0 ? " has-unread" : ""}`}
               onClick={handleHistoryToggle}
               aria-expanded={historyOpen}
               aria-label="Abrir historial"
             >
-              <HistoryGlyph className="player-utility-icon" />
               {unreadHistoryCount > 0 && (
                 <em aria-label={`${unreadHistoryCount} mensajes nuevos`}>
                   {unreadHistoryCount > 9 ? "9+" : unreadHistoryCount}
                 </em>
               )}
+              <HistoryGlyph className="player-utility-icon" />
             </button>
           </div>
-        )}
-        {!isGmMonitorView && expandedPlayerTooltip && (
-          <PlayerCodeTooltipLayer
-            tooltip={expandedPlayerTooltip}
-            expanded
-            unread={false}
-            onOpen={handlePlayerTooltipOpen}
-            onAbout={() => setCodexGuideTooltip(expandedPlayerTooltip)}
-          />
         )}
         {!isGmMonitorView && (
           <CodexGuideOverlay
             tooltip={codexGuideTooltip}
             onClose={() => setCodexGuideTooltip(null)}
           />
+        )}
+        {!isGmMonitorView && tooltipDrawerOpen && (
+          <aside className="player-tooltip-overlay">
+            <section className="player-tooltip-drawer" aria-label="Registro de guias">
+              <header>
+                <span>codex://guias</span>
+                <button type="button" onClick={() => setTooltipDrawerOpen(false)} aria-label="Cerrar guias">Cerrar</button>
+              </header>
+              <div className="player-tooltip-list">
+                {tooltipHistory.length === 0 ? (
+                  <p>Sin guias todavia.</p>
+                ) : (
+                  [...tooltipHistory].reverse().map((tooltip, index) => {
+                    const key = `${tooltip.id}-${index}`;
+                    const isExpanded = expandedTooltipKey === key;
+                    return (
+                      <article key={key} className={`player-tooltip-entry${isExpanded ? " player-tooltip-entry--expanded" : ""}`}>
+                        <button
+                          type="button"
+                          className="player-tooltip-entry__title"
+                          onClick={() => setExpandedTooltipKey(isExpanded ? null : key)}
+                        >
+                          <span className="player-tooltip-entry__num">{String(tooltipHistory.length - index).padStart(2, "0")}</span>
+                          <span>{tooltip.title}</span>
+                          <span className="player-tooltip-entry__chevron">{isExpanded ? "−" : "+"}</span>
+                        </button>
+                        {isExpanded && (
+                          <PlayerCodeTooltipLayer
+                            tooltip={tooltip}
+                            expanded
+                            unread={false}
+                            onOpen={() => {}}
+                            onAbout={() => { setCodexGuideTooltip(tooltip); setTooltipDrawerOpen(false); }}
+                          />
+                        )}
+                      </article>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+          </aside>
         )}
         {!isGmMonitorView && historyOpen && (
           <aside className={`player-history-overlay ${historyOpen ? "player-history-overlay--open" : ""}`}>

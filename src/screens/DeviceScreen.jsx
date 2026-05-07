@@ -149,8 +149,9 @@ export function DeviceScreen({ params }) {
   const boardVariant = playerBoard.variant || "A";
   const boardScenarioId = playerBoard.scenarioId || DEFAULT_SCENARIO_ID;
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
-  const variantResonance = gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
-  const resonanceValue = Number(variantResonance.value || 0);
+  const sharedResonance = gameState.sharedResonance || gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
+  const variantResonance = sharedResonance;
+  const resonanceValue = Number(sharedResonance.value || 0);
   const overlayActive = pulseState.status === "executing";
   const fusionSession = remoteState?.fusionSession || null;
 
@@ -192,8 +193,8 @@ export function DeviceScreen({ params }) {
     setStatusMsg("");
     try {
       await firebasePatch("", {
-        [`gameState/resonanceByVariant/${boardVariant}/value`]: resonanceValue - 1,
-        [`gameState/resonanceByVariant/${boardVariant}/spent`]: (Number(variantResonance.spent) || 0) + 1,
+        "gameState/sharedResonance/value": resonanceValue - 1,
+        "gameState/sharedResonance/spent": (Number(sharedResonance.spent) || 0) + 1,
       });
       setSelectedPort({ hotspotId, portType });
       setNodeGraphActive(true);

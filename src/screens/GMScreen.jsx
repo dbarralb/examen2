@@ -10,6 +10,7 @@ import { DEFAULT_SCENARIO_ID, SCENARIO_VARIANTS, getScenario, getVariantBackgrou
 import { applyScenarioHotspotOverrides, getScenarioHotspotOverrideKey, getScenarioHotspots } from "../data/scenarioContent.js";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
+import { createId } from "../services/clientIdentity.js";
 import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
 import { ensureNextPulseScheduled, forceResetPulse, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
 import { filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
@@ -132,6 +133,11 @@ export function GMScreen() {
   const [devicesExpanded, setDevicesExpanded] = useState(false);
   const [technicalFlowExpanded, setTechnicalFlowExpanded] = useState(false);
   const [fusionHotspot, setFusionHotspot] = useState("taquillas");
+  const [addChipOpen, setAddChipOpen] = useState(false);
+  const [addChipKind, setAddChipKind] = useState("inspection");
+  const [addChipRole, setAddChipRole] = useState("empollon");
+  const [addChipTarget, setAddChipTarget] = useState("");
+  const [addChipCharge, setAddChipCharge] = useState(1);
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
@@ -632,6 +638,29 @@ export function GMScreen() {
     } finally {
       setIsBusy(false);
     }
+  }
+
+  async function handleAddChip(e) {
+    e.preventDefault();
+    const cardId = `${addChipRole}_accion_${addChipKind === "inspection" ? "inspeccion" : "interaccion"}`;
+    const scenarioHotspots = getScenarioHotspots(activeScenario.id, "A");
+    const targetId = addChipTarget || scenarioHotspots[0]?.id || "hotspot_1";
+    const id = createId();
+    const now = Date.now();
+    const action = {
+      id,
+      role: addChipRole,
+      card: cardId,
+      target: targetId,
+      player: `GM:${addChipRole}`,
+      status: "queued",
+      createdAt: now,
+      loadedAt: now,
+      charge: Number(addChipCharge) || 1,
+    };
+    await firebasePatch("", { [`queuedActions/${id}`]: action });
+    setAddChipOpen(false);
+    await refresh();
   }
 
   /** Assign a scenario variant (A-D) to a specific player role. */
@@ -1284,35 +1313,37 @@ export function GMScreen() {
         </NCard>
 
         {/* ---- Variantes por jugador ---- */}
-        <NCard title={`Variantes — ${activeScenario.label}`}>
-          <p className="react-status">
-            Cada jugador vive una variante del escenario (A/B/C/D).
-            Asigna aquí qué realidad ve cada uno.
-          </p>
-          <div className="gm-variant-grid">
-            {playerRoles.map((role) => {
-              const claim = remoteState?.lobby?.roleClaims?.[role.id];
-              const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
-              return (
-                <div key={role.id} className="gm-variant-row">
-                  <NBadge status={claim ? role.status : "muted"}>{role.label}</NBadge>
-                  <div className="button-row">
-                    {SCENARIO_VARIANTS.map((v) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`gm-variant-btn ${variant === v ? "active" : ""}`}
-                        onClick={() => handleSetVariant(role.id, v)}
-                        disabled={session.status !== "in_game"}
-                        title={`Variante ${v}`}
-                      >
-                        {v}
-                      </button>
-                    ))}
+        <NCard title="Variantes">
+          <div className="gm-variants-scenario">
+            <h3 className="gm-variants-scenario-title">{activeScenario.label}</h3>
+            <div className="gm-variant-cards">
+              {playerRoles.map((role) => {
+                const claim = remoteState?.lobby?.roleClaims?.[role.id];
+                const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
+                return (
+                  <div key={role.id} className="gm-variant-card">
+                    <div className="gm-variant-card-header">
+                      <NBadge status={claim ? role.status : "muted"}>{role.label}</NBadge>
+                      <span className="gm-variant-card-current">{variant}</span>
+                    </div>
+                    <div className="button-row">
+                      {SCENARIO_VARIANTS.map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          className={`gm-variant-btn ${variant === v ? "active" : ""}`}
+                          onClick={() => handleSetVariant(role.id, v)}
+                          disabled={session.status !== "in_game"}
+                          title={`Variante ${v}`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </NCard>
 
@@ -1358,6 +1389,9 @@ export function GMScreen() {
             >
               Programar auto
             </NButton>
+            <NButton variant="secondary" onClick={() => setAddChipOpen((v) => !v)}>
+              {addChipOpen ? "Cancelar" : "+ Chip"}
+            </NButton>
             {pulseState.status === "executing" && (
               <NButton
                 variant="danger"
@@ -1368,6 +1402,48 @@ export function GMScreen() {
               </NButton>
             )}
           </div>
+          {addChipOpen && (
+            <form className="gm-add-chip-form" onSubmit={handleAddChip}>
+              <div className="gm-add-chip-fields">
+                <label className="gm-add-chip-field">
+                  <span>Tipo</span>
+                  <select value={addChipKind} onChange={(e) => setAddChipKind(e.target.value)}>
+                    <option value="inspection">Inspeccion</option>
+                    <option value="interaction">Interaccion</option>
+                  </select>
+                </label>
+                <label className="gm-add-chip-field">
+                  <span>Rol</span>
+                  <select value={addChipRole} onChange={(e) => setAddChipRole(e.target.value)}>
+                    {playerRoles.map((r) => (
+                      <option key={r.id} value={r.id}>{r.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="gm-add-chip-field">
+                  <span>Objetivo</span>
+                  <select value={addChipTarget} onChange={(e) => setAddChipTarget(e.target.value)}>
+                    <option value="">— primero disponible —</option>
+                    {getScenarioHotspots(activeScenario.id, "A").map((h) => (
+                      <option key={h.id} value={h.id}>{h.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="gm-add-chip-field">
+                  <span>Carga</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    value={addChipCharge}
+                    onChange={(e) => setAddChipCharge(e.target.value)}
+                    className="gm-add-chip-charge-input"
+                  />
+                </label>
+              </div>
+              <NButton type="submit" disabled={isBusy}>Añadir chip</NButton>
+            </form>
+          )}
         </NCard>
 
         {/* ---- Historial ---- */}
