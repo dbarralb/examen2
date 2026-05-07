@@ -42,16 +42,16 @@ export function getDeviceUrl(roleId, { code } = {}) {
   return buildUrl(params);
 }
 
-export function getRoleSessionCode(session, roleId) {
-  return session?.playerCodes?.[roleId] || "";
+export function getRoleSessionCode(session, roleId, lobby = null) {
+  return lobby?.roleClaims?.[roleId]?.sessionCode || session?.playerCodes?.[roleId] || "";
 }
 
-export function getAllSessionUrls(session = {}) {
+export function getAllSessionUrls(session = {}, lobby = null) {
   const players = playerRoles.map((role) => ({
     roleId: role.id,
     label: role.label,
     playerUrl: getPlayerUrl(role.id),
-    deviceUrl: getDeviceUrl(role.id, { code: getRoleSessionCode(session, role.id) }),
+    deviceUrl: getDeviceUrl(role.id, { code: getRoleSessionCode(session, role.id, lobby) }),
   }));
 
   return {

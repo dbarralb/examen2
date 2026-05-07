@@ -34,11 +34,12 @@ function getPlayerCodeDisplay(label, code, lobby) {
   const role = findRole(claimedRoleId) || roleFromCodeKey;
   const player = claim?.clientId ? lobby?.players?.[claim.clientId] : null;
   const playerName = claim?.name || player?.customName || label;
+  const hasJoined = Boolean(claim || player);
 
   return {
     playerName,
-    role,
-    hasJoined: Boolean(claim || player),
+    role: hasJoined ? role : null,
+    hasJoined,
   };
 }
 
@@ -800,7 +801,7 @@ export function GMScreen() {
           <section className="gm-devices-panel" aria-label="URLs de dispositivos">
             {playerRoles.map((role) => {
               const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
-              const url = getDeviceUrl(role.id, { code: getRoleSessionCode(session, role.id) });
+              const url = getDeviceUrl(role.id, { code: getRoleSessionCode(session, role.id, remoteState?.lobby) });
               const queued = queuedActions.find(
                 (a) => a.role === role.id && ["queued", "executing"].includes(a.status || "queued"),
               );
