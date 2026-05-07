@@ -14,6 +14,7 @@
 
 import {
   getScenarioContainerOpenState,
+  getScenarioHotspotDiscoveries,
   getScenarioInspectionDiscovery,
   getScenarioItem,
   getScenarioTarget,
@@ -188,4 +189,9 @@ export function getContainerOpenState(targetId, gameState, scenarioId = "almacen
 /** Short state label used in event log and GM coordinate overlay. */
 export function getTargetStateLabel(target, gameState, scenarioId = "almacen", variant = "A") {
   return getScenarioTargetStateLabel(target, gameState, scenarioId, variant);
+}
+
+/** Discovery slots for a hotspot, with unlocked state per slot. */
+export function getHotspotDiscoveries(targetId, gameState, scenarioId = "almacen", variant = "A") {
+  return getScenarioHotspotDiscoveries(targetId, gameState, scenarioId, variant);
 }

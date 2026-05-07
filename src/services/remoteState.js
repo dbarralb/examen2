@@ -7,7 +7,6 @@
 // What lives here:
 //   - Game timer (shared, GM-controlled)
 //   - Pulse state (shared, driven by pulseService)
-//   - Alarm / scene state (shared, driven by gameRules + gmSceneControl)
 //   - Player inventories (per-role, persisted per session)
 //   - Player boards (per-role: variant, hotspot states)
 //   - Session state (active scenario)
@@ -71,21 +70,15 @@ export function createInitialPulseState() {
 }
 
 /**
- * Shared game state — alarm system, scene flags, GM effects.
+ * Shared game state — scene flags and puzzle progress.
  * Scenario-specific puzzle state is NOT included here; it is injected
  * per scenario when the adventure content is defined.
  */
 export function createInitialGameState() {
   return {
-    alarmState: { level: 0, noise: 0, triggers: [] },
     discoveries: {},   // keyed by discovery ID, value: true
     flags: {},         // keyed by flag ID, value: true
     resonance: { value: 0, spent: 0, discoveries: {} },
-    gmSceneState: {
-      activeVariant: "normal",
-      activeEffects: [],
-      history: [],
-    },
   };
 }
 

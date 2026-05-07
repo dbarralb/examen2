@@ -4,6 +4,7 @@ import { RoleSelectScreen } from "./screens/RoleSelectScreen.jsx";
 import { WaitingScreen } from "./screens/WaitingScreen.jsx";
 import { PlayerScreen } from "./screens/PlayerScreen.jsx";
 import { GMScreen } from "./screens/GMScreen.jsx";
+import { DeviceScreen } from "./screens/DeviceScreen.jsx";
 import { GameCursor } from "./components/GameCursor.jsx";
 
 const routes = {
@@ -12,6 +13,7 @@ const routes = {
   waiting: WaitingScreen,
   player: PlayerScreen,
   gm: GMScreen,
+  device: DeviceScreen,
 };
 
 function getInitialRoute() {

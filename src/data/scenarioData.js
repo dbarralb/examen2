@@ -66,8 +66,8 @@ export const scenarios = [
     label: "Almacen",
     description: "Primer nivel: almacen del gimnasio fragmentado en realidades paralelas.",
     variants: {
-      A: { label: "Almacen A", backgroundSrc: almacenABackground, imageAspect: 4096 / 1536 },
-      B: { label: "Almacen B", backgroundSrc: almacenBBackground, imageAspect: 4096 / 1536 },
+      A: { label: "Almacen A", backgroundSrc: almacenABackground, imageAspect: 4097 / 1536 },
+      B: { label: "Almacen B", backgroundSrc: almacenBBackground, imageAspect: 4097 / 1537 },
       C: { label: "Almacen C", backgroundSrc: null, imageAspect: null },
       D: { label: "Almacen D", backgroundSrc: null, imageAspect: null },
     },

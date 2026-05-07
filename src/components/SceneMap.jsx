@@ -7,18 +7,11 @@ import { BackgroundLayer } from "./map/BackgroundLayer.jsx";
 import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
-import { getContainerOpenState, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
+import { getContainerOpenState, getHotspotDiscoveries, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
 import { getScenarioScopedTargetKey } from "../data/scenarioContent.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import resonanceRing1 from "../../assets/Pantalla de juego/Resonance/1.svg?url";
-import resonanceRing2 from "../../assets/Pantalla de juego/Resonance/2.svg?url";
-import resonanceRing3 from "../../assets/Pantalla de juego/Resonance/3.svg?url";
-import resonanceRing4 from "../../assets/Pantalla de juego/Resonance/4.svg?url";
-import resonanceRing5 from "../../assets/Pantalla de juego/Resonance/5.svg?url";
-import resonanceRing6 from "../../assets/Pantalla de juego/Resonance/6.svg?url";
-import resonanceRing7 from "../../assets/Pantalla de juego/Resonance/7.svg?url";
-import resonanceRing8 from "../../assets/Pantalla de juego/Resonance/8.svg?url";
 import resonanceSquareA from "../../assets/Pantalla de juego/Resonance/Square A.svg?url";
 import resonanceSquareB from "../../assets/Pantalla de juego/Resonance/Square B.svg?url";
 import resonanceSquareC from "../../assets/Pantalla de juego/Resonance/Square C.svg?url";
@@ -42,16 +35,7 @@ const CRITICAL_CUBE_COUNTS = {
   rising: 16,
   peak: 28,
 };
-const RESONANCE_RINGS = [
-  resonanceRing1,
-  resonanceRing2,
-  resonanceRing3,
-  resonanceRing4,
-  resonanceRing5,
-  resonanceRing6,
-  resonanceRing7,
-  resonanceRing8,
-];
+const RESONANCE_RINGS = [resonanceRing1, resonanceRing1];
 const RESONANCE_SQUARES = [resonanceSquareA, resonanceSquareB, resonanceSquareC];
 const PAN_EDGE_FAST_ZONE_WIDTH = 150;
 const PAN_EDGE_SLOW_ZONE_WIDTH = 150;
@@ -395,7 +379,7 @@ function ResonanceSpawnVFX({
       <span className="scene-resonance-spawn__hover-ring" aria-hidden="true" />
       <div className="scene-resonance-spawn__rings">
         {RESONANCE_RINGS.map((src, index) => (
-          <img key={src} src={src} alt="" className={`scene-resonance-spawn__ring scene-resonance-spawn__ring--${index + 1}`} draggable="false" />
+          <img key={index} src={src} alt="" className={`scene-resonance-spawn__ring scene-resonance-spawn__ring--${index + 1}`} draggable="false" />
         ))}
       </div>
       <div className="scene-resonance-spawn__square-mask">
@@ -1030,6 +1014,24 @@ export function SceneMap({
                   revealedSlots={revealedSlots[target.id] || []}
                   containerOpen={getContainerOpenState(target.id, gameState, scenarioId, variant)}
                 />
+                {(() => {
+                  const discoverySlots = getHotspotDiscoveries(target.id, gameState, scenarioId, variant);
+                  if (!discoverySlots.length) return null;
+                  return (
+                    <section className="scene-object-card-discoveries">
+                      {discoverySlots.map((slot) => (
+                        <div key={slot.slotKey} className={`scene-discovery-slot ${slot.unlocked ? "unlocked" : "locked"}`}>
+                          <span className="scene-discovery-slot-label">
+                            {slot.unlocked ? slot.label : "Analisis bloqueado"}
+                          </span>
+                          {slot.unlocked && (
+                            <p className="scene-discovery-slot-content">{slot.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </section>
+                  );
+                })()}
                 <section
                   className={`react-drop-slot ${isSoftwareDropExpanded ? "expanded" : ""} ${pendingAction?.target === target.id ? "loading" : ""} ${
                     dropZoneState.targetId === target.id && !pendingAction ? "staged" : ""

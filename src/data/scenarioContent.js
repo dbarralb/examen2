@@ -25,26 +25,13 @@ export const SCENARIO_ITEMS = {
   MODULE_SYNC: "MODULE_SYNC_01",
 };
 
-const LOCKER_INSPECTION_DISCOVERY = {
-  A: {
-    assetDev: "LOCKER_PADLOCK_DETAIL_VAR_A",
-    cipherName: "C%$D$%0",
-    description: "La pieza exterior tiene carcasa y arco, pero la zona de lectura esta incompleta. Hay una guia vacia donde deberia encajar un mecanismo.",
-  },
-  B: {
-    assetDev: "LOCKER_MECHANISM_DETAIL_VAR_B",
-    cipherName: "C%$D$%0",
-    description: "No ves la carcasa completa: ves el mecanismo interno. Las marcas verdes coinciden con la guia vacia de la otra realidad.",
-  },
-};
-
 const sandboxHotspots = [
   { id: "hotspot_1", label: "Hotspot 1", x: 20, y: 38, w: 9, h: 9, family: "objeto", hotspotClass: "generico" },
   { id: "hotspot_2", label: "Hotspot 2", x: 48, y: 38, w: 9, h: 9, family: "objeto", hotspotClass: "generico" },
   { id: "hotspot_3", label: "Hotspot 3", x: 76, y: 38, w: 9, h: 9, family: "objeto", hotspotClass: "generico" },
 ];
 
-const almacenHotspots = [
+const almacenHotspotsBase = [
   {
     id: "pizarra",
     label: "Pizarra",
@@ -64,6 +51,24 @@ const almacenHotspots = [
     h: 22,
     family: "contenedor",
     hotspotClass: "contenedor",
+    discoveries: [
+      {
+        slotKey: "slot0",
+        label: "Análisis del cierre",
+        contentByVariant: {
+          A: "El cierre tiene carcasa y arco, pero la zona de lectura esta incompleta. Hay una guia vacia donde deberia encajar un mecanismo interior.",
+          B: "No ves la carcasa completa: ves el mecanismo interno. Las marcas verdes coinciden con la guia vacia de la otra realidad.",
+        },
+      },
+      {
+        slotKey: "slot1",
+        label: "Fallo de mecanismo",
+        contentByVariant: {
+          A: "La llave encaja en la guia exterior, pero el mecanismo de rotacion interior no responde. Falta la pieza que lo activa desde dentro.",
+          B: "La horquilla calza en el mecanismo interior, pero sin la carcasa exterior no hay estructura para girar el cierre.",
+        },
+      },
+    ],
   },
   {
     id: "caja",
@@ -129,6 +134,48 @@ const almacenHotspots = [
   },
 ];
 
+const almacenHotspotsA = [
+  ...almacenHotspotsBase,
+  {
+    id: "llave_taquilla",
+    label: "Llave industrial",
+    x: 24,
+    y: 63,
+    w: 6,
+    h: 7,
+    family: "objeto",
+    hotspotClass: "objeto",
+    discoveries: [
+      {
+        slotKey: "slot0",
+        label: "Análisis",
+        description: "El pomo de la llave coincide con el cierre exterior de la taquilla, pero el mecanismo de rotacion no encaja completamente.",
+      },
+    ],
+  },
+];
+
+const almacenHotspotsB = [
+  ...almacenHotspotsBase,
+  {
+    id: "horquilla",
+    label: "Horquilla reforzada",
+    x: 55,
+    y: 68,
+    w: 5,
+    h: 6,
+    family: "objeto",
+    hotspotClass: "objeto",
+    discoveries: [
+      {
+        slotKey: "slot0",
+        label: "Análisis",
+        description: "La forma de la horquilla calza perfectamente en el interior del mecanismo de la taquilla. Falta la pieza exterior para completar el cierre.",
+      },
+    ],
+  },
+];
+
 const almacenItems = {
   A: {
     taquillas: [
@@ -159,6 +206,14 @@ const almacenItems = {
         content: "No todo lo que ves es real. Si se repite, desconfia.",
       },
     ],
+    llave_taquilla: [
+      {
+        id: "llave_taquilla",
+        label: "Llave de taquilla",
+        type: "usable",
+        content: "Llave industrial con un pomo de forma especifica. Encaja en el cierre exterior de la taquilla, pero algo falta para que funcione.",
+      },
+    ],
   },
   B: {
     taquillas: [
@@ -175,6 +230,14 @@ const almacenItems = {
         label: "Fragmento de codigo",
         type: "clue",
         content: "Dos cifras aparecen claras. Las otras parecen haber sido escritas en otra capa.",
+      },
+    ],
+    horquilla: [
+      {
+        id: "horquilla",
+        label: "Horquilla reforzada",
+        type: "usable",
+        content: "Horquilla metalica reforzada. No es de uso personal: su forma coincide con el mecanismo interior de la taquilla.",
       },
     ],
   },
@@ -201,7 +264,7 @@ export const scenarioContent = {
     },
   },
   almacen: {
-    hotspotsByVariant: { A: almacenHotspots, B: almacenHotspots, C: almacenHotspots, D: almacenHotspots },
+    hotspotsByVariant: { A: almacenHotspotsA, B: almacenHotspotsB, C: almacenHotspotsBase, D: almacenHotspotsBase },
     itemsByVariant: almacenItems,
     feedback: almacenFeedback,
   },
@@ -267,12 +330,32 @@ export function getScenarioTargetImage(_target, _gameState, _scenarioId, _varian
   return "";
 }
 
-export function getScenarioInspectionDiscovery(targetId, gameState = {}, scenarioId = "almacen", variant = "A") {
-  if (scenarioId !== "almacen" || targetId !== "taquillas") return null;
-  const inspected = Boolean(gameState.inspectionDiscoveries?.[getScenarioScopedTargetKey(scenarioId, variant, targetId)]);
-  if (!inspected) return null;
+// Legacy stub — discoveries are now managed by getScenarioHotspotDiscoveries.
+export function getScenarioInspectionDiscovery() {
+  return null;
+}
 
-  return LOCKER_INSPECTION_DISCOVERY[variant] || LOCKER_INSPECTION_DISCOVERY.A;
+/**
+ * Returns the discovery slots for a hotspot, with unlocked state per slot.
+ * Slot keys in Firebase: `${scenarioId}_${variant}__${targetId}__${slotKey}`
+ */
+export function getScenarioHotspotDiscoveries(targetId, gameState = {}, scenarioId = "almacen", variant = "A") {
+  const hotspot = getScenarioTarget(targetId, scenarioId, variant);
+  if (!hotspot?.discoveries?.length) return [];
+
+  return hotspot.discoveries.map((disc) => {
+    const fullSlotKey = `${getScenarioScopedTargetKey(scenarioId, variant, targetId)}__${disc.slotKey}`;
+    const unlocked = Boolean(gameState.inspectionDiscoveries?.[fullSlotKey]);
+    const description = disc.contentByVariant
+      ? (disc.contentByVariant[variant] || disc.contentByVariant.A || "")
+      : (disc.description || "");
+    return {
+      slotKey: disc.slotKey,
+      label: disc.label || "Analisis",
+      description,
+      unlocked,
+    };
+  });
 }
 
 export function getScenarioTargetStateLabel(target, gameState = {}, scenarioId = "almacen", variant = "A") {
@@ -289,7 +372,15 @@ export function getScenarioTargetStateLabel(target, gameState = {}, scenarioId =
 
 export function getScenarioContainerOpenState(targetId, gameState = {}, scenarioId = "almacen", variant = "A") {
   const target = getScenarioTarget(targetId, scenarioId, variant);
-  if (!target || target.family !== "contenedor") return null;
+  if (!target) return null;
+
+  // "objeto" hotspots with items are always accessible when selected
+  if (target.family === "objeto") {
+    const items = getScenarioTargetItems(targetId, scenarioId, variant);
+    return items.length > 0 ? true : null;
+  }
+
+  if (target.family !== "contenedor") return null;
   const state = gameState.hotspotStates?.[getScenarioScopedTargetKey(scenarioId, variant, targetId)];
   if (targetId === "taquillas") {
     return state === LOCKER_STATES.OPEN;
@@ -404,6 +495,10 @@ function setAlmacenStateForBothVariants(gameState, targetId, state) {
   }
 }
 
+function getScopedDiscoverySlotKey(scenarioId, variant, targetId, slotKey) {
+  return `${getScenarioScopedTargetKey(scenarioId, variant, targetId)}__${slotKey}`;
+}
+
 export function resolveScenarioAction(context, action, pulseFlags = {}) {
   const scenarioId = context.sessionState?.scenarioId || "almacen";
   if (scenarioId !== "almacen") {
@@ -448,7 +543,19 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
       feedback = "La taquilla acaba de estabilizarse en este pulso. Necesita una nueva interaccion para abrirse.";
       message = "La taquilla queda fusionada, pendiente de apertura.";
     } else if (lockerState === LOCKER_STATES.LOCKED && isInteraction) {
-      if (pulseFlags.canFuseLocker && consumeResonance(gameState, RESONANCE_COSTS.LOCKER_FUSION)) {
+      const hasKey = action.itemId === "llave_taquilla";
+      const hasHairpin = action.itemId === "horquilla";
+
+      if (hasKey || hasHairpin) {
+        gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot1")] = true;
+        context.lastVfxType = "spark_fusion_fail";
+        feedback = hasKey
+          ? "La llave encaja en la guia exterior, pero el mecanismo interior no responde. La anomalia temporal lo hace imposible por separado."
+          : "La horquilla calza en el mecanismo interior, pero sin la carcasa exterior el cierre no cede. Algo falta en esta realidad.";
+        message = hasKey
+          ? "La llave activa una reaccion anomala: chispas verdes y rosas aparecen en la taquilla."
+          : "La horquilla detecta la anomalia temporal: chispas verdes y rosas aparecen en la taquilla.";
+      } else if (pulseFlags.canFuseLocker && consumeResonance(gameState, RESONANCE_COSTS.LOCKER_FUSION)) {
         setAlmacenStateForBothVariants(gameState, "taquillas", LOCKER_STATES.FUSION);
         pulseFlags.lockerFusionResolvedThisPulse = true;
         gameState.flags.lockerFusionDone = true;
@@ -461,7 +568,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
       }
     } else if (isInspection) {
       const gained = addResonanceOnce(gameState, `contradiction_locker_mechanism_${actionVariant}`, 3);
-      gameState.inspectionDiscoveries[actionTargetKey] = true;
+      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot0")] = true;
       gameState.flags.contradiccionTaquillas = true;
       feedback = gained > 0
         ? "La taquilla confirma una contradiccion: A muestra el bloqueo, B muestra la logica mecanica. La resonancia aumenta."
@@ -472,6 +579,38 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     } else {
       feedback = "La taquilla no responde a esta accion. Primero conviene inspeccionarla o estabilizar su fusion.";
       message = "La taquilla sigue bloqueada.";
+    }
+  }
+
+  if (action.target === "llave_taquilla") {
+    if (isInspection) {
+      const gained = addResonanceOnce(gameState, `inspection_llave_taquilla_${actionVariant}`, 2);
+      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "llave_taquilla", "slot0")] = true;
+      feedback = gained > 0
+        ? "La llave industrial revela su proposito: su pomo encaja en el cierre exterior de la taquilla, aunque algo falta para que funcione."
+        : "La llave ya habia sido analizada. El mecanismo incompleto sigue esperando.";
+      message = gained > 0
+        ? "El equipo analiza la llave industrial y detecta su conexion con la taquilla."
+        : "La llave ya fue analizada. Sigue siendo util.";
+    } else {
+      feedback = "La llave necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
+      message = `${action.role} examina la llave sin objetivo claro.`;
+    }
+  }
+
+  if (action.target === "horquilla") {
+    if (isInspection) {
+      const gained = addResonanceOnce(gameState, `inspection_horquilla_${actionVariant}`, 2);
+      gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "horquilla", "slot0")] = true;
+      feedback = gained > 0
+        ? "La horquilla reforzada calza perfectamente en el mecanismo interior de la taquilla. Falta la pieza exterior para completar el cierre."
+        : "La horquilla ya habia sido analizada. Sigue siendo la clave del mecanismo interior.";
+      message = gained > 0
+        ? "El equipo analiza la horquilla y detecta su conexion con el mecanismo interior de la taquilla."
+        : "La horquilla ya fue analizada. Sigue siendo util.";
+    } else {
+      feedback = "La horquilla necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
+      message = `${action.role} examina la horquilla sin objetivo claro.`;
     }
   }
 

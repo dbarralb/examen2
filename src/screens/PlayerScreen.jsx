@@ -64,6 +64,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     playerInventoryForRole,
     playerBoardForRole,
     hotspotOverrides,
+    fusionSession,
   ] = await Promise.all([
     firebaseGet("session"),
     firebaseGet("gameState"),
@@ -78,6 +79,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     firebaseGet(`playerInventories/${roleId}`),
     firebaseGet(`playerBoards/${roleId}`),
     firebaseGet("hotspotOverrides"),
+    firebaseGet("fusionSession"),
   ]);
 
   return {
@@ -94,6 +96,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     playerInventories: { [roleId]: playerInventoryForRole || {} },
     playerBoards: { [roleId]: playerBoardForRole || {} },
     hotspotOverrides,
+    fusionSession,
   };
 }
 
@@ -161,7 +164,15 @@ export function PlayerScreen({ navigation, params }) {
   const [actionInfoState, setActionInfoState] = useState({ status: "idle", cardId: null, info: null });
   const [resonanceSpawn, setResonanceSpawn] = useState(null);
   const [resonanceCollectState, setResonanceCollectState] = useState("idle");
+  const [notifications, setNotifications] = useState([]);
+  const [sparkVfxActive, setSparkVfxActive] = useState(false);
+  const [fusionVfxActive, setFusionVfxActive] = useState(false);
   const prevGameStateRef = useRef(null);
+  const prevActionResultIdRef = useRef(null);
+  const prevFusionStatusRef = useRef(null);
+  const sparkVfxTimerRef = useRef(null);
+  const fusionVfxTimerRef = useRef(null);
+  const notifDismissTimersRef = useRef([]);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
   const successCloseTimerRef = useRef(null);
@@ -181,6 +192,7 @@ export function PlayerScreen({ navigation, params }) {
   const lastPublishedViewSignatureRef = useRef("");
 
   const session = remoteState?.session || {};
+  const fusionSession = remoteState?.fusionSession || null;
   const gameState = { ...createInitialGameState(), ...(remoteState?.gameState || {}) };
   const remoteTargetFeedback = remoteState?.targetFeedback || {};
   const pulseState = remoteState?.pulseState || {};
@@ -306,7 +318,7 @@ export function PlayerScreen({ navigation, params }) {
   useEffect(() => {
     const prev = prevGameStateRef.current;
     if (!prev) {
-      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, gmSceneState: gameState.gmSceneState };
+      prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage };
       return;
     }
 
@@ -331,17 +343,6 @@ export function PlayerScreen({ navigation, params }) {
       if (val !== prevDisc[key]) logEvent(`discovery.${key}: ${val}`);
     }
 
-    // ── gameState.alarmState ──
-    const alarm = gameState.alarmState || {};
-    const prevAlarm = prev.gameState.alarmState || {};
-    if (alarm.level !== prevAlarm.level) logEvent(`alarm.level: ${prevAlarm.level ?? 0} → ${alarm.level}`);
-    if (alarm.noise !== prevAlarm.noise) logEvent(`alarm.noise: ${prevAlarm.noise ?? 0} → ${alarm.noise}`);
-    const prevTriggers = Array.isArray(prevAlarm.triggers) ? prevAlarm.triggers : [];
-    const nextTriggers = Array.isArray(alarm.triggers) ? alarm.triggers : [];
-    if (nextTriggers.length > prevTriggers.length) {
-      nextTriggers.slice(prevTriggers.length).forEach((t) => logEvent(`alarm.trigger: ${t}`));
-    }
-
     // ── gameState.failedAttempts ──
     if ((gameState.failedAttempts || 0) !== (prev.gameState.failedAttempts || 0)) {
       logEvent(`failedAttempts: ${prev.gameState.failedAttempts ?? 0} → ${gameState.failedAttempts}`);
@@ -363,22 +364,7 @@ export function PlayerScreen({ navigation, params }) {
       }
     }
 
-    // ── gmSceneState — efectos activos ──
-    const gmScene = gameState.gmSceneState || {};
-    const prevGmScene = prev.gmSceneState || {};
-    const activeEffects = Array.isArray(gmScene.activeEffects) ? gmScene.activeEffects : [];
-    const prevEffects = Array.isArray(prevGmScene.activeEffects) ? prevGmScene.activeEffects : [];
-    for (const fx of activeEffects) {
-      if (!prevEffects.includes(fx)) logEvent(`gmScene.+${fx}`);
-    }
-    for (const fx of prevEffects) {
-      if (!activeEffects.includes(fx)) logEvent(`gmScene.-${fx}`);
-    }
-    if ((gmScene.activeVariant || "normal") !== (prevGmScene.activeVariant || "normal")) {
-      logEvent(`gmScene.variant: ${prevGmScene.activeVariant ?? "normal"} → ${gmScene.activeVariant}`);
-    }
-
-    prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, pulseState, gmSceneState: gameState.gmSceneState };
+    prevGameStateRef.current = { gameState, actionLog, allCardUsage: remoteState?.cardUsage, pulseState };
   }); // intentionally no dep array — runs after every render to diff state
 
   // null = not a container; true = open; false = closed
@@ -434,9 +420,47 @@ export function PlayerScreen({ navigation, params }) {
     return () => {
       window.clearTimeout(successCloseTimerRef.current);
       window.clearTimeout(viewPublishTimerRef.current);
+      window.clearTimeout(sparkVfxTimerRef.current);
+      window.clearTimeout(fusionVfxTimerRef.current);
+      notifDismissTimersRef.current.forEach(clearTimeout);
       window.removeEventListener("dragend", handleDragEnd);
     };
   }, []);
+
+  useEffect(() => {
+    const status = fusionSession?.status;
+    if (status === "success" && prevFusionStatusRef.current !== "success" && !isGmMonitorView) {
+      prevFusionStatusRef.current = "success";
+      setFusionVfxActive(true);
+      window.clearTimeout(fusionVfxTimerRef.current);
+      fusionVfxTimerRef.current = window.setTimeout(() => setFusionVfxActive(false), 4000);
+    } else if (status !== "success") {
+      prevFusionStatusRef.current = status || null;
+    }
+  }, [fusionSession?.status, isGmMonitorView]);
+
+  useEffect(() => {
+    const result = pulseState.currentActionResult;
+    if (!result?.visible || !result?.actionId) return;
+    if (result.actionId === prevActionResultIdRef.current) return;
+    prevActionResultIdRef.current = result.actionId;
+
+    if (result.variant && result.variant !== boardVariant) return;
+
+    const notif = { id: result.actionId, text: result.message, player: result.player || result.role, createdAt: Date.now() };
+    setNotifications((prev) => [...prev.slice(-2), notif]);
+
+    if (result.vfxType === "spark_fusion_fail" && !isGmMonitorView) {
+      window.clearTimeout(sparkVfxTimerRef.current);
+      setSparkVfxActive(true);
+      sparkVfxTimerRef.current = window.setTimeout(() => setSparkVfxActive(false), 2500);
+    }
+
+    const timer = window.setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== result.actionId));
+    }, 8000);
+    notifDismissTimersRef.current.push(timer);
+  }, [pulseState.currentActionResult, boardVariant, isGmMonitorView]);
 
   useEffect(() => {
     if (remoteInventorySlots) {
@@ -835,41 +859,9 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
-  // Firebase strips empty arrays → normalize to safe defaults
-  const rawGmScene = gameState.gmSceneState || {};
-  const gmActiveEffects = Array.isArray(rawGmScene.activeEffects) ? rawGmScene.activeEffects : [];
-  const gmVariant = rawGmScene.activeVariant || "normal";
-  const hasRedLight = gmActiveEffects.includes("red_light_overlay");
-  const hasSystemInterference = gmActiveEffects.includes("system_interference");
-  const hasCameraTracking = gmActiveEffects.includes("camera_tracking");
-  const hasExitLocked = gmActiveEffects.includes("exit_temporarily_locked");
-  const isContainment = gmVariant === "containment" || gmActiveEffects.includes("containment_mode");
-
   return (
-    <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""} ${isContainment ? "gm-variant-containment" : ""}`}>
+    <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
       <section className="player-scene-preview player-scene-live">
-        {/* GM scene state overlays — only GM triggers these */}
-        {hasRedLight && <div className="react-alarm-overlay react-alarm-overlay-red" aria-label="Alarma activa" />}
-        {hasSystemInterference && (
-          <div className="gm-system-interference" aria-live="assertive">
-            <span>[SISTEMA] Interferencia detectada. Acceso restringido.</span>
-          </div>
-        )}
-        {hasCameraTracking && (
-          <div className="gm-camera-tracking-badge" aria-label="Cámara en seguimiento">
-            REC ●
-          </div>
-        )}
-        {hasExitLocked && (
-          <div className="gm-door-locked-badge" aria-label="Salida bloqueada">
-            SALIDA BLOQUEADA
-          </div>
-        )}
-        {isContainment && (
-          <div className="gm-containment-overlay" aria-live="assertive">
-            <span>MODO CONTENCIÓN ACTIVADO</span>
-          </div>
-        )}
         <div className="player-topbar">
           <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
@@ -926,6 +918,41 @@ export function PlayerScreen({ navigation, params }) {
           onResonanceHoverStart={isGmMonitorView ? undefined : handleResonanceHoverStart}
           onResonanceHoverEnd={isGmMonitorView ? undefined : handleResonanceHoverEnd}
         />
+        {!isGmMonitorView && notifications.length > 0 && (
+          <div className="player-notifications-stack" aria-live="polite" aria-atomic="false">
+            {notifications.map((notif) => (
+              <div key={notif.id} className="player-notification">
+                <span className="player-notification-text">{notif.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {!isGmMonitorView && sparkVfxActive && (
+          <div className="player-spark-vfx" aria-hidden="true">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <span key={i} className={`player-spark-particle player-spark-particle--${i % 2 === 0 ? "green" : "magenta"}`} />
+            ))}
+          </div>
+        )}
+        {!isGmMonitorView && fusionVfxActive && (
+          <div className="player-fusion-overlay" aria-live="assertive">
+            <div className="player-fusion-glow" />
+            <p className="player-fusion-text">REALIDADES<br />FUSIONADAS</p>
+            {Array.from({ length: 20 }).map((_, i) => {
+              const angle = (i / 20) * 360;
+              const dist = 80 + Math.random() * 80;
+              const dx = Math.cos((angle * Math.PI) / 180) * dist;
+              const dy = Math.sin((angle * Math.PI) / 180) * dist;
+              return (
+                <span
+                  key={i}
+                  className={`player-fusion-particle player-fusion-particle--${i % 2 === 0 ? "green" : "purple"}`}
+                  style={{ "--dx": `${dx}px`, "--dy": `${dy}px`, animationDelay: `${(i / 20) * 0.4}s` }}
+                />
+              );
+            })}
+          </div>
+        )}
         {!isGmMonitorView && (
           <div className="scene-action-zone">
             <div

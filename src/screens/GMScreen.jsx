@@ -11,8 +11,6 @@ import { applyScenarioHotspotOverrides, getScenarioHotspotOverrideKey, getScenar
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import { firebasePatch } from "../services/firebaseClient.js";
 import { forceStartGameWithReadyPlayers, getRemoteState, resetGame, startGame } from "../services/gmService.js";
-import { getAlarmRecommendations } from "../services/gameRules.js";
-import { gmSceneEffects, toggleSceneEffect } from "../services/gmSceneControl.js";
 import { ensureNextPulseScheduled, startManualPulse, triggerAutoPulseIfDue } from "../services/pulseService.js";
 import { filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { formatPulseCountdown, getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
@@ -29,6 +27,11 @@ function getMonitorSrc(roleId) {
   });
 
   return `${window.location.pathname}?${params.toString()}`;
+}
+
+function getDeviceUrl(roleId) {
+  const params = new URLSearchParams({ screen: "device", role: roleId });
+  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 }
 
 function getActionSummary(action) {
@@ -117,8 +120,9 @@ export function GMScreen() {
     catch { return {}; }
   });
   const [monitorsExpanded, setMonitorsExpanded] = useState(false);
-  const [sceneControlExpanded, setSceneControlExpanded] = useState(false);
+  const [devicesExpanded, setDevicesExpanded] = useState(false);
   const [technicalFlowExpanded, setTechnicalFlowExpanded] = useState(false);
+  const [fusionHotspot, setFusionHotspot] = useState("taquillas");
 
   const session = remoteState?.session || {};
   const sessionState = remoteState?.sessionState || {};
@@ -147,25 +151,6 @@ export function GMScreen() {
   const gameState = remoteState?.gameState || {};
   const readyPlayerCount = Object.values(remoteState?.lobby?.roleClaims || {}).filter(Boolean).length;
 
-  // Firebase strips empty arrays — normalize to safe defaults
-  const rawGmScene = gameState.gmSceneState || {};
-  const gmSceneState = {
-    activeVariant: rawGmScene.activeVariant || "normal",
-    activeEffects: Array.isArray(rawGmScene.activeEffects) ? rawGmScene.activeEffects : [],
-    history: Array.isArray(rawGmScene.history) ? rawGmScene.history : [],
-  };
-  const rawAlarm = gameState.alarmState || {};
-  const alarmState = {
-    level: rawAlarm.level ?? 0,
-    noise: rawAlarm.noise ?? 0,
-    triggers: Array.isArray(rawAlarm.triggers) ? rawAlarm.triggers : [],
-  };
-  const flags = gameState.flags || {};
-  const alarmRecommendations = useMemo(
-    () => getAlarmRecommendations(gameState),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [alarmState.level, alarmState.noise],
-  );
 
   // Reset drawing state when switching hotspot or variant
   useEffect(() => {
@@ -637,13 +622,42 @@ export function GMScreen() {
     }
   }
 
-  async function handleToggleSceneEffect(effectId) {
+  async function handleSetGraphType(roleId, graphType) {
     try {
-      await toggleSceneEffect(effectId, "GM activó desde panel de escenario");
-      setStatusMessage(`Efecto de escena actualizado: ${effectId}`);
+      await firebasePatch(`deviceConfig/${roleId}`, { graphType });
+      setStatusMessage(`Grafo ${graphType} → ${roleId}.`);
+    } catch {
+      setStatusMessage("No se pudo cambiar el grafo.");
+    }
+  }
+
+  async function handleStartFusion() {
+    if (!fusionHotspot) return;
+    try {
+      const id = Date.now().toString();
+      await firebasePatch("fusionSession", {
+        id,
+        hotspot: fusionHotspot,
+        status: "pending",
+        variantA: { ready: false, completedAt: null },
+        variantB: { ready: false, completedAt: null },
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 120000,
+      });
+      setStatusMessage(`Fusion iniciada: ${fusionHotspot}.`);
       await refresh();
     } catch {
-      setStatusMessage("No se pudo actualizar el efecto de escena.");
+      setStatusMessage("No se pudo iniciar la fusion.");
+    }
+  }
+
+  async function handleCancelFusion() {
+    try {
+      await firebasePatch("fusionSession", { status: "cancelled" });
+      setStatusMessage("Fusion cancelada.");
+      await refresh();
+    } catch {
+      setStatusMessage("No se pudo cancelar la fusion.");
     }
   }
 
@@ -690,6 +704,131 @@ export function GMScreen() {
                 </article>
               );
             })}
+          </section>
+        )}
+      </div>
+
+      {/* ---- Dispositivos de jugadores ---- */}
+      <div className="react-gm-monitors-collapsible">
+        <button
+          className={`react-gm-monitors-toggle ${devicesExpanded ? "expanded" : ""}`}
+          onClick={() => setDevicesExpanded((v) => !v)}
+          aria-expanded={devicesExpanded}
+        >
+          <span>Dispositivos de jugadores</span>
+          <span className="react-gm-monitors-toggle-badges">
+            {playerRoles.map((role) => {
+              const queued = queuedActions.find(
+                (a) => a.role === role.id && ["queued", "executing"].includes(a.status || "queued"),
+              );
+              return (
+                <NBadge key={role.id} status={queued ? "success" : "muted"}>
+                  {role.label.split(" ").pop()}
+                </NBadge>
+              );
+            })}
+          </span>
+          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{devicesExpanded ? "▲" : "▼"}</span>
+        </button>
+        {devicesExpanded && (
+          <section className="gm-devices-panel" aria-label="URLs de dispositivos">
+            {playerRoles.map((role) => {
+              const variant = remoteState?.playerBoards?.[role.id]?.variant || "A";
+              const url = getDeviceUrl(role.id);
+              const queued = queuedActions.find(
+                (a) => a.role === role.id && ["queued", "executing"].includes(a.status || "queued"),
+              );
+              return (
+                <div key={role.id} className="gm-device-card">
+                  <div className="gm-device-card-header">
+                    <strong>{role.label}</strong>
+                    <NBadge status="muted">Realidad {variant}</NBadge>
+                    {queued && <NBadge status="success">Accion en cola</NBadge>}
+                  </div>
+                  <div className="gm-device-url-row">
+                    <code className="gm-device-url">{url}</code>
+                    <button
+                      type="button"
+                      className="gm-device-copy-btn"
+                      onClick={() => navigator.clipboard.writeText(url)}
+                      title="Copiar URL"
+                    >
+                      Copiar
+                    </button>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="gm-device-open-btn"
+                    >
+                      Abrir
+                    </a>
+                  </div>
+                  {queued && (
+                    <p className="gm-device-queued">
+                      {queued.card} → {queued.target}
+                    </p>
+                  )}
+                  <div className="gm-device-graph-row">
+                    <span>Grafo:</span>
+                    <select
+                      className="gm-device-graph-select"
+                      value={remoteState?.deviceConfig?.[role.id]?.graphType || "random"}
+                      onChange={(e) => handleSetGraphType(role.id, e.target.value)}
+                    >
+                      <option value="random">Aleatorio</option>
+                      <option value="inspection">Inspeccion</option>
+                      <option value="interaction">Interaccion</option>
+                    </select>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* ── Fusion de Realidades ── */}
+            <div className="gm-fusion-zone">
+              <h3>Fusion de Realidades</h3>
+              {remoteState?.fusionSession?.status === "pending" ? (
+                <div className="gm-fusion-status">
+                  <span>Objetivo: <strong>{remoteState.fusionSession.hotspot}</strong></span>
+                  <span className={remoteState.fusionSession.variantA?.ready ? "gm-fusion-ready" : ""}>
+                    Variante A: {remoteState.fusionSession.variantA?.ready ? "Lista ✓" : "Esperando..."}
+                  </span>
+                  <span className={remoteState.fusionSession.variantB?.ready ? "gm-fusion-ready" : ""}>
+                    Variante B: {remoteState.fusionSession.variantB?.ready ? "Lista ✓" : "Esperando..."}
+                  </span>
+                  <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
+                    Cancelar Fusion
+                  </button>
+                </div>
+              ) : remoteState?.fusionSession?.status === "success" ? (
+                <div className="gm-fusion-status">
+                  <span className="gm-fusion-ready">Fusion completada: {remoteState.fusionSession.hotspot} ✓</span>
+                  <button type="button" className="gm-fusion-cancel-btn" onClick={handleCancelFusion}>
+                    Resetear
+                  </button>
+                </div>
+              ) : (
+                <div className="gm-fusion-controls">
+                  <select
+                    className="gm-fusion-select"
+                    value={fusionHotspot}
+                    onChange={(e) => setFusionHotspot(e.target.value)}
+                  >
+                    <option value="taquillas">Taquillas</option>
+                    <option value="ordenador">Ordenador</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="gm-fusion-start-btn"
+                    disabled={!fusionHotspot || session.status !== "in_game"}
+                    onClick={handleStartFusion}
+                  >
+                    Iniciar Fusion
+                  </button>
+                </div>
+              )}
+            </div>
           </section>
         )}
       </div>
@@ -1203,101 +1342,6 @@ export function GMScreen() {
         </NCard>
       </section>
 
-      {/* ---- Control de Escenario (alarma + efectos GM) ---- */}
-      <div className="react-gm-monitors-collapsible">
-        <button
-          className={`react-gm-monitors-toggle ${sceneControlExpanded ? "expanded" : ""}`}
-          onClick={() => setSceneControlExpanded((v) => !v)}
-          aria-expanded={sceneControlExpanded}
-        >
-          <span>Control de Escenario</span>
-          <span className="react-gm-monitors-toggle-badges">
-            <NBadge status={alarmState.level === 0 ? "muted" : alarmState.level >= 3 ? "danger" : "warning"}>
-              Alarma {alarmState.level}
-            </NBadge>
-            {gmSceneState.activeEffects.length > 0 && (
-              <NBadge status="warning">
-                {gmSceneState.activeEffects.length} efecto{gmSceneState.activeEffects.length > 1 ? "s" : ""} activo{gmSceneState.activeEffects.length > 1 ? "s" : ""}
-              </NBadge>
-            )}
-          </span>
-          <span className="react-gm-monitors-toggle-arrow" aria-hidden="true">{sceneControlExpanded ? "▲" : "▼"}</span>
-        </button>
-        {sceneControlExpanded && (
-          <section className="react-gm-scene-control" aria-label="Control de escenario">
-            {/* Métricas de alarma */}
-            <div className="gm-scene-metrics">
-              <div className="gm-scene-metric">
-                <strong>Nivel de alarma:</strong>
-                <NBadge status={alarmState.level === 0 ? "success" : alarmState.level >= 3 ? "danger" : "warning"}>
-                  {alarmState.level} — {["normal", "sospecha", "alarma", "contencion"][alarmState.level] || "?"}
-                </NBadge>
-              </div>
-              <div className="gm-scene-metric">
-                <strong>Ruido acumulado:</strong> {alarmState.noise}
-              </div>
-              {alarmState.triggers?.length > 0 && (
-                <div className="gm-scene-metric">
-                  <strong>Últimos triggers:</strong>
-                  <span>{alarmState.triggers.slice(-5).join(", ")}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Flags activos */}
-            {Object.keys(flags).length > 0 && (
-              <div className="gm-scene-flags">
-                <strong>Flags activos:</strong>
-                {Object.entries(flags).filter(([, v]) => v === true).map(([key]) => (
-                  <NBadge key={key} status="success">{key}</NBadge>
-                ))}
-              </div>
-            )}
-
-            {/* Recomendaciones */}
-            {alarmRecommendations.length > 0 && (
-              <div className="gm-scene-recommendations">
-                <strong>Recomendaciones:</strong>
-                {alarmRecommendations.map((rec) => (
-                  <div key={rec.id} className="gm-scene-rec">
-                    <span>{rec.label}</span>
-                    <small>{rec.reason}</small>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Efectos de escena */}
-            <div className="gm-scene-effects">
-              <strong>Efectos de escena:</strong>
-              <div className="button-row">
-                {gmSceneEffects.map((effect) => {
-                  const isActive = gmSceneState.activeEffects.includes(effect.id);
-                  return (
-                    <button
-                      key={effect.id}
-                      type="button"
-                      className={`gm-effect-btn ${isActive ? "active" : ""}`}
-                      title={effect.description}
-                      onClick={() => handleToggleSceneEffect(effect.id)}
-                    >
-                      {isActive ? "✓ " : ""}{effect.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Variante de escena GM */}
-            <div className="gm-scene-metric">
-              <strong>Variante activa:</strong>
-              <NBadge status={gmSceneState.activeVariant === "normal" ? "muted" : "warning"}>
-                {gmSceneState.activeVariant}
-              </NBadge>
-            </div>
-          </section>
-        )}
-      </div>
     </main>
   );
 }

@@ -68,7 +68,7 @@ function createPulseResultOverlay(message, action, now = Date.now()) {
   };
 }
 
-function createCurrentActionResult(action, message, now = Date.now()) {
+function createCurrentActionResult(action, message, vfxType = null, now = Date.now()) {
   return {
     visible: true,
     actionId: action?.id || null,
@@ -81,6 +81,7 @@ function createCurrentActionResult(action, message, now = Date.now()) {
     endsAt: now + PULSE_TIMING.resultDisplaySeconds * 1000,
     scenarioId: action?.scenarioId || null,
     variant: action?.variant || null,
+    vfxType: vfxType || null,
   };
 }
 
@@ -227,6 +228,7 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       metricsDelta: {},
       sessionState,
       playerBoards,
+      lastVfxType: null,
     };
     const pulseFlags = buildPulseFlags(pulseActions, gameState);
 
@@ -265,6 +267,8 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
 
       const resultMessage = resolveActionWithResult(context, liveAction, pulseFlags);
       const resolvedAt = Date.now();
+      const vfxType = context.lastVfxType || null;
+      context.lastVfxType = null;
       lastRoleDebug = context.lastRoleDebug;
       liveAction.status = "resolved";
       liveAction.resolvedAt = resolvedAt;
@@ -273,7 +277,7 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       pulseState = {
         ...pulseState,
         resultOverlay: createPulseResultOverlay(resultMessage, liveAction, resolvedAt),
-        currentActionResult: createCurrentActionResult(liveAction, resultMessage, resolvedAt),
+        currentActionResult: createCurrentActionResult(liveAction, resultMessage, vfxType, resolvedAt),
         updatedAt: resolvedAt,
       };
 
