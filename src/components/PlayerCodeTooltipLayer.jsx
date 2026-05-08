@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const TYPE_INTERVAL_MS = 24;
 
@@ -54,11 +54,39 @@ function useTypedLine(text, isActive, reducedMotion, delayMs = 0) {
 }
 
 export function CodexGuideOverlay({ tooltip, onClose, confirmLabel = "Cerrar", durationMs = 10000 }) {
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef(null);
+  const elapsedRef = useRef(0);
+  const startTimeRef = useRef(null);
+
+  const schedule = useCallback((remaining) => {
+    window.clearTimeout(timerRef.current);
+    startTimeRef.current = Date.now();
+    timerRef.current = window.setTimeout(() => onClose?.(), remaining);
+  }, [onClose]);
+
   useEffect(() => {
     if (!tooltip) return undefined;
-    const timerId = window.setTimeout(() => onClose?.(), durationMs);
-    return () => window.clearTimeout(timerId);
-  }, [durationMs, onClose, tooltip]);
+    elapsedRef.current = 0;
+    setPaused(false);
+    schedule(durationMs);
+    return () => window.clearTimeout(timerRef.current);
+  }, [tooltip, durationMs, schedule]);
+
+  const handleMouseEnter = useCallback(() => {
+    if (startTimeRef.current !== null) {
+      elapsedRef.current += Date.now() - startTimeRef.current;
+      startTimeRef.current = null;
+    }
+    window.clearTimeout(timerRef.current);
+    setPaused(true);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    const remaining = Math.max(0, durationMs - elapsedRef.current);
+    schedule(remaining);
+    setPaused(false);
+  }, [durationMs, schedule]);
 
   if (!tooltip) return null;
 
@@ -70,11 +98,17 @@ export function CodexGuideOverlay({ tooltip, onClose, confirmLabel = "Cerrar", d
       aria-labelledby="codex-guide-title"
       style={{ "--guide-duration": `${durationMs}ms` }}
     >
-      <div className="codex-guide-placeholder">
+      <div
+        className={`codex-guide-placeholder${paused ? " is-paused" : ""}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div className="codex-guide-progress" aria-hidden="true" />
-        <span className="codex-guide-kicker">codex://guia</span>
         <h2 id="codex-guide-title">{tooltip.title}</h2>
         <p>{tooltip.text}</p>
+        {tooltip.hint && (
+          <p className="codex-guide-hint">{tooltip.hint}</p>
+        )}
         <button type="button" className="codex-guide-close" onClick={onClose}>{confirmLabel}</button>
       </div>
     </div>
@@ -107,12 +141,15 @@ export function HistoryGlyph({ className = "" }) {
 
 export function PlayerCodeTooltipLayer({ tooltip, expanded = false, unread = false, onOpen, onAbout }) {
   const reducedMotion = usePrefersReducedMotion();
-  const titleLine = useMemo(() => (tooltip ? `codex:// ${tooltip.title.toLowerCase().replace(/\s+/g, "_")}` : ""), [tooltip]);
+  const titleLine = useMemo(() => (tooltip ? tooltip.title : ""), [tooltip]);
   const descriptionLine = useMemo(() => (tooltip ? `// ${tooltip.text}` : ""), [tooltip]);
+  const hintLine = useMemo(() => (tooltip?.hint ? `// sistema: ${tooltip.hint}` : ""), [tooltip]);
   const typedTitle = useTypedLine(titleLine, Boolean(tooltip && expanded), reducedMotion);
   const titleDone = typedTitle.length >= titleLine.length;
   const typedDescription = useTypedLine(descriptionLine, titleDone, reducedMotion, 120);
   const descriptionDone = typedDescription.length >= descriptionLine.length;
+  const typedHint = useTypedLine(hintLine, descriptionDone && Boolean(hintLine), reducedMotion, 80);
+  const hintDone = !hintLine || typedHint.length >= hintLine.length;
 
   if (!expanded) {
     return (
@@ -142,9 +179,15 @@ export function PlayerCodeTooltipLayer({ tooltip, expanded = false, unread = fal
           <span>{typedDescription}</span>
           {titleDone && !descriptionDone && <span className="player-code-tooltip__cursor" />}
         </p>
+        {tooltip.hint && (
+          <p className="player-code-tooltip__line player-code-tooltip__line--hint" aria-hidden="true">
+            <span>{typedHint}</span>
+            {descriptionDone && !hintDone && <span className="player-code-tooltip__cursor" />}
+          </p>
+        )}
         <button
           type="button"
-          className={`player-code-tooltip__about ${descriptionDone ? "is-visible" : ""}`}
+          className={`player-code-tooltip__about ${hintDone ? "is-visible" : ""}`}
           onClick={onAbout}
         >
           [ Acerca de... ]

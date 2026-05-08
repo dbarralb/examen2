@@ -9289,6 +9289,11 @@ select {
   color: rgba(207, 235, 255, 0.72);
 }
 
+.player-code-tooltip__line--hint {
+  color: rgba(0, 255, 135, 0.38);
+  font-size: 11px;
+}
+
 .player-code-tooltip__cursor {
   display: inline-block;
   width: 7px;
@@ -9924,17 +9929,18 @@ select {
   inset: 0;
   z-index: 208;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 112px 24px 24px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 24px 24px 32px;
   background: transparent;
   pointer-events: none;
 }
 
 .codex-guide-placeholder {
   position: relative;
-  width: min(620px, calc(100vw - 48px));
+  width: min(300px, calc(100vw - 64px));
   border: 1px solid rgba(0, 255, 135, 0.24);
+  border-radius: 4px;
   padding: 18px 18px 16px;
   background: rgba(5, 10, 18, 0.92);
   box-shadow:
@@ -9959,6 +9965,12 @@ select {
   animation: codex-guide-progress-drain var(--guide-duration, 10000ms) linear forwards;
 }
 
+.codex-guide-placeholder.is-paused .codex-guide-progress {
+  animation-play-state: paused;
+  background: linear-gradient(90deg, rgba(255, 210, 0, 0.92), rgba(255, 165, 0, 0.78));
+  box-shadow: 0 0 12px rgba(255, 200, 0, 0.38);
+}
+
 @keyframes codex-guide-progress-drain {
   from {
     transform: scaleX(1);
@@ -9978,7 +9990,7 @@ select {
 .codex-guide-placeholder h2 {
   margin: 0 0 10px;
   color: rgba(255, 255, 255, 0.94);
-  font-size: 22px;
+  font-size: 17px;
   letter-spacing: 0;
 }
 
@@ -9986,6 +9998,21 @@ select {
   margin: 0 0 18px;
   color: rgba(207, 235, 255, 0.72);
   line-height: 1.5;
+}
+
+.codex-guide-hint {
+  margin: 0 0 16px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 255, 135, 0.1);
+  color: rgba(0, 255, 135, 0.48);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.codex-guide-hint::before {
+  content: "// ";
+  opacity: 0.6;
 }
 
 .codex-guide-close {

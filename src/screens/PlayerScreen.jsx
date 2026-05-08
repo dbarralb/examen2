@@ -36,7 +36,7 @@ const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
 const PLAYER_TOOLTIP_STORAGE_PREFIX = "elExamen2.playerTooltips";
 const PLAYER_TOOLTIP_HISTORY_PREFIX = "elExamen2.playerTooltipHistory";
 const PULSE_SUMMARY_STORAGE_PREFIX = "elExamen2.pulseSummarySeen";
-const PLAYER_TOOLTIP_VISIBLE_MS = 10000;
+const PLAYER_TOOLTIP_VISIBLE_MS = 20000;
 const PLAYER_TOOLTIP_GAP_MS = 3000;
 const TOOLTIP_CONFIRM_LABELS = [
   "Vale, okeey",
@@ -261,6 +261,7 @@ export function PlayerScreen({ navigation, params }) {
   const [chatMode, setChatMode] = useState("reading");
   const [chatText, setChatText] = useState("");
   const [dismissedPulseSummaryId, setDismissedPulseSummaryId] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const prevGameStateRef = useRef(null);
   const prevActionResultIdRef = useRef(null);
   const prevFusionStatusRef = useRef(null);
@@ -346,7 +347,6 @@ export function PlayerScreen({ navigation, params }) {
   const sharedResonance = gameState.sharedResonance || gameState.resonanceByVariant?.[boardVariant] || gameState.resonance || { value: 0, spent: 0, discoveries: {} };
   const variantResonance = sharedResonance;
   const resonanceValue = Number(sharedResonance.value || 0);
-  const elapsedSeconds = getGameTimerElapsedSeconds(session.gameTimer);
   const deviceSessionCode = getRoleSessionCode(session, role.id) || getStoredSessionCode();
   const playerDeviceUrl = getDeviceUrl(role.id, { code: deviceSessionCode });
   const tooltipStorageScope = `${getStoredSessionCode() || session.accessCode || "local"}:${role.id}:${boardScenarioId}:${boardVariant}`;
@@ -544,6 +544,16 @@ export function PlayerScreen({ navigation, params }) {
   useEffect(() => {
     setDismissedPulseSummaryId(readSeenPulseSummaryId(pulseSummaryStorageScope));
   }, [pulseSummaryStorageScope]);
+
+  useEffect(() => {
+    const clockTimer = window.setInterval(() => {
+      setElapsedSeconds((current) => {
+        const gameTimer = remoteState?.session?.gameTimer;
+        return gameTimer?.status === "running" ? getGameTimerElapsedSeconds(gameTimer) : current;
+      });
+    }, 500);
+    return () => window.clearInterval(clockTimer);
+  }, [remoteState?.session?.gameTimer]);
 
   useEffect(() => {
     if (!pulseSummaryVisible) {
@@ -1211,7 +1221,7 @@ export function PlayerScreen({ navigation, params }) {
         {!isGmMonitorView && (
           <CodexGuideOverlay
             tooltip={activeGuideTooltip || codexGuideTooltip}
-            durationMs={activeGuideTooltip ? PLAYER_TOOLTIP_VISIBLE_MS : 10000}
+            durationMs={activeGuideTooltip ? PLAYER_TOOLTIP_VISIBLE_MS : 20000}
             confirmLabel={activeGuideTooltip ? TOOLTIP_CONFIRM_LABELS[tooltipConfirmIndex % TOOLTIP_CONFIRM_LABELS.length] : "Cerrar"}
             onClose={activeGuideTooltip ? closeActiveGuideTooltip : () => setCodexGuideTooltip(null)}
           />
