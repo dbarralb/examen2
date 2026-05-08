@@ -1,6 +1,6 @@
 # Estado del Proyecto - El Examen II
 
-**Fecha de ultima actualizacion:** 2026-05-07
+**Fecha de ultima actualizacion:** 2026-05-08
 **Rama activa:** `react-oficial`
 **Historico:** `docs/OLD`
 
@@ -45,6 +45,9 @@
 - [x] UI de bateria/carga en chips y panel GM
 - [x] Historial de tooltips de jugador con iconos de notificacion
 - [x] Tooltips convertidos en overlays superiores no bloqueantes con confirmacion, autocierre y barra de progreso
+- [x] Pantalla de jugador migrada a escena de mapa a pantalla completa, sin frame exterior visible
+- [x] QR del terminal movil migrado a icono lateral dentro de la escena
+- [x] Contador de resonancia reubicado junto a la onda de anomalia
 - [x] Fusion de taquillas activada por jugadores desde movil; boton GM mantenido como debug
 - [x] Apertura de taquilla fusionada exige usar la llave
 - [x] Optimizacion inicial web de jugador: mapas responsive, polling parcial, menos renders y menor frecuencia de `playerViews`
@@ -64,6 +67,8 @@
 - [ ] Mover el codigo GM (`delfin`) a variable de entorno/configuracion antes de una prueba publica
 - [ ] Revisar seguridad real por rol si el proyecto sale de una prueba controlada; los codigos actuales son UX, no permisos fuertes
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
+- [ ] Migrar chat de jugador al interior de la escena de mapa
+- [ ] Decidir si el log de debug vuelve solo como herramienta GM/dev o queda eliminado para jugadores
 - [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
   - [x] Generar variantes WebP/AVIF responsive de los mapas `almacen_A/B` y conservar PNG como fallback
   - [x] Revisar polling de Firebase cada 1s para evitar leer `getRemoteState()` completo en la web de jugador; quedan monitores GM con lectura completa
@@ -132,6 +137,22 @@
 - [x] Memoizar capas estables del mapa donde aplica
 - [x] Optimizar recogida de resonancia leyendo solo `gameState/resonance`
 - [ ] Medicion comparativa antes/despues con Chrome Task Manager: 1 jugador, 4 jugadores y GM con monitores
+
+---
+
+## Checklist reciente - HUD de escena y migracion a pantalla completa
+
+- [x] Eliminar el frame exterior de la pantalla de jugador
+- [x] Renderizar la escena de mapa a `100vw` x `100vh`
+- [x] Quitar el panel lateral exterior del jugador
+- [x] Quitar el chat exterior de jugador del render y de la lectura parcial de Firebase
+- [x] Quitar el log flotante de debug del render de jugador
+- [x] Mantener historial/tooltips/QR como herramientas dentro de la escena
+- [x] Reducir iconos laterales de escena un 20%
+- [x] Mostrar contador de resonancia a la derecha de la onda de anomalia
+- [ ] Definir e integrar el chat dentro de la escena
+- [ ] Revisar posicion final del HUD superior con chat ya integrado
+- [ ] Definir si el contador de resonancia necesita variante compacta en portatil
 
 ---
 

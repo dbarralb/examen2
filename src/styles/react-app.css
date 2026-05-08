@@ -2291,6 +2291,13 @@ a {
   min-height: 100vh;
 }
 
+.react-player-functional {
+  display: block;
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+
 .player-scene-preview {
   position: relative;
   min-width: 0;
@@ -2298,6 +2305,13 @@ a {
   border: 1px solid var(--border-subtle);
   background: rgba(23, 35, 33, 0.55);
   overflow: hidden;
+}
+
+.react-player-functional .player-scene-preview {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  border: 0;
 }
 
 .scene-frame {
@@ -2403,11 +2417,6 @@ a {
   background: var(--color-teal-mid);
   color: var(--color-gray-400);
   cursor: not-allowed;
-}
-
-.player-device-qr-card {
-  display: grid;
-  gap: 10px;
 }
 
 .player-device-qr {
@@ -5021,6 +5030,9 @@ a {
   top: 24px;
   left: 50%;
   z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 18px;
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -6279,6 +6291,55 @@ code {
 
   .react-gm-monitor iframe {
     height: 220px;
+  }
+}
+
+@media (min-width: 621px) and (max-width: 1100px) {
+  .scene-pulse-signal-zone {
+    top: 88px;
+  }
+}
+
+@media (min-width: 1101px) and (max-width: 1500px) {
+  .scene-pulse-signal-zone {
+    top: 96px;
+  }
+}
+
+@media (min-width: 1501px) {
+  .player-topbar {
+    display: grid;
+    grid-template-columns:
+      minmax(260px, 1fr)
+      auto
+      clamp(620px, 32vw, 840px)
+      auto
+      minmax(0, 1fr);
+    column-gap: 24px;
+    justify-content: normal;
+    padding-right: 228px;
+    box-sizing: border-box;
+  }
+
+  .player-topbar .e2-logo {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .player-topbar .n-badge {
+    grid-column: 2;
+    justify-self: end;
+  }
+
+  .player-topbar .player-resonance-counter {
+    justify-self: auto;
+  }
+
+  .player-topbar .n-timer {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
   }
 }
 
@@ -8950,11 +9011,19 @@ select {
   opacity: 1;
 }
 
+.player-utility-btn--qr.is-open {
+  opacity: 0.9;
+}
+
 .player-utility-icon {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   display: block;
   object-fit: contain;
+}
+
+.player-utility-icon--qr {
+  filter: drop-shadow(0 0 8px rgba(234, 255, 242, 0.16));
 }
 
 .player-utility-btn i {
@@ -9063,6 +9132,17 @@ select {
   pointer-events: none;
 }
 
+.player-qr-overlay {
+  position: absolute;
+  top: 76px;
+  right: 108px;
+  z-index: 207;
+  display: grid;
+  justify-items: end;
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
 .player-scene-preview.has-player-tooltip-expanded .player-history-overlay {
   top: 224px;
 }
@@ -9071,9 +9151,9 @@ select {
   top: 224px;
 }
 
-.player-history-drawer {
+.player-history-drawer,
+.player-qr-drawer {
   width: min(390px, calc(100vw - 120px));
-  max-height: min(48vh, 420px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -9087,7 +9167,16 @@ select {
   animation: player-history-drawer-enter 180ms ease-out;
 }
 
-.player-history-drawer header {
+.player-history-drawer {
+  max-height: min(48vh, 420px);
+}
+
+.player-qr-drawer {
+  max-height: min(60vh, 520px);
+}
+
+.player-history-drawer header,
+.player-qr-drawer header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -9096,13 +9185,15 @@ select {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.player-history-drawer header span {
+.player-history-drawer header span,
+.player-qr-drawer header span {
   color: rgba(0, 255, 135, 0.72);
   font-size: 11px;
   font-weight: 800;
 }
 
-.player-history-drawer header button {
+.player-history-drawer header button,
+.player-qr-drawer header button {
   border: 0;
   padding: 0;
   background: transparent;
@@ -9113,9 +9204,19 @@ select {
 }
 
 .player-history-drawer header button:hover,
-.player-history-drawer header button:focus-visible {
+.player-history-drawer header button:focus-visible,
+.player-qr-drawer header button:hover,
+.player-qr-drawer header button:focus-visible {
   color: rgba(49, 198, 255, 0.95);
   outline: none;
+}
+
+.player-qr-drawer-body {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px 16px;
 }
 
 .player-history-list {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { E2Logo, NBadge, NCard, NTimer } from "../components/e2";
+import { E2Logo, NBadge, NTimer } from "../components/e2";
 import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { CodexGuideOverlay, HistoryGlyph, PlayerCodeTooltipLayer } from "../components/PlayerCodeTooltipLayer.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
@@ -16,7 +16,7 @@ import { getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getStoredSessionCode, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, sendPlayerChatMessage, updatePlayerView } from "../services/playerService.js";
+import { findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, updatePlayerView } from "../services/playerService.js";
 import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
 import { getDeviceUrl, getRoleSessionCode } from "../services/urlService.js";
 
@@ -104,6 +104,29 @@ function writeTooltipHistory(scope, tooltips) {
   }
 }
 
+function TemporaryQrGlyph({ className = "" }) {
+  return (
+    <svg className={className} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+      <rect width="64" height="64" rx="2" fill="#fff" />
+      <rect x="6" y="6" width="18" height="18" fill="#061018" />
+      <rect x="10" y="10" width="10" height="10" fill="#fff" />
+      <rect x="40" y="6" width="18" height="18" fill="#061018" />
+      <rect x="44" y="10" width="10" height="10" fill="#fff" />
+      <rect x="6" y="40" width="18" height="18" fill="#061018" />
+      <rect x="10" y="44" width="10" height="10" fill="#fff" />
+      <rect x="31" y="31" width="6" height="6" fill="#061018" />
+      <rect x="43" y="31" width="6" height="6" fill="#061018" />
+      <rect x="55" y="31" width="3" height="6" fill="#061018" />
+      <rect x="31" y="43" width="6" height="15" fill="#061018" />
+      <rect x="43" y="43" width="15" height="6" fill="#061018" />
+      <rect x="52" y="52" width="6" height="6" fill="#061018" />
+      <rect x="28" y="8" width="4" height="10" fill="#061018" />
+      <rect x="8" y="28" width="10" height="4" fill="#061018" />
+      <rect x="22" y="28" width="4" height="4" fill="#061018" />
+    </svg>
+  );
+}
+
 async function getPlayerRemoteStateSlice(roleId) {
   const [
     session,
@@ -112,7 +135,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     targetFeedback,
     queuedActions,
     actionLog,
-    chatMessages,
     lastRoleActions,
     itemSeenState,
     playerInventoryForRole,
@@ -126,7 +148,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     firebaseGet("targetFeedback"),
     firebaseGet("queuedActions"),
     firebaseGet("actionLog"),
-    firebaseGet("chatMessages"),
     firebaseGet("lastRoleActions"),
     firebaseGet("itemSeenState"),
     firebaseGet(`playerInventories/${roleId}`),
@@ -142,7 +163,6 @@ async function getPlayerRemoteStateSlice(roleId) {
     targetFeedback,
     queuedActions,
     actionLog,
-    chatMessages,
     lastRoleActions,
     itemSeenState,
     playerInventories: { [roleId]: playerInventoryForRole || {} },
@@ -187,15 +207,13 @@ export function PlayerScreen({ navigation, params }) {
   const isGmMonitorView = params.get("view") === "gm-monitor";
   const [remoteState, setRemoteState] = useState(null);
   const [selectedTargetId, setSelectedTargetId] = useState(null);
-  const [chatDraft, setChatDraft] = useState("");
   const [openedItem, setOpenedItem] = useState(null);
   const [playerInventory, setPlayerInventory] = useState([null, null, null]);
   const [isDraggingItem, setIsDraggingItem] = useState(false);
   const [revealedSlots, setRevealedSlots] = useState({}); // { [targetId]: number[] }
   const [deviceCommandResult, setDeviceCommandResult] = useState(null);
-  const [eventLog, setEventLog] = useState([]);
-  const [eventLogVisible, setEventLogVisible] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [qrDrawerOpen, setQrDrawerOpen] = useState(false);
   const [unreadHistoryCount, setUnreadHistoryCount] = useState(0);
   const [resonanceSpawn, setResonanceSpawn] = useState(null);
   const [resonanceCollectState, setResonanceCollectState] = useState("idle");
@@ -227,7 +245,6 @@ export function PlayerScreen({ navigation, params }) {
   const notifDismissTimersRef = useRef([]);
   const revealedSlotsRef = useRef({});
   const searchTimersRef = useRef([]);
-  const chatListRef = useRef(null);
   const latestCameraRef = useRef(null);
   const viewPublishTimerRef = useRef(null);
   const resonanceSpawnTimerRef = useRef(null);
@@ -249,7 +266,6 @@ export function PlayerScreen({ navigation, params }) {
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 20), [remoteState]);
-  const chatMessages = useMemo(() => normalizeRemoteList(remoteState?.chatMessages).slice(-18), [remoteState]);
   const lastRoleAction = remoteState?.lastRoleActions?.[role.id];
   const mirroredView = isGmMonitorView ? remoteState?.playerViews?.[role.id] : null;
   const isMirrorFresh = Boolean(mirroredView?.updatedAt && Date.now() - mirroredView.updatedAt < PLAYER_VIEW_STALE_MS);
@@ -353,6 +369,10 @@ export function PlayerScreen({ navigation, params }) {
     setTooltipDrawerOpen((open) => {
       const nextOpen = !open;
       if (nextOpen) setUnreadTooltipCount(0);
+      if (nextOpen) {
+        setHistoryOpen(false);
+        setQrDrawerOpen(false);
+      }
       return nextOpen;
     });
   }, []);
@@ -362,6 +382,19 @@ export function PlayerScreen({ navigation, params }) {
       const nextOpen = !open;
       if (nextOpen) {
         setUnreadHistoryCount(0);
+        setTooltipDrawerOpen(false);
+        setQrDrawerOpen(false);
+      }
+      return nextOpen;
+    });
+  }, []);
+
+  const handleQrToggle = useCallback(() => {
+    setQrDrawerOpen((open) => {
+      const nextOpen = !open;
+      if (nextOpen) {
+        setTooltipDrawerOpen(false);
+        setHistoryOpen(false);
       }
       return nextOpen;
     });
@@ -385,6 +418,7 @@ export function PlayerScreen({ navigation, params }) {
     setSeenPlayerTooltipIds(readSeenPlayerTooltips(tooltipStorageScope));
     setTooltipHistory(readTooltipHistory(tooltipStorageScope));
     setTooltipDrawerOpen(false);
+    setQrDrawerOpen(false);
     setActiveGuideTooltip(null);
     setQueuedGuideTooltips([]);
     setTooltipCooldown(false);
@@ -436,8 +470,7 @@ export function PlayerScreen({ navigation, params }) {
   }, [resonanceValue]);
 
   function logEvent(msg) {
-    const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-    setEventLog((prev) => [{ time, msg }, ...prev].slice(0, 80));
+    void msg;
   }
 
   const applyRemoteStateIfChanged = useCallback((nextState) => {
@@ -693,14 +726,6 @@ export function PlayerScreen({ navigation, params }) {
     };
   }, [selectedTargetId, selectedContainerOpen]);
 
-  useEffect(() => {
-    const chatList = chatListRef.current;
-
-    if (chatList) {
-      chatList.scrollTop = chatList.scrollHeight;
-    }
-  }, [chatMessages]);
-
   function queuePlayerViewPublish({ force = false } = {}) {
     if (isGmMonitorView) {
       return;
@@ -909,35 +934,6 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
-  async function handleChatSubmit(event) {
-    event.preventDefault();
-
-    try {
-      const message = await sendPlayerChatMessage(role, chatDraft);
-
-      if (!message) {
-        return;
-      }
-
-      setChatDraft("");
-      setRemoteState((current) => {
-        if (!current) {
-          return current;
-        }
-
-        return {
-          ...current,
-          chatMessages: {
-            ...(current.chatMessages || {}),
-            [message.id]: message,
-          },
-        };
-      });
-    } catch (error) {
-      // Error de red silencioso.
-    }
-  }
-
   if (!isGmMonitorView && !remoteState) {
     return (
       <main className="react-screen react-player-screen react-player-functional">
@@ -957,19 +953,10 @@ export function PlayerScreen({ navigation, params }) {
 
   return (
     <main className={`react-screen react-player-screen react-player-functional ${isGmMonitorView ? "react-player-monitor-view" : ""}`}>
-      <section className={`player-scene-preview player-scene-live ${tooltipDrawerOpen ? "has-player-tooltip" : ""} ${historyOpen ? "has-player-history-open" : ""}`}>
+      <section className={`player-scene-preview player-scene-live ${tooltipDrawerOpen ? "has-player-tooltip" : ""} ${historyOpen ? "has-player-history-open" : ""} ${qrDrawerOpen ? "has-player-qr-open" : ""}`}>
         <div className="player-topbar">
           <E2Logo compact />
           <NBadge status={role.status}>{role.label}</NBadge>
-          {!isGmMonitorView && (
-            <div className={`player-resonance-counter ${resonanceRewardFeedback ? "player-resonance-counter--reward" : ""}`} aria-label="Resonancia acumulada">
-              <span>Resonancia</span>
-              <strong>{resonanceValue}</strong>
-              {resonanceRewardFeedback && (
-                <em key={resonanceRewardFeedback.id}>+{resonanceRewardFeedback.amount}</em>
-              )}
-            </div>
-          )}
           <NTimer seconds={elapsedSeconds} />
         </div>
         <SceneMap
@@ -1025,6 +1012,15 @@ export function PlayerScreen({ navigation, params }) {
                 </em>
               )}
               <HistoryGlyph className="player-utility-icon" />
+            </button>
+            <button
+              type="button"
+              className={`player-utility-btn player-utility-btn--qr${qrDrawerOpen ? " is-open" : ""}`}
+              onClick={handleQrToggle}
+              aria-expanded={qrDrawerOpen}
+              aria-label="Abrir QR del terminal movil"
+            >
+              <TemporaryQrGlyph className="player-utility-icon player-utility-icon--qr" />
             </button>
           </div>
         )}
@@ -1100,6 +1096,39 @@ export function PlayerScreen({ navigation, params }) {
             </section>
           </aside>
         )}
+        {!isGmMonitorView && qrDrawerOpen && (
+          <aside className="player-qr-overlay">
+            <section className="player-qr-drawer" aria-label="QR del terminal movil">
+              <header>
+                <span>terminal://movil</span>
+                <button type="button" onClick={() => setQrDrawerOpen(false)} aria-label="Cerrar QR">Cerrar</button>
+              </header>
+              <div className="player-qr-drawer-body">
+                <div className="player-device-qr">
+                  <QRCodeSVG
+                    value={playerDeviceUrl}
+                    size={132}
+                    level="M"
+                    marginSize={2}
+                    bgColor="transparent"
+                    fgColor="#eafff2"
+                  />
+                </div>
+                <code className="player-device-qr-url">{playerDeviceUrl}</code>
+                <button
+                  type="button"
+                  className="player-device-copy-btn"
+                  onClick={() => navigator.clipboard?.writeText(playerDeviceUrl)}
+                >
+                  Copiar URL
+                </button>
+                {!deviceSessionCode && (
+                  <p className="player-device-qr-hint">Escanea y escribe el codigo de sesion.</p>
+                )}
+              </div>
+            </section>
+          </aside>
+        )}
         {!isGmMonitorView && notifications.length > 0 && (
           <div className="player-notifications-stack" aria-live="polite" aria-atomic="false">
             {notifications.map((notif) => (
@@ -1136,7 +1165,14 @@ export function PlayerScreen({ navigation, params }) {
             })}
           </div>
         )}
-        {!isGmMonitorView && <ActionQueueOverlay actions={queuedActions} pulseState={pulseState} />}
+        {!isGmMonitorView && (
+          <ActionQueueOverlay
+            actions={queuedActions}
+            pulseState={pulseState}
+            resonanceValue={resonanceValue}
+            resonanceRewardFeedback={resonanceRewardFeedback}
+          />
+        )}
         {!isGmMonitorView && (
           <PlayerInventoryBar
             slots={playerInventory}
@@ -1162,88 +1198,6 @@ export function PlayerScreen({ navigation, params }) {
           </aside>
         )}
       </section>
-      {!isGmMonitorView && <aside className="player-hud-panel">
-        <NCard title="Chat" className="player-side-card player-chat-card">
-          <div ref={chatListRef} className="react-chat-list" aria-label="Mensajes de chat">
-            {chatMessages.length === 0 ? (
-              <p>Sin mensajes todavia.</p>
-            ) : (
-              chatMessages.map((message) => (
-                <article key={message.id || `${message.author}-${message.createdAt}`} className={`react-chat-message role-${message.role || "event"}`}>
-                  <strong>{message.author || "Sistema"}</strong>
-                  <span>{message.text}</span>
-                </article>
-              ))
-            )}
-          </div>
-          <form className="react-chat-form" onSubmit={handleChatSubmit}>
-            <input
-              value={chatDraft}
-              maxLength={120}
-              placeholder="Mensaje..."
-              aria-label="Mensaje de chat"
-              onChange={(event) => setChatDraft(event.target.value)}
-            />
-            <button type="submit" disabled={!chatDraft.trim()}>Enviar</button>
-          </form>
-        </NCard>
-        <NCard title="Terminal movil" className="player-side-card player-device-qr-card">
-          <div className="player-device-qr">
-            <QRCodeSVG
-              value={playerDeviceUrl}
-              size={132}
-              level="M"
-              marginSize={2}
-              bgColor="transparent"
-              fgColor="#eafff2"
-            />
-          </div>
-          <code className="player-device-qr-url">{playerDeviceUrl}</code>
-          <button
-            type="button"
-            className="player-device-copy-btn"
-            onClick={() => navigator.clipboard?.writeText(playerDeviceUrl)}
-          >
-            Copiar URL
-          </button>
-          {!deviceSessionCode && (
-            <p className="player-device-qr-hint">Escanea y escribe el codigo de sesion.</p>
-          )}
-        </NCard>
-      </aside>}
-      {!isGmMonitorView && (
-        <div className={`event-log-panel ${eventLogVisible ? "event-log-panel--open" : ""}`}>
-          <button
-            type="button"
-            className="event-log-toggle"
-            onClick={() => setEventLogVisible((v) => !v)}
-            aria-expanded={eventLogVisible}
-          >
-            <span>▸ LOG</span>
-            {eventLog.length > 0 && <span className="event-log-count">{eventLog.length}</span>}
-          </button>
-          {eventLogVisible && (
-            <div className="event-log-body">
-              <div className="event-log-header">
-                <span>Registro de eventos</span>
-                <button type="button" className="event-log-clear" onClick={() => setEventLog([])}>Limpiar</button>
-              </div>
-              <div className="event-log-entries">
-                {eventLog.length === 0 ? (
-                  <span className="event-log-empty">Sin eventos registrados.</span>
-                ) : (
-                  eventLog.map((e, i) => (
-                    <div key={i} className="event-log-entry">
-                      <span className="event-log-time">{e.time}</span>
-                      <span className="event-log-msg">{e.msg}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </main>
   );
 }

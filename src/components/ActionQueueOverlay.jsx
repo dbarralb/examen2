@@ -17,7 +17,7 @@ function useTick(active) {
   }, [active]);
 }
 
-export function ActionQueueOverlay({ actions, pulseState = {} }) {
+export function ActionQueueOverlay({ actions, pulseState = {}, resonanceValue = null, resonanceRewardFeedback = null }) {
   const chips = buildQueuedActionChipModels(actions || []);
   const status = pulseState.status || "idle";
   const isExecuting = status === "executing";
@@ -32,6 +32,15 @@ export function ActionQueueOverlay({ actions, pulseState = {} }) {
     <>
       <div className="scene-pulse-signal-zone">
         <PulseSignalFrame pulseState={pulseState} />
+        {resonanceValue !== null && (
+          <div className={`player-resonance-counter ${resonanceRewardFeedback ? "player-resonance-counter--reward" : ""}`} aria-label="Resonancia acumulada">
+            <span>Resonancia</span>
+            <strong>{resonanceValue}</strong>
+            {resonanceRewardFeedback && (
+              <em key={resonanceRewardFeedback.id}>+{resonanceRewardFeedback.amount}</em>
+            )}
+          </div>
+        )}
       </div>
       <aside className="scene-queue-overlay" aria-label="Cola de chips">
         <div className="scene-queue-strip">
