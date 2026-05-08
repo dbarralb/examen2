@@ -68,6 +68,7 @@
 - [ ] Mover el codigo GM (`delfin`) a variable de entorno/configuracion antes de una prueba publica
 - [ ] Revisar seguridad real por rol si el proyecto sale de una prueba controlada; los codigos actuales son UX, no permisos fuertes
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
+- [ ] Deuda tecnica: separar entornos PRE y PROD con dos instancias de Firebase Realtime Database (requiere plan de pago en Firebase). La rama `react-oficial` apuntaria a PRE y `legacy` a PROD. Implica tambien configurar contextos de build en Netlify (`context.production` para `legacy` y `context.branch-deploy` para `react-oficial`) con variables `VITE_FIREBASE_*` distintas por entorno, y eliminar el fallback hardcodeado de URL en `src/services/firebaseClient.js`.
 - [x] Migrar chat de jugador al interior de la escena de mapa
 - [ ] Decidir si el log de debug vuelve solo como herramienta GM/dev o queda eliminado para jugadores
 - [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
