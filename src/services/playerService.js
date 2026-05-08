@@ -1,8 +1,10 @@
 import { createId, getOrCreateClientId } from "./clientIdentity.js";
-import { firebasePatch, firebasePut } from "./firebaseClient.js";
+import { firebaseGet, firebasePatch, firebasePut } from "./firebaseClient.js";
 import { createLastRoleAction } from "./gameRules.js";
 import { getStoredPlayerName } from "./lobbyService.js";
 import { getStoredSessionCode } from "./sessionAccess.js";
+
+export const MAX_QUEUED_ACTIONS = 8;
 
 export function getPlayerName() {
   const storedName = getStoredPlayerName();
@@ -51,6 +53,13 @@ export function createPendingAction({ card, targetId, roleId, scenarioId = null,
 }
 
 export async function enqueueLoadedAction(pendingAction) {
+  const queuedActions = Object.values((await firebaseGet("queuedActions")) || {})
+    .filter((action) => action && ["queued", "executing"].includes(action.status || "queued"));
+
+  if (queuedActions.length >= MAX_QUEUED_ACTIONS) {
+    throw new Error("La cola de acciones esta llena.");
+  }
+
   const action = {
     ...pendingAction,
     status: "queued",

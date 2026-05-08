@@ -66,7 +66,7 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 /pulseState        estado del pulso actual
 /targetFeedback    feedback por hotspot
 /lobby             jugadores conectados y roleClaims
-/queuedActions     acciones esperando pulso
+/queuedActions     acciones esperando pulso, maximo 8 pendientes/ejecutandose
 /actionLog         historial de acciones
 /chatMessages      chat
 /playerViews       espejo de camara/seleccion para monitores GM
@@ -91,6 +91,8 @@ Las reglas viven en `database.rules.json`. El procedimiento de configuracion y d
 9. `pulseService` ejecuta acciones y llama a `resolveActionWithResult()`.
 10. `gameRules` delega a `scenarioContent`.
 11. `scenarioContent` aplica carga acumulada, resonancia compartida, flags, feedback y log.
+
+La cola de acciones de jugador es una unica UI inferior centrada en escena. Sustituye cualquier cola lateral o tarjeta de resultado anterior: muestra hasta 8 chips horizontales, cada uno con su carga amarilla, y durante el pulso enseña solo una barra flotante y la animacion secuencial de ejecucion. El resumen final del pulso vive en `pulseState.lastPulseSummary`; cada jugador lo ve filtrado por su variante y lo cierra localmente.
 
 Las guias de jugador se resuelven en `src/data/playerTooltips.js` y se presentan desde `PlayerScreen` con una cola local: cada guia se marca como vista al entrar en cola, se muestra como overlay superior no bloqueante durante 10s y deja al menos 3s antes de mostrar la siguiente.
 
@@ -125,6 +127,7 @@ Regla de implementacion: comparar el snapshot anterior y el actual de `pulseStat
 | `src/screens/GMScreen.jsx` | Panel GM |
 | `src/screens/AccessScreen.jsx` | Acceso de jugadores y formulario de codigo GM |
 | `src/components/SceneMap.jsx` | Tablero paneable con escala fija |
+| `src/components/ActionQueueOverlay.jsx` | Cola inferior de chips, barra de pulso y animacion de ejecucion |
 | `src/components/map/*` | Capas del mapa y overlay de coordenadas |
 | `src/components/DeviceConsole.jsx` | Consola generica de dispositivo |
 | `src/services/pulseService.js` | Ciclo del pulso |

@@ -43,6 +43,7 @@
 - [x] Resonancia compartida centralizada en `gameState.sharedResonance`
 - [x] Carga acumulada por hotspot/variante para desbloquear descubrimientos por pasos
 - [x] UI de bateria/carga en chips y panel GM
+- [x] Cola inferior centrada de hasta 8 chips con carga amarilla, animacion de pulso y resumen final por variante
 - [x] Historial de tooltips de jugador con iconos de notificacion
 - [x] Tooltips convertidos en overlays superiores no bloqueantes con confirmacion, autocierre y barra de progreso
 - [x] Pantalla de jugador migrada a escena de mapa a pantalla completa, sin frame exterior visible
@@ -67,11 +68,12 @@
 - [ ] Mover el codigo GM (`delfin`) a variable de entorno/configuracion antes de una prueba publica
 - [ ] Revisar seguridad real por rol si el proyecto sale de una prueba controlada; los codigos actuales son UX, no permisos fuertes
 - [ ] Deuda tecnica: estudiar un modo de accesibilidad para ampliar el texto de las cajas sin reactivar zoom del escenario
-- [ ] Migrar chat de jugador al interior de la escena de mapa
+- [x] Migrar chat de jugador al interior de la escena de mapa
 - [ ] Decidir si el log de debug vuelve solo como herramienta GM/dev o queda eliminado para jugadores
 - [ ] Deuda tecnica: optimizar rendimiento web antes de escalar contenido y monitores GM
   - [x] Generar variantes WebP/AVIF responsive de los mapas `almacen_A/B` y conservar PNG como fallback
   - [x] Revisar polling de Firebase cada 1s para evitar leer `getRemoteState()` completo en la web de jugador; quedan monitores GM con lectura completa
+  - [ ] Dividir el bundle inicial de Vite si el chunk principal sigue superando 500 kB minificado
   - [ ] Medir memoria real en Chrome/Firefox con prueba de estres de jugador y GM con varios monitores abiertos
   - [x] Vigilar coste pasivo del `SceneMap`: capas estables memoizadas y efectos VFX montados solo cuando estan activos
 
@@ -136,6 +138,7 @@
 - [x] Reducir escrituras de `playerViews` con debounce mayor, umbral de camara y publicacion final tras pan
 - [x] Memoizar capas estables del mapa donde aplica
 - [x] Optimizar recogida de resonancia leyendo solo `gameState/resonance`
+- [ ] Evaluar code splitting/lazy loading para reducir el warning de Vite por chunk inicial mayor de 500 kB
 - [ ] Medicion comparativa antes/despues con Chrome Task Manager: 1 jugador, 4 jugadores y GM con monitores
 
 ---
@@ -150,7 +153,8 @@
 - [x] Mantener historial/tooltips/QR como herramientas dentro de la escena
 - [x] Reducir iconos laterales de escena un 20%
 - [x] Mostrar contador de resonancia a la derecha de la onda de anomalia
-- [ ] Definir e integrar el chat dentro de la escena
+- [x] Definir e integrar el chat dentro de la escena
+- [x] Sustituir cola lateral antigua por cola inferior unica de acciones
 - [ ] Revisar posicion final del HUD superior con chat ya integrado
 - [ ] Definir si el contador de resonancia necesita variante compacta en portatil
 

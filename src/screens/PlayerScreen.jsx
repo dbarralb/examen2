@@ -16,11 +16,12 @@ import { getPulseScheduleProgress } from "../presentation/pulsePresentation.js";
 import { getRemoteState } from "../services/gmService.js";
 import { createInitialGameState, createInitialTargetFeedback, filterActionHistory, getGameTimerElapsedSeconds, normalizeRemoteList } from "../services/remoteState.js";
 import { getStoredSessionCode, hasValidStoredSessionCode } from "../services/sessionAccess.js";
-import { findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, updatePlayerView } from "../services/playerService.js";
+import { findQueuedActionForCurrentPlayer, markItemSeen, pickUpItem, sendPlayerChatMessage, updatePlayerView } from "../services/playerService.js";
 import { firebaseGet, firebasePatch } from "../services/firebaseClient.js";
 import { getDeviceUrl, getRoleSessionCode } from "../services/urlService.js";
 
 const PLAYER_VIEW_STALE_MS = 15000;
+const CHAT_READING_MS = 15000;
 const SEARCHING_SLOT_TIME = 10; // seconds per slot before revealing content
 const SLOT_STAGGER_MS = 800;    // ms between each slot's search start
 const RESONANCE_BALLS_OPEN_REWARD = 3;
@@ -34,6 +35,7 @@ const PLAYER_VIEW_PUBLISH_DEBOUNCE_MS = 420;
 const PLAYER_VIEW_CAMERA_MIN_DELTA = 4;
 const PLAYER_TOOLTIP_STORAGE_PREFIX = "elExamen2.playerTooltips";
 const PLAYER_TOOLTIP_HISTORY_PREFIX = "elExamen2.playerTooltipHistory";
+const PULSE_SUMMARY_STORAGE_PREFIX = "elExamen2.pulseSummarySeen";
 const PLAYER_TOOLTIP_VISIBLE_MS = 10000;
 const PLAYER_TOOLTIP_GAP_MS = 3000;
 const TOOLTIP_CONFIRM_LABELS = [
@@ -104,6 +106,26 @@ function writeTooltipHistory(scope, tooltips) {
   }
 }
 
+function getPulseSummaryStorageKey(scope) {
+  return `${PULSE_SUMMARY_STORAGE_PREFIX}:${scope}`;
+}
+
+function readSeenPulseSummaryId(scope) {
+  try {
+    return window.localStorage.getItem(getPulseSummaryStorageKey(scope)) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeSeenPulseSummaryId(scope, pulseId) {
+  try {
+    window.localStorage.setItem(getPulseSummaryStorageKey(scope), pulseId || "");
+  } catch {
+    // ignore
+  }
+}
+
 function TemporaryQrGlyph({ className = "" }) {
   return (
     <svg className={className} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -141,6 +163,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     playerBoardForRole,
     hotspotOverrides,
     fusionSession,
+    chatMessages,
   ] = await Promise.all([
     firebaseGet("session"),
     firebaseGet("gameState"),
@@ -154,6 +177,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     firebaseGet(`playerBoards/${roleId}`),
     firebaseGet("hotspotOverrides"),
     firebaseGet("fusionSession"),
+    firebaseGet("chatMessages"),
   ]);
 
   return {
@@ -169,6 +193,7 @@ async function getPlayerRemoteStateSlice(roleId) {
     playerBoards: { [roleId]: playerBoardForRole || {} },
     hotspotOverrides,
     fusionSession,
+    chatMessages,
   };
 }
 
@@ -233,6 +258,9 @@ export function PlayerScreen({ navigation, params }) {
   const [recentResonanceGain, setRecentResonanceGain] = useState(false);
   const [resonanceRewardFeedback, setResonanceRewardFeedback] = useState(null);
   const [playerConnectionIssue, setPlayerConnectionIssue] = useState(false);
+  const [chatMode, setChatMode] = useState("reading");
+  const [chatText, setChatText] = useState("");
+  const [dismissedPulseSummaryId, setDismissedPulseSummaryId] = useState("");
   const prevGameStateRef = useRef(null);
   const prevActionResultIdRef = useRef(null);
   const prevFusionStatusRef = useRef(null);
@@ -255,6 +283,9 @@ export function PlayerScreen({ navigation, params }) {
   const resonanceRewardPendingRef = useRef(false);
   const resonanceRewardClaimedRef = useRef(false);
   const tooltipCooldownTimerRef = useRef(null);
+  const chatReadingTimerRef = useRef(null);
+  const chatInputRef = useRef(null);
+  const chatSignatureRef = useRef("");
   const remoteStateSignatureRef = useRef("");
   const lastPublishedCameraRef = useRef(null);
   const lastPublishedViewSignatureRef = useRef("");
@@ -266,6 +297,12 @@ export function PlayerScreen({ navigation, params }) {
   const pulseState = remoteState?.pulseState || {};
   const queuedActions = useMemo(() => normalizeRemoteList(remoteState?.queuedActions), [remoteState]);
   const actionLog = useMemo(() => filterActionHistory(remoteState?.actionLog).slice(0, 20), [remoteState]);
+  const chatMessages = useMemo(() => normalizeRemoteList(remoteState?.chatMessages), [remoteState]);
+  const visibleChatMessages = useMemo(() => chatMessages.slice(-4), [chatMessages]);
+  const visibleChatSignature = useMemo(
+    () => visibleChatMessages.map((message) => `${message.id || ""}:${message.createdAt || ""}:${message.text || ""}`).join("|"),
+    [visibleChatMessages],
+  );
   const lastRoleAction = remoteState?.lastRoleActions?.[role.id];
   const mirroredView = isGmMonitorView ? remoteState?.playerViews?.[role.id] : null;
   const isMirrorFresh = Boolean(mirroredView?.updatedAt && Date.now() - mirroredView.updatedAt < PLAYER_VIEW_STALE_MS);
@@ -313,6 +350,17 @@ export function PlayerScreen({ navigation, params }) {
   const deviceSessionCode = getRoleSessionCode(session, role.id) || getStoredSessionCode();
   const playerDeviceUrl = getDeviceUrl(role.id, { code: deviceSessionCode });
   const tooltipStorageScope = `${getStoredSessionCode() || session.accessCode || "local"}:${role.id}:${boardScenarioId}:${boardVariant}`;
+  const pulseSummaryStorageScope = `${getStoredSessionCode() || session.accessCode || "local"}:${role.id}:${boardScenarioId}:${boardVariant}`;
+  const pulseSummary = pulseState.lastPulseSummary || null;
+  const pulseSummaryEntries = useMemo(() => {
+    return (pulseSummary?.entries || []).filter((entry) => !entry.variant || entry.variant === boardVariant);
+  }, [boardVariant, pulseSummary]);
+  const pulseSummaryVisible = Boolean(
+    !isGmMonitorView
+    && pulseSummary?.pulseId
+    && pulseSummary.pulseId !== dismissedPulseSummaryId
+    && pulseSummaryEntries.length > 0,
+  );
   const activePlayerTooltip = useMemo(() => {
     if (isGmMonitorView || codexGuideTooltip) {
       return null;
@@ -410,9 +458,152 @@ export function PlayerScreen({ navigation, params }) {
     }, PLAYER_TOOLTIP_GAP_MS);
   }, []);
 
+  const startChatReadingMode = useCallback(() => {
+    window.clearTimeout(chatReadingTimerRef.current);
+    setChatMode("reading");
+    chatReadingTimerRef.current = window.setTimeout(() => {
+      setChatMode((mode) => (mode === "active" ? mode : "idle"));
+    }, CHAT_READING_MS);
+  }, []);
+
+  const openChat = useCallback(() => {
+    window.clearTimeout(chatReadingTimerRef.current);
+    setChatMode("active");
+    window.setTimeout(() => chatInputRef.current?.focus(), 0);
+  }, []);
+
+  const closeChatToReading = useCallback(() => {
+    startChatReadingMode();
+  }, [startChatReadingMode]);
+
+  const closePulseSummary = useCallback(() => {
+    if (!pulseSummary?.pulseId) {
+      return;
+    }
+
+    setDismissedPulseSummaryId(pulseSummary.pulseId);
+    writeSeenPulseSummaryId(pulseSummaryStorageScope, pulseSummary.pulseId);
+  }, [pulseSummary?.pulseId, pulseSummaryStorageScope]);
+
+  async function handleChatSubmit(event) {
+    event.preventDefault();
+
+    if (chatMode !== "active") {
+      openChat();
+      return;
+    }
+
+    const trimmedText = chatText.trim();
+    if (!trimmedText) {
+      closeChatToReading();
+      return;
+    }
+
+    setChatText("");
+
+    try {
+      const message = await sendPlayerChatMessage(role, trimmedText);
+
+      if (message) {
+        setRemoteState((current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            chatMessages: {
+              ...(Array.isArray(current.chatMessages) ? Object.fromEntries(current.chatMessages.filter(Boolean).map((item) => [item.id, item])) : current.chatMessages || {}),
+              [message.id]: message,
+            },
+          };
+        });
+      }
+    } catch (error) {
+      setChatText(trimmedText);
+      return;
+    }
+
+    closeChatToReading();
+  }
+
+  function handleChatBlur(event) {
+    if (chatMode !== "active") {
+      return;
+    }
+
+    const nextFocusedElement = event.relatedTarget;
+    if (nextFocusedElement && event.currentTarget.contains(nextFocusedElement)) {
+      return;
+    }
+
+    closeChatToReading();
+  }
+
   useEffect(() => {
     resonanceRewardClaimedRef.current = Boolean(variantResonance?.discoveries?.[RESONANCE_BALLS_DISCOVERY_ID]);
   }, [variantResonance?.discoveries]);
+
+  useEffect(() => {
+    setDismissedPulseSummaryId(readSeenPulseSummaryId(pulseSummaryStorageScope));
+  }, [pulseSummaryStorageScope]);
+
+  useEffect(() => {
+    if (!pulseSummaryVisible) {
+      return undefined;
+    }
+
+    function handlePulseSummaryKeyDown(event) {
+      if (event.key === "Escape") {
+        closePulseSummary();
+      }
+    }
+
+    window.addEventListener("keydown", handlePulseSummaryKeyDown);
+    return () => window.removeEventListener("keydown", handlePulseSummaryKeyDown);
+  }, [closePulseSummary, pulseSummaryVisible]);
+
+  useEffect(() => {
+    if (isGmMonitorView || !visibleChatSignature) {
+      return;
+    }
+
+    if (chatSignatureRef.current === visibleChatSignature) {
+      return;
+    }
+
+    chatSignatureRef.current = visibleChatSignature;
+    if (chatMode !== "active") {
+      startChatReadingMode();
+    }
+  }, [chatMode, isGmMonitorView, startChatReadingMode, visibleChatSignature]);
+
+  useEffect(() => {
+    if (isGmMonitorView) {
+      return undefined;
+    }
+
+    function handleChatKeyDown(event) {
+      const target = event.target;
+      const isEditable = target instanceof HTMLElement && (
+        target.tagName === "INPUT"
+        || target.tagName === "TEXTAREA"
+        || target.tagName === "SELECT"
+        || target.isContentEditable
+      );
+
+      if (event.key === "Escape" && chatMode === "active") {
+        event.preventDefault();
+        closeChatToReading();
+        return;
+      }
+
+      if (event.key === "Enter" && chatMode !== "active" && !isEditable) {
+        event.preventDefault();
+        openChat();
+      }
+    }
+
+    window.addEventListener("keydown", handleChatKeyDown);
+    return () => window.removeEventListener("keydown", handleChatKeyDown);
+  }, [chatMode, closeChatToReading, isGmMonitorView, openChat]);
 
   useEffect(() => {
     setSeenPlayerTooltipIds(readSeenPlayerTooltips(tooltipStorageScope));
@@ -648,6 +839,7 @@ export function PlayerScreen({ navigation, params }) {
       window.clearTimeout(fusionVfxTimerRef.current);
       window.clearTimeout(resonanceTooltipTimerRef.current);
       window.clearTimeout(resonanceRewardFeedbackTimerRef.current);
+      window.clearTimeout(chatReadingTimerRef.current);
       notifDismissTimersRef.current.forEach(clearTimeout);
       window.removeEventListener("dragend", handleDragEnd);
     };
@@ -673,19 +865,11 @@ export function PlayerScreen({ navigation, params }) {
 
     if (result.variant && result.variant !== boardVariant) return;
 
-    const notif = { id: result.actionId, text: result.message, player: result.player || result.role, createdAt: Date.now() };
-    setNotifications((prev) => [...prev.slice(-2), notif]);
-
     if (result.vfxType === "spark_fusion_fail" && !isGmMonitorView) {
       window.clearTimeout(sparkVfxTimerRef.current);
       setSparkVfxActive(true);
       sparkVfxTimerRef.current = window.setTimeout(() => setSparkVfxActive(false), 2500);
     }
-
-    const timer = window.setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== result.actionId));
-    }, 8000);
-    notifDismissTimersRef.current.push(timer);
   }, [pulseState.currentActionResult, boardVariant, isGmMonitorView]);
 
   useEffect(() => {
@@ -1183,6 +1367,84 @@ export function PlayerScreen({ navigation, params }) {
             isDraggingItem={isDraggingItem}
             getItemById={(itemId) => getScenarioItem(itemId, boardScenarioId, boardVariant)}
           />
+        )}
+        {!isGmMonitorView && (
+          <aside className={`player-scene-chat player-scene-chat--${chatMode}`} aria-label="Chat de jugadores">
+            <div className="player-scene-chat__messages" aria-live="polite" aria-atomic="false">
+              {visibleChatMessages.length === 0 ? (
+                <p className="player-scene-chat__empty">Sin mensajes todavia.</p>
+              ) : (
+                visibleChatMessages.map((message, index) => (
+                  <article key={message.id || `${message.createdAt || "chat"}-${index}`} className={`player-scene-chat__message role-${message.role || "gm"}`}>
+                    <strong>{message.author || "Jugador"}</strong>
+                    <span>{message.text}</span>
+                  </article>
+                ))
+              )}
+            </div>
+            <form className="player-scene-chat__form" onSubmit={handleChatSubmit} onBlur={handleChatBlur}>
+              {chatMode === "active" && (
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={chatText}
+                  onChange={(event) => setChatText(event.target.value)}
+                  placeholder="Escribe..."
+                  aria-label="Mensaje de chat"
+                  autoComplete="off"
+                />
+              )}
+              <button type="submit" className="player-scene-chat__send">
+                <span>Enviar</span>
+                <kbd>Intro</kbd>
+              </button>
+            </form>
+          </aside>
+        )}
+        {pulseSummaryVisible && (
+          <aside
+            className="pulse-summary-overlay"
+            aria-modal="true"
+            role="dialog"
+            aria-label="Resumen del pulso"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closePulseSummary();
+              }
+            }}
+          >
+            <section className="pulse-summary-panel">
+              <header>
+                <span>Pulso resuelto</span>
+                <strong>Variante {boardVariant}</strong>
+              </header>
+              <div className="pulse-summary-list">
+                {pulseSummaryEntries.map((entry) => {
+                  const targetLabel = boardTargets.find((target) => target.id === entry.target)?.label || entry.target || "Objetivo";
+                  return (
+                    <article key={entry.id || entry.actionId} className="pulse-summary-entry">
+                      <div>
+                        <span>{entry.player || entry.role || "Jugador"}</span>
+                        <strong>{formatCardLabel(entry)}{" -> "}{targetLabel}</strong>
+                        {entry.charge != null && <em>Carga {entry.charge}</em>}
+                      </div>
+                      <p>{entry.message}</p>
+                      {entry.unlocks?.length > 0 && (
+                        <ul>
+                          {entry.unlocks.map((unlock) => (
+                            <li key={unlock}>Desbloqueo: {String(unlock).split("__").pop()}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+              <button type="button" className="pulse-summary-confirm" onClick={closePulseSummary}>
+                Confirmar
+              </button>
+            </section>
+          </aside>
         )}
         <ItemModal item={openedItem} onClose={() => setOpenedItem(null)} />
         {isGmMonitorView && (

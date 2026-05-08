@@ -92,6 +92,32 @@ function estimatePulseDurationMs(actions = []) {
   }, 0);
 }
 
+function getDiscoveryKeys(gameState = {}) {
+  return new Set(Object.keys(gameState.inspectionDiscoveries || {}).filter((key) => gameState.inspectionDiscoveries[key]));
+}
+
+function getNewDiscoveryKeys(beforeKeys, gameState = {}) {
+  return Object.keys(gameState.inspectionDiscoveries || {})
+    .filter((key) => gameState.inspectionDiscoveries[key] && !beforeKeys.has(key));
+}
+
+function createPulseSummaryEntry(action, message, unlockedDiscoveryKeys = [], now = Date.now()) {
+  return {
+    id: `${action?.id || "action"}-${now}`,
+    actionId: action?.id || null,
+    role: action?.role || null,
+    player: action?.player || action?.role || "Jugador",
+    card: action?.card || null,
+    target: action?.target || null,
+    charge: action?.charge ?? null,
+    scenarioId: action?.scenarioId || null,
+    variant: action?.variant || null,
+    message: message || "Accion resuelta.",
+    unlocks: unlockedDiscoveryKeys,
+    createdAt: now,
+  };
+}
+
 async function acquireRemotePulseLock(nextPulseState) {
   const current = await firebaseGetWithEtag("pulseState");
   const currentPulseState = mergePulseState(current.data);
@@ -111,13 +137,14 @@ async function getReadyPulseActions(pulseStartAt) {
     .sort(sortActionsByLoadedAt);
 }
 
-async function resetPulseToIdle(schedule, patch = {}) {
+async function resetPulseToIdle(schedule, patch = {}, pulseStatePatch = {}) {
   const now = Date.now();
   await firebasePatch("", {
     pulseState: {
       ...createInitialPulseState(),
       mode: "auto",
       schedule: schedule || createPulseSchedule({}, now),
+      ...pulseStatePatch,
       updatedAt: now,
     },
     ...patch,
@@ -235,6 +262,7 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       lastVfxType: null,
     };
     const pulseFlags = buildPulseFlags(pulseActions, gameState);
+    const summaryEntries = [];
 
     for (let index = 0; index < pulseActions.length; index += 1) {
       const liveAction = { ...pulseActions[index] };
@@ -269,14 +297,17 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       onStatus?.(`Ejecutando ${index + 1}/${pulseActions.length}: ${getActionLabel(liveAction)}.`);
       await waitMs((liveAction.executionTimeSeconds || PULSE_TIMING.actionExecutionSeconds) * 1000);
 
+      const discoveryKeysBeforeAction = getDiscoveryKeys(context.gameState);
       const resultMessage = resolveActionWithResult(context, liveAction, pulseFlags);
       const resolvedAt = Date.now();
+      const unlockedDiscoveryKeys = getNewDiscoveryKeys(discoveryKeysBeforeAction, context.gameState);
       const vfxType = context.lastVfxType || null;
       context.lastVfxType = null;
       lastRoleDebug = context.lastRoleDebug;
       liveAction.status = "resolved";
       liveAction.resolvedAt = resolvedAt;
       liveAction.resultMessage = resultMessage;
+      summaryEntries.push(createPulseSummaryEntry(liveAction, resultMessage, unlockedDiscoveryKeys, resolvedAt));
       lastRoleActions[liveAction.role] = createLastRoleAction(liveAction, "resuelta", resultMessage);
       pulseState = {
         ...pulseState,
@@ -320,6 +351,12 @@ export async function executePulse({ mode = "manual", onStatus, range } = {}) {
       pendingItemUsage: {},
       lastRoleActions,
       lastRoleDebug,
+    }, {
+      lastPulseSummary: {
+        pulseId,
+        createdAt: Date.now(),
+        entries: summaryEntries,
+      },
     });
     onStatus?.("Pulso resuelto. Siguiente pulso programado.");
   } catch (error) {

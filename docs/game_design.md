@@ -67,6 +67,8 @@ El pulso del GM mantiene su funcion actual: resuelve las acciones encoladas desp
 
 La carga es acumulativa por hotspot y variante. Un chip no tiene que alcanzar por si solo el umbral de descubrimiento: si aporta menos carga de la necesaria, esa carga queda guardada en `gameState.accumulatedCharge`. Cuando se completan los slots de descubrimiento de un hotspot, el excedente se convierte en resonancia compartida.
 
+La cola visible de chips es una fila inferior centrada, no un panel lateral. Puede contener hasta 8 chips reales en espera o ejecucion; la carga obtenida en el minijuego se muestra sobre cada chip en amarillo para distinguirla de la anomalia verde. Durante el pulso, los chips se consumen uno a uno con una animacion de ejecucion y al final aparece un resumen central de efectos filtrado por variante.
+
 Las guias de jugador aparecen como overlays superiores no bloqueantes: se muestran centradas bajo la onda de anomalia, duran 10 segundos, tienen barra de progreso y tambien pueden cerrarse con boton. Si se disparan varias guias seguidas, se encolan con una pausa minima de 3 segundos entre ellas.
 
 La fusion combina propiedades de dos realidades en una nueva version estable. No es una tercera variante visual completa: es un nuevo estado del objeto dentro del escenario actual. Ejemplo: una taquilla que en A parece cerrada con candado y en B muestra una anomalia mecanica puede pasar a `LOCKER_FUSION`, donde ambas propiedades conviven y el bloqueo ya es manipulable.

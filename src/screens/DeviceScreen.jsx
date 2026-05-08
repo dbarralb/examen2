@@ -285,9 +285,9 @@ export function DeviceScreen({ params }) {
       incrementCardUsage(role.id, card.id, 0).catch(() => {});
       setQueueStatus("done");
       setStatusMsg(`Chip creado. Carga: ${charge}. ${getActionKindLabel(actionKind)}. El pulso resolvera la accion.`);
-    } catch {
+    } catch (error) {
       setQueueStatus("error");
-      setStatusMsg("No se pudo encolar. Reintenta.");
+      setStatusMsg(error?.message || "No se pudo encolar. Reintenta.");
     } finally {
       setSelectedPort(null);
     }

@@ -65,6 +65,7 @@ export function createInitialPulseState() {
     actionCount: 0,
     actionIndex: 0,
     resultOverlay: createEmptyResultOverlay(),
+    lastPulseSummary: null,
     updatedAt: Date.now(),
   };
 }
