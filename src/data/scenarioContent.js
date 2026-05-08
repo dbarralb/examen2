@@ -18,7 +18,7 @@ export const DOOR_STATES = {
 };
 
 export const RESONANCE_COSTS = {
-  LOCKER_FUSION: 6,
+  LOCKER_FUSION: 8,
 };
 
 export const SCENARIO_ITEMS = {

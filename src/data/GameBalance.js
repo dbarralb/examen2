@@ -58,7 +58,7 @@ export const NODE_GRAPH = {
 // -----------------------------------------------------------------------------
 export const FUSION = {
   /** Coste de resonancia necesario para activar la fusión de taquillas. */
-  lockerFusionResonanceCost: 6,
+  lockerFusionResonanceCost: 8,
 
   /** Milisegundos de espera antes de disparar onSuccess tras completar la fusión. */
   successDelayMs: 3_200,

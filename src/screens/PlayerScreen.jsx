@@ -283,6 +283,7 @@ export function PlayerScreen({ navigation, params }) {
   const resonanceCollectPendingRef = useRef(false);
   const resonanceRewardPendingRef = useRef(false);
   const resonanceRewardClaimedRef = useRef(false);
+  const clientResonanceGrantRef = useRef(0);
   const tooltipCooldownTimerRef = useRef(null);
   const chatReadingTimerRef = useRef(null);
   const chatInputRef = useRef(null);
@@ -667,6 +668,19 @@ export function PlayerScreen({ navigation, params }) {
     setRecentResonanceGain(true);
     resonanceTooltipTimerRef.current = window.setTimeout(() => setRecentResonanceGain(false), 7000);
 
+    const totalGained = resonanceValue - previousValue;
+    const clientPortion = Math.min(clientResonanceGrantRef.current, totalGained);
+    clientResonanceGrantRef.current = Math.max(0, clientResonanceGrantRef.current - totalGained);
+    const pulseGained = totalGained - clientPortion;
+
+    if (pulseGained > 0) {
+      window.clearTimeout(resonanceRewardFeedbackTimerRef.current);
+      setResonanceRewardFeedback({ id: Date.now(), targetId: null, amount: pulseGained });
+      resonanceRewardFeedbackTimerRef.current = window.setTimeout(() => {
+        setResonanceRewardFeedback(null);
+      }, 3400);
+    }
+
     return () => window.clearTimeout(resonanceTooltipTimerRef.current);
   }, [resonanceValue]);
 
@@ -1002,6 +1016,7 @@ export function PlayerScreen({ navigation, params }) {
 
     resonanceRewardPendingRef.current = true;
     resonanceRewardClaimedRef.current = true;
+    clientResonanceGrantRef.current += RESONANCE_BALLS_OPEN_REWARD;
     try {
       const currentValue = Number(sharedResonance?.value || 0);
       const currentSpent = Number(sharedResonance?.spent || 0);
@@ -1055,9 +1070,15 @@ export function PlayerScreen({ navigation, params }) {
     }
 
     resonanceCollectPendingRef.current = true;
+    clientResonanceGrantRef.current += 1;
     window.clearTimeout(resonanceCollectTimerRef.current);
     window.clearTimeout(resonanceDespawnTimerRef.current);
+    window.clearTimeout(resonanceRewardFeedbackTimerRef.current);
     setResonanceCollectState("collected");
+    setResonanceRewardFeedback({ id: Date.now(), targetId: null, amount: 1 });
+    resonanceRewardFeedbackTimerRef.current = window.setTimeout(() => {
+      setResonanceRewardFeedback(null);
+    }, 3400);
 
     try {
       const latestResonance = await firebaseGet("gameState/sharedResonance") || sharedResonance || {};
