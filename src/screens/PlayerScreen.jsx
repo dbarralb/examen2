@@ -5,7 +5,7 @@ import { ActionQueueOverlay } from "../components/ActionQueueOverlay.jsx";
 import { CodexGuideOverlay, HistoryGlyph, PlayerCodeTooltipLayer } from "../components/PlayerCodeTooltipLayer.jsx";
 import { SceneMap } from "../components/SceneMap.jsx";
 import { DEFAULT_SCENARIO_ID, getVariantBackground, getVariantImageAspect } from "../data/scenarioData.js";
-import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioPulseAnomalyTargetIds, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
+import { applyScenarioHotspotOverrides, getScenarioContainerOpenState, getScenarioHotspots, getScenarioItem, getScenarioPulseAnomalyTargetIds, getScenarioScopedTargetKey, purchaseInspectionDiscovery, resolveScenarioDeviceCommand } from "../data/scenarioContent.js";
 import { PLAYER_TOOLTIPS, resolvePlayerTooltip } from "../data/playerTooltips.js";
 import { ItemModal } from "../components/ItemModal.jsx";
 import { PlayerInventoryBar } from "../components/PlayerInventoryBar.jsx";
@@ -1134,6 +1134,49 @@ export function PlayerScreen({ navigation, params }) {
     }
   }
 
+  async function handleUnlockDiscovery(targetId, slotKey) {
+    if (isGmMonitorView || !targetId || !slotKey) {
+      return;
+    }
+
+    try {
+      const latestGameState = { ...createInitialGameState(), ...((await firebaseGet("gameState")) || {}) };
+      const result = purchaseInspectionDiscovery(latestGameState, boardScenarioId, boardVariant, targetId, slotKey);
+
+      if (!result.ok) {
+        return;
+      }
+
+      const latestActionLog = normalizeRemoteList(await firebaseGet("actionLog"));
+      const nextActionLog = [result.message, ...latestActionLog];
+      const scopedTargetKey = getScenarioScopedTargetKey(boardScenarioId, boardVariant, targetId);
+      const nextTargetFeedback = {
+        ...targetFeedback,
+        [targetId]: result.feedback,
+        [scopedTargetKey]: result.feedback,
+      };
+
+      await firebasePatch("", {
+        gameState: latestGameState,
+        actionLog: nextActionLog,
+        [`targetFeedback/${targetId}`]: result.feedback,
+        [`targetFeedback/${scopedTargetKey}`]: result.feedback,
+      });
+
+      setRemoteState((current) => current
+        ? {
+            ...current,
+            gameState: latestGameState,
+            actionLog: nextActionLog,
+            targetFeedback: nextTargetFeedback,
+          }
+        : current
+      );
+    } catch {
+      // El polling remoto reintentara dejar la UI en estado correcto.
+    }
+  }
+
   async function handleInventorySlotDrop(itemId, slotIndex) {
     const taken = playerInventory[slotIndex] !== null;
     if (taken) return;
@@ -1179,6 +1222,7 @@ export function PlayerScreen({ navigation, params }) {
           targetFeedback={targetFeedback}
           selectedTargetId={effectiveSelectedTargetId}
           queuedForPlayer={queuedForPlayer}
+          queuedActions={queuedActions}
           overlayActive={overlayActive}
           onSelectTarget={handleSelectTarget}
           onCloseTarget={() => setSelectedTargetId(null)}
@@ -1207,6 +1251,7 @@ export function PlayerScreen({ navigation, params }) {
           resonanceRewardFeedback={isGmMonitorView ? null : resonanceRewardFeedback}
           onResonanceHoverStart={isGmMonitorView ? undefined : handleResonanceHoverStart}
           onResonanceHoverEnd={isGmMonitorView ? undefined : handleResonanceHoverEnd}
+          onUnlockDiscovery={isGmMonitorView ? undefined : handleUnlockDiscovery}
         />
         {!isGmMonitorView && (
           <div className="player-utility-rail" aria-label="Herramientas de escena">

@@ -58,6 +58,11 @@ export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, o
             className={`obj-inv-slot reveal-in ${isUnseen ? "unseen" : ""}`}
             onClick={() => onItemClick?.(item)}
             draggable={item.type === "usable"}
+            aria-label={
+              item.type === "usable"
+                ? `${item.label}. Arrastra este objeto al inventario para cogerlo.`
+                : item.label
+            }
             onDragStart={(event) => {
               if (item.type !== "usable") return;
               event.stopPropagation();
@@ -69,6 +74,11 @@ export function ObjectInventoryGrid({ items = [], seenState = {}, onItemClick, o
             <span className="obj-inv-icon">{item.type === "usable" ? "✋" : "📄"}</span>
             <span className="obj-inv-label">{item.label}</span>
             {isUnseen && <span className="obj-inv-unseen-dot" aria-hidden="true" />}
+            {item.type === "usable" && (
+              <span className="obj-inv-pickup-tooltip" role="tooltip">
+                Arrastra al inventario para cogerlo
+              </span>
+            )}
           </button>
         );
       })}

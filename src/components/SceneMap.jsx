@@ -7,7 +7,8 @@ import { StructureLayer } from "./map/StructureLayer.jsx";
 import { InteractiveLayer } from "./map/InteractiveLayer.jsx";
 import { CoordinateOverlay } from "./map/CoordinateOverlay.jsx";
 import { getContainerOpenState, getHotspotDiscoveries, getInspectionDiscovery, getTarget, getTargetImage, getTargetStateLabel, getTargetItems, targets } from "../data/gameData.js";
-import { getScenarioScopedTargetKey, getAccChargeKey } from "../data/scenarioContent.js";
+import { isInspectionAction } from "../data/actionTypes.js";
+import { getAccumulatedChargeForTarget, getScenarioScopedTargetKey, getAccChargeKey } from "../data/scenarioContent.js";
 import { ObjectInventoryGrid } from "./ObjectInventoryGrid.jsx";
 import { formatCardLabel } from "../presentation/actionQueuePresentation.js";
 import resonanceRing1 from "../../assets/Pantalla de juego/Resonance/1.svg?url";
@@ -60,6 +61,26 @@ function ChargeBattery({ accumulated = 0, cost = 1 }) {
       <span className="scene-discovery-battery__label">{accumulated}/{cost}</span>
     </div>
   );
+}
+
+function getIncomingChargeForTarget(queuedActions = [], scenarioId = "almacen", variant = "A", targetId = "") {
+  const targetChargeKey = getAccChargeKey(scenarioId, variant, targetId);
+
+  return queuedActions.reduce((total, action) => {
+    if (!action || (action.status || "queued") !== "queued" || action.target !== targetId || !isInspectionAction(action)) {
+      return total;
+    }
+
+    const actionScenarioId = action.scenarioId || scenarioId;
+    const actionVariant = action.variant || variant;
+    const actionChargeKey = getAccChargeKey(actionScenarioId, actionVariant, action.target);
+
+    if (actionChargeKey !== targetChargeKey) {
+      return total;
+    }
+
+    return total + Math.max(0, Number(action.charge || 0));
+  }, 0);
 }
 
 function clamp(value, min, max) {
@@ -419,6 +440,7 @@ export function SceneMap({
   targetFeedback,
   selectedTargetId,
   queuedForPlayer,
+  queuedActions = [],
   overlayActive,
   onSelectTarget,
   onCloseTarget,
@@ -455,6 +477,7 @@ export function SceneMap({
   resonanceRewardFeedback = null,
   onResonanceHoverStart,
   onResonanceHoverEnd,
+  onUnlockDiscovery,
 }) {
   const effectiveAspect = imageAspect || DEFAULT_MAP_ASPECT;
   const effectiveMinScale = imageAspect && imageAspect > DEFAULT_MAP_ASPECT ? MIN_SCALE_WIDE : MIN_SCALE;
@@ -994,7 +1017,7 @@ export function SceneMap({
                   const isDisabled = /disabled/i.test(stateLabel);
                   return <NBadge status={isDisabled ? "danger" : "info"}>Estado: {stateLabel}</NBadge>;
                 })()}
-                <p>{targetFeedback[target.id]}</p>
+                <p>{targetFeedback[getScenarioScopedTargetKey(scenarioId, variant, target.id)] || targetFeedback[target.id]}</p>
                 {resonanceRewardForTarget && (
                   <div key={resonanceRewardForTarget.id} className="scene-object-resonance-reward" aria-live="polite">
                     <span className="scene-object-resonance-reward__scan" aria-hidden="true" />
@@ -1025,28 +1048,59 @@ export function SceneMap({
                 {(() => {
                   const discoverySlots = getHotspotDiscoveries(target.id, gameState, scenarioId, variant);
                   if (!discoverySlots.length) return null;
-                  const accKey = getAccChargeKey(scenarioId, variant, target.id);
-                  const accumulated = Number(gameState.accumulatedCharge?.[accKey] || 0);
+                  const accumulated = getAccumulatedChargeForTarget(gameState, scenarioId, variant, target.id);
+                  const incomingCharge = getIncomingChargeForTarget(queuedActions, scenarioId, variant, target.id);
                   return (
-                    <section className="scene-object-card-discoveries">
-                      {discoverySlots.map((slot) => (
-                        <div key={slot.slotKey} className={`scene-discovery-slot ${slot.unlocked ? "unlocked" : "locked"}`}>
-                          <span className="scene-discovery-slot-label">
-                            {slot.unlocked ? slot.label : "Analisis bloqueado"}
-                          </span>
-                          {slot.unlocked ? (
-                            <p className="scene-discovery-slot-content">{slot.description}</p>
-                          ) : (
+                    <>
+                      <div className="scene-object-charge-meter" aria-label={`Carga acumulada: ${accumulated}${incomingCharge > 0 ? `. ${incomingCharge} en pulso` : ""}`}>
+                        <span>Carga acumulada</span>
+                        <strong>{accumulated}</strong>
+                        {incomingCharge > 0 && <em>+{incomingCharge} en pulso</em>}
+                      </div>
+                      <section className="scene-object-card-discoveries">
+                        {discoverySlots.map((slot) => {
+                          const canUnlock = !slot.unlocked && accumulated >= slot.chargeCost;
+                          const slotClassName = `scene-discovery-slot ${slot.unlocked ? "unlocked" : "locked"}${canUnlock ? " can-unlock" : ""}`;
+
+                          if (slot.unlocked) {
+                            return (
+                              <div key={slot.slotKey} className={slotClassName}>
+                                <span className="scene-discovery-slot-label">{slot.label}</span>
+                                <p className="scene-discovery-slot-content">{slot.description}</p>
+                              </div>
+                            );
+                          }
+
+                          const lockedContent = (
                             <>
+                              <span className="scene-discovery-slot-label">Analisis bloqueado</span>
                               <ChargeBattery accumulated={accumulated} cost={slot.chargeCost} />
                               <p className="scene-discovery-slot-cost">
-                                Requiere carga <strong>{slot.chargeCost}</strong> en la accion de inspeccion
+                                {canUnlock ? "Desbloquear por" : "Requiere carga"} <strong>{slot.chargeCost}</strong>
                               </p>
                             </>
-                          )}
-                        </div>
-                      ))}
-                    </section>
+                          );
+
+                          return canUnlock && !isMonitorView ? (
+                            <button
+                              key={slot.slotKey}
+                              type="button"
+                              className={slotClassName}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onUnlockDiscovery?.(target.id, slot.slotKey);
+                              }}
+                            >
+                              {lockedContent}
+                            </button>
+                          ) : (
+                            <div key={slot.slotKey} className={slotClassName}>
+                              {lockedContent}
+                            </div>
+                          );
+                        })}
+                      </section>
+                    </>
                   );
                 })()}
                 <section className={`scene-mobile-action-hint${queuedChipForTarget ? " scene-mobile-action-hint--queued" : ""}${overlayActive ? " scene-mobile-action-hint--pulse" : ""}`}>

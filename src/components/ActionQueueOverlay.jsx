@@ -24,12 +24,12 @@ function getChipExecutionClass(chip, pulseState) {
     return "";
   }
 
-  if (chip.id === pulseState.currentActionId) {
-    return " scene-action-chip--executing";
-  }
-
   if (chip.status === "resolved") {
     return " scene-action-chip--resolved";
+  }
+
+  if (chip.id === pulseState.currentActionId) {
+    return " scene-action-chip--executing";
   }
 
   return "";
@@ -38,6 +38,8 @@ function getChipExecutionClass(chip, pulseState) {
 export function ActionQueueOverlay({ actions, pulseState = {}, resonanceValue = null, resonanceRewardFeedback = null }) {
   const chips = buildQueuedActionChipModels(actions || []).slice(0, MAX_VISIBLE_CHIPS);
   const isExecuting = pulseState.status === "executing";
+  const hasQueuedActions = chips.length > 0 || (pulseState.actionCount || 0) > 0;
+  const showExecutionProgress = isExecuting && hasQueuedActions;
 
   useTick(isExecuting);
 
@@ -59,8 +61,8 @@ export function ActionQueueOverlay({ actions, pulseState = {}, resonanceValue = 
         )}
       </div>
 
-      <aside className={`scene-action-queue ${isExecuting ? "scene-action-queue--executing" : ""}`} aria-label="Cola de acciones">
-        {isExecuting && (
+      <aside className={`scene-action-queue ${showExecutionProgress ? "scene-action-queue--executing" : ""}`} aria-label="Cola de acciones">
+        {showExecutionProgress && (
           <div className="scene-action-queue__pulse" aria-live="polite">
             <span>{pulseProgress.label}</span>
             <strong>{Math.min(pulseState.actionIndex || 0, pulseState.actionCount || 0)}/{pulseState.actionCount || chips.length}</strong>
@@ -83,7 +85,16 @@ export function ActionQueueOverlay({ actions, pulseState = {}, resonanceValue = 
                 <strong className="scene-action-chip__charge">{chip.charge}</strong>
               )}
               <img className="scene-action-chip__image" src={chip.chipImage} alt="" draggable="false" />
+              {chip.status === "resolved" && chip.charge != null && (
+                <strong className="scene-action-chip__resolved-charge">+{chip.charge}</strong>
+              )}
               <div className="scene-action-chip__burst" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="scene-action-chip__burst scene-action-chip__burst--entry" aria-hidden="true">
                 <span />
                 <span />
                 <span />

@@ -14,6 +14,7 @@ export function ActionQueuePanel({
 }) {
   const queuedActionChips = useMemo(() => buildQueuedActionChipModels(queuedActions), [queuedActions]);
   const pulseProgress = getPulseProgress(pulseState);
+  const hasQueuedActions = queuedActionChips.length > 0 || (pulseState.actionCount || 0) > 0;
   const stackClasses = ["action-queue-stack"];
 
   if (stackClassName) {
@@ -26,7 +27,7 @@ export function ActionQueuePanel({
         <NBadge status={getPulseBadgeStatus(pulseState.status)}>Pulso: {pulseState.status || "idle"}</NBadge>
         <span>{queuedActionChips.length} chips</span>
       </div>
-      {pulseState.status !== "idle" && (
+      {pulseState.status !== "idle" && hasQueuedActions && (
         <NProgress
           value={pulseProgress.value}
           max={pulseProgress.max}

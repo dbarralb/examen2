@@ -372,8 +372,11 @@ export function getScenarioHotspotDiscoveries(targetId, gameState = {}, scenario
   if (!hotspot?.discoveries?.length) return [];
 
   return hotspot.discoveries.map((disc) => {
-    const fullSlotKey = `${getScenarioScopedTargetKey(scenarioId, variant, targetId)}__${disc.slotKey}`;
-    const unlocked = Boolean(gameState.inspectionDiscoveries?.[fullSlotKey]);
+    const fullSlotKey = getScopedDiscoverySlotKey(scenarioId, variant, targetId, disc.slotKey);
+    const legacyUnlocked = getLegacyScopedTargetKeys(scenarioId, targetId).some((legacyKey) => (
+      gameState.inspectionDiscoveries?.[`${legacyKey}__${disc.slotKey}`]
+    ));
+    const unlocked = Boolean(gameState.inspectionDiscoveries?.[fullSlotKey] || legacyUnlocked);
     const description = disc.contentByVariant
       ? (disc.contentByVariant[variant] || disc.contentByVariant.A || "")
       : (disc.description || "");
@@ -535,8 +538,33 @@ function consumeSharedResonance(gameState, amount) {
 // Accumulated charge per hotspot
 // ---------------------------------------------------------------------------
 
+function getDiscoveryScopeVariant(scenarioId, variant, targetId) {
+  if (scenarioId === "almacen" && targetId === "taquillas") {
+    return "shared";
+  }
+
+  return variant || "A";
+}
+
+function getLegacyScopedTargetKeys(scenarioId, targetId) {
+  if (scenarioId !== "almacen" || targetId !== "taquillas") {
+    return [];
+  }
+
+  return ["A", "B"].map((variantId) => getScenarioScopedTargetKey(scenarioId, variantId, targetId));
+}
+
 export function getAccChargeKey(scenarioId, variant, targetId) {
-  return getScenarioScopedTargetKey(scenarioId, variant, targetId);
+  return getScenarioScopedTargetKey(scenarioId, getDiscoveryScopeVariant(scenarioId, variant, targetId), targetId);
+}
+
+export function getAccumulatedChargeForTarget(gameState = {}, scenarioId = "almacen", variant = "A", targetId = "") {
+  const key = getAccChargeKey(scenarioId, variant, targetId);
+  const current = Number(gameState.accumulatedCharge?.[key] || 0);
+  const legacyTotal = getLegacyScopedTargetKeys(scenarioId, targetId)
+    .reduce((total, legacyKey) => total + Number(gameState.accumulatedCharge?.[legacyKey] || 0), 0);
+
+  return current + legacyTotal;
 }
 
 function getAccumulatedCharge(gameState, key) {
@@ -549,44 +577,47 @@ function setAccumulatedCharge(gameState, key, value) {
   gameState.accumulatedCharge[key] = Math.max(0, value);
 }
 
-/**
- * Adds charge to the hotspot accumulator, unlocking discovery slots in order.
- * Overflow after all slots are unlocked goes to shared resonance.
- * Returns { newlyUnlocked: string[], resonanceGained: number }
- */
+function migrateSharedDiscoveryState(gameState, scenarioId, variant, targetId) {
+  if (scenarioId !== "almacen" || targetId !== "taquillas") {
+    return;
+  }
+
+  if (!gameState.accumulatedCharge) gameState.accumulatedCharge = {};
+  if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
+
+  const sharedChargeKey = getAccChargeKey(scenarioId, variant, targetId);
+  const legacyChargeKeys = getLegacyScopedTargetKeys(scenarioId, targetId);
+  const legacyCharge = legacyChargeKeys.reduce((total, legacyKey) => total + Number(gameState.accumulatedCharge[legacyKey] || 0), 0);
+  if (legacyCharge > 0) {
+    gameState.accumulatedCharge[sharedChargeKey] = Number(gameState.accumulatedCharge[sharedChargeKey] || 0) + legacyCharge;
+    legacyChargeKeys.forEach((legacyKey) => {
+      delete gameState.accumulatedCharge[legacyKey];
+    });
+  }
+
+  const hotspotDefs = getScenarioTarget(targetId, scenarioId, variant);
+  (hotspotDefs?.discoveries || []).forEach((disc) => {
+    const sharedSlotKey = getScopedDiscoverySlotKey(scenarioId, variant, targetId, disc.slotKey);
+    const wasUnlocked = ["A", "B"].some((legacyVariant) => (
+      gameState.inspectionDiscoveries[`${getScenarioScopedTargetKey(scenarioId, legacyVariant, targetId)}__${disc.slotKey}`]
+    ));
+    if (wasUnlocked) {
+      gameState.inspectionDiscoveries[sharedSlotKey] = true;
+    }
+  });
+}
+
+/** Adds charge to the hotspot accumulator without spending it. */
 function applyChargeToTarget(gameState, scenarioId, variant, targetId, addedCharge, hotspotDefs) {
   if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
+  migrateSharedDiscoveryState(gameState, scenarioId, variant, targetId);
   const key = getAccChargeKey(scenarioId, variant, targetId);
-  let accumulated = getAccumulatedCharge(gameState, key) + Number(addedCharge || 0);
-  const discoveries = hotspotDefs?.discoveries || [];
-  const newlyUnlocked = [];
-
-  for (const disc of discoveries) {
-    const slotKey = getScopedDiscoverySlotKey(scenarioId, variant, targetId, disc.slotKey);
-    if (gameState.inspectionDiscoveries[slotKey]) continue;
-    const cost = Number(disc.chargeCost) || 2;
-    if (accumulated >= cost) {
-      accumulated -= cost;
-      gameState.inspectionDiscoveries[slotKey] = true;
-      newlyUnlocked.push(disc.slotKey);
-    } else {
-      break;
-    }
-  }
-
-  const allDone = discoveries.every((disc) =>
-    gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, variant, targetId, disc.slotKey)]
-  );
-
-  let resonanceGained = 0;
-  if (allDone && accumulated > 0) {
-    addSharedResonance(gameState, accumulated);
-    resonanceGained = accumulated;
-    accumulated = 0;
-  }
+  const previousAccumulated = getAccumulatedCharge(gameState, key);
+  const added = Math.max(0, Number(addedCharge || 0));
+  const accumulated = previousAccumulated + added;
 
   setAccumulatedCharge(gameState, key, accumulated);
-  return { newlyUnlocked, resonanceGained };
+  return { previousAccumulated, accumulated, added, discoveries: hotspotDefs?.discoveries || [] };
 }
 
 // Keep legacy stubs so nothing outside breaks during transition
@@ -604,7 +635,81 @@ function setAlmacenStateForBothVariants(gameState, targetId, state) {
 }
 
 function getScopedDiscoverySlotKey(scenarioId, variant, targetId, slotKey) {
-  return `${getScenarioScopedTargetKey(scenarioId, variant, targetId)}__${slotKey}`;
+  return `${getScenarioScopedTargetKey(scenarioId, getDiscoveryScopeVariant(scenarioId, variant, targetId), targetId)}__${slotKey}`;
+}
+
+function markInspectionDiscoveryUnlocked(gameState, scenarioId, variant, targetId, slotKey) {
+  if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
+
+  const discoveryKey = getScopedDiscoverySlotKey(scenarioId, variant, targetId, slotKey);
+  gameState.inspectionDiscoveries[discoveryKey] = true;
+
+  getLegacyScopedTargetKeys(scenarioId, targetId).forEach((legacyKey) => {
+    gameState.inspectionDiscoveries[`${legacyKey}__${slotKey}`] = true;
+  });
+
+  return discoveryKey;
+}
+
+export function purchaseInspectionDiscovery(gameState = {}, scenarioId = "almacen", variant = "A", targetId = "", slotKey = "") {
+  if (!gameState.flags) gameState.flags = {};
+  if (!gameState.inspectionDiscoveries) gameState.inspectionDiscoveries = {};
+  migrateSharedDiscoveryState(gameState, scenarioId, variant, targetId);
+
+  const hotspotDefs = getScenarioTarget(targetId, scenarioId, variant);
+  const discovery = hotspotDefs?.discoveries?.find((disc) => disc.slotKey === slotKey);
+  if (!discovery) {
+    return { ok: false, reason: "missing_discovery" };
+  }
+
+  const discoveryKey = getScopedDiscoverySlotKey(scenarioId, variant, targetId, slotKey);
+  if (gameState.inspectionDiscoveries[discoveryKey]) {
+    return { ok: false, reason: "already_unlocked", discoveryKey };
+  }
+
+  const accKey = getAccChargeKey(scenarioId, variant, targetId);
+  const cost = Number(discovery.chargeCost) || 0;
+  const accumulated = getAccumulatedCharge(gameState, accKey);
+  if (accumulated < cost) {
+    return { ok: false, reason: "insufficient_charge", accumulated, cost, discoveryKey };
+  }
+
+  const remainingCharge = accumulated - cost;
+  setAccumulatedCharge(gameState, accKey, remainingCharge);
+  markInspectionDiscoveryUnlocked(gameState, scenarioId, variant, targetId, slotKey);
+
+  let resonanceGained = 0;
+  let feedback = `${discovery.label || "Hallazgo"} desbloqueado. Carga restante: ${remainingCharge}.`;
+  let message = `Hallazgo desbloqueado en ${targetId}: ${discovery.label || slotKey}.`;
+
+  if (scenarioId === "almacen" && targetId === "taquillas" && slotKey === "slot0") {
+    resonanceGained = addSharedResonanceOnce(gameState, `contradiction_locker_mechanism_shared`, 3);
+    gameState.flags.contradiccionTaquillas = true;
+    feedback = resonanceGained > 0
+      ? "La taquilla confirma una contradiccion entre realidades. La resonancia aumenta."
+      : "La contradiccion de la taquilla ya estaba detectada.";
+    message = "El grupo desbloquea el analisis del cierre de la taquilla.";
+  } else if (scenarioId === "almacen" && targetId === "llave_taquilla" && slotKey === "slot0") {
+    resonanceGained = addSharedResonanceOnce(gameState, `inspection_llave_taquilla_${variant}`, 2);
+    feedback = "La llave industrial revela su proposito: encaja con el cierre exterior de la taquilla.";
+    message = "El equipo desbloquea el analisis de la llave industrial.";
+  } else if (scenarioId === "almacen" && targetId === "horquilla" && slotKey === "slot0") {
+    resonanceGained = addSharedResonanceOnce(gameState, `inspection_horquilla_${variant}`, 2);
+    feedback = "La horquilla reforzada encaja con el mecanismo interior de la taquilla.";
+    message = "El equipo desbloquea el analisis de la horquilla.";
+  }
+
+  return {
+    ok: true,
+    accKey,
+    cost,
+    discoveryKey,
+    label: discovery.label || "Hallazgo",
+    remainingCharge,
+    resonanceGained,
+    feedback,
+    message,
+  };
 }
 
 export function resolveScenarioAction(context, action, pulseFlags = {}) {
@@ -658,7 +763,7 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
       const hasHairpin = action.itemId === "horquilla";
 
       if (hasKey || hasHairpin) {
-        gameState.inspectionDiscoveries[getScopedDiscoverySlotKey(scenarioId, actionVariant, "taquillas", "slot1")] = true;
+        markInspectionDiscoveryUnlocked(gameState, scenarioId, actionVariant, "taquillas", "slot1");
         context.lastVfxType = "spark_fusion_fail";
         feedback = hasKey
           ? "La llave encaja en la guia exterior, pero el mecanismo interior no responde. La anomalia temporal lo hace imposible por separado."
@@ -673,30 +778,9 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     } else if (isInspection) {
       const actionCharge = Number(action.charge || 0);
       const hotspotDefs = getScenarioTarget("taquillas", scenarioId, actionVariant);
-      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
-      const accKey = getAccChargeKey(scenarioId, actionVariant, "taquillas");
-      const prevAccumulated = getAccumulatedCharge(gameState, accKey);
-      const { newlyUnlocked, resonanceGained } = applyChargeToTarget(gameState, scenarioId, actionVariant, "taquillas", actionCharge, hotspotDefs);
-      const newAccumulated = getAccumulatedCharge(gameState, accKey);
-      const slot0JustUnlocked = newlyUnlocked.includes("slot0");
-
-      if (slot0JustUnlocked) {
-        const gained = addSharedResonanceOnce(gameState, `contradiction_locker_mechanism_${actionVariant}`, 3);
-        gameState.flags.contradiccionTaquillas = true;
-        feedback = gained > 0
-          ? `La taquilla confirma una contradiccion: A muestra el bloqueo, B muestra la logica mecanica. La resonancia aumenta.`
-          : `La contradiccion de la taquilla ya esta detectada. Aun necesita un pulso con resonancia suficiente.`;
-        message = gained > 0
-          ? "El grupo detecta una contradiccion resonante en la taquilla."
-          : "La taquilla sigue bloqueada hasta que se produzca una fusion.";
-      } else if (resonanceGained > 0) {
-        feedback = `La taquilla ya esta analizada. Carga excedente convertida en resonancia (+${resonanceGained}).`;
-        message = `${action.role} genera resonancia con carga excedente en la taquilla.`;
-      } else {
-        const needed = slot0Cost - (prevAccumulated + actionCharge);
-        feedback = `Carga acumulada: ${prevAccumulated + actionCharge}/${slot0Cost}. Faltan ${Math.max(0, needed)} puntos mas para desbloquear el analisis.`;
-        message = `${action.role} acumula carga en la taquilla (${prevAccumulated + actionCharge}/${slot0Cost}).`;
-      }
+      const chargeResult = applyChargeToTarget(gameState, scenarioId, actionVariant, "taquillas", actionCharge, hotspotDefs);
+      feedback = `Carga de taquillas +${chargeResult.added}. Carga acumulada: ${chargeResult.accumulated}. Desbloquead hallazgos disponibles desde la carta.`;
+      message = `${action.role} suma ${chargeResult.added} de carga a la taquilla (${chargeResult.accumulated} acumulada).`;
     } else {
       feedback = "La taquilla no responde a esta accion. Primero conviene inspeccionarla o estabilizar su fusion.";
       message = "La taquilla sigue bloqueada.";
@@ -707,26 +791,9 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     if (isInspection) {
       const actionCharge = Number(action.charge || 0);
       const hotspotDefs = getScenarioTarget("llave_taquilla", scenarioId, actionVariant);
-      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
-      const accKey = getAccChargeKey(scenarioId, actionVariant, "llave_taquilla");
-      const prevAccumulated = getAccumulatedCharge(gameState, accKey);
-      const { newlyUnlocked, resonanceGained } = applyChargeToTarget(gameState, scenarioId, actionVariant, "llave_taquilla", actionCharge, hotspotDefs);
-
-      if (newlyUnlocked.includes("slot0")) {
-        const gained = addSharedResonanceOnce(gameState, `inspection_llave_taquilla_${actionVariant}`, 2);
-        feedback = gained > 0
-          ? "La llave industrial revela su proposito: su pomo encaja en el cierre exterior de la taquilla, aunque algo falta para que funcione."
-          : "La llave ya habia sido analizada. El mecanismo incompleto sigue esperando.";
-        message = gained > 0
-          ? "El equipo analiza la llave industrial y detecta su conexion con la taquilla."
-          : "La llave ya fue analizada. Sigue siendo util.";
-      } else if (resonanceGained > 0) {
-        feedback = `La llave ya esta analizada. Carga excedente convertida en resonancia (+${resonanceGained}).`;
-        message = `${action.role} genera resonancia con carga excedente en la llave.`;
-      } else {
-        feedback = `Carga acumulada: ${prevAccumulated + actionCharge}/${slot0Cost}. Necesitas mas nodos de datos para analizar la llave.`;
-        message = `${action.role} acumula carga en la llave (${prevAccumulated + actionCharge}/${slot0Cost}).`;
-      }
+      const chargeResult = applyChargeToTarget(gameState, scenarioId, actionVariant, "llave_taquilla", actionCharge, hotspotDefs);
+      feedback = `Carga de llave +${chargeResult.added}. Carga acumulada: ${chargeResult.accumulated}. Desbloquead su analisis desde la carta.`;
+      message = `${action.role} suma ${chargeResult.added} de carga a la llave (${chargeResult.accumulated} acumulada).`;
     } else {
       feedback = "La llave necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
       message = `${action.role} examina la llave sin objetivo claro.`;
@@ -737,26 +804,9 @@ export function resolveScenarioAction(context, action, pulseFlags = {}) {
     if (isInspection) {
       const actionCharge = Number(action.charge || 0);
       const hotspotDefs = getScenarioTarget("horquilla", scenarioId, actionVariant);
-      const slot0Cost = hotspotDefs?.discoveries?.find(d => d.slotKey === "slot0")?.chargeCost || 2;
-      const accKey = getAccChargeKey(scenarioId, actionVariant, "horquilla");
-      const prevAccumulated = getAccumulatedCharge(gameState, accKey);
-      const { newlyUnlocked, resonanceGained } = applyChargeToTarget(gameState, scenarioId, actionVariant, "horquilla", actionCharge, hotspotDefs);
-
-      if (newlyUnlocked.includes("slot0")) {
-        const gained = addSharedResonanceOnce(gameState, `inspection_horquilla_${actionVariant}`, 2);
-        feedback = gained > 0
-          ? "La horquilla reforzada calza perfectamente en el mecanismo interior de la taquilla. Falta la pieza exterior para completar el cierre."
-          : "La horquilla ya habia sido analizada. Sigue siendo la clave del mecanismo interior.";
-        message = gained > 0
-          ? "El equipo analiza la horquilla y detecta su conexion con el mecanismo interior de la taquilla."
-          : "La horquilla ya fue analizada. Sigue siendo util.";
-      } else if (resonanceGained > 0) {
-        feedback = `La horquilla ya esta analizada. Carga excedente convertida en resonancia (+${resonanceGained}).`;
-        message = `${action.role} genera resonancia con carga excedente en la horquilla.`;
-      } else {
-        feedback = `Carga acumulada: ${prevAccumulated + actionCharge}/${slot0Cost}. Necesitas mas nodos de datos para analizar la horquilla.`;
-        message = `${action.role} acumula carga en la horquilla (${prevAccumulated + actionCharge}/${slot0Cost}).`;
-      }
+      const chargeResult = applyChargeToTarget(gameState, scenarioId, actionVariant, "horquilla", actionCharge, hotspotDefs);
+      feedback = `Carga de horquilla +${chargeResult.added}. Carga acumulada: ${chargeResult.accumulated}. Desbloquead su analisis desde la carta.`;
+      message = `${action.role} suma ${chargeResult.added} de carga a la horquilla (${chargeResult.accumulated} acumulada).`;
     } else {
       feedback = "La horquilla necesita un objetivo. Prueba a usarla sobre la taquilla con una accion de interaccion.";
       message = `${action.role} examina la horquilla sin objetivo claro.`;
